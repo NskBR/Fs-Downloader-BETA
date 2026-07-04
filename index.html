@@ -1,1 +1,21 @@
-<!doctype html><html lang="pt-BR" style="background:#0b0d12;color:#eef1f7"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b0d12"><link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><path fill=%22%237d5cff%22 d=%22M6 0 2 6h3l-1 4 4-6H5z%22/></svg>"><title>SF Downloader</title></head><body style="background:#0b0d12;margin:0"><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
+<!doctype html>
+<html lang="pt-BR" style="background:#0b0d0a;color:#eef1e8">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b0d0a">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><path fill=%22%237d5cff%22 d=%22M6 0 2 6h3l-1 4 4-6H5z%22/></svg>">
+  <title>SF Downloader</title>
+  <style>
+    html,body,#root{width:100%;height:100%;margin:0;background:#0b0d0a}
+    .boot-loader{display:grid;width:100%;height:100%;place-content:center;place-items:center;gap:13px;color:#aeb7aa;font:500 11px system-ui,sans-serif;background:radial-gradient(circle at 50% 20%,#20251c,#0b0d0a 62%)}
+    .boot-loader__mark{position:relative;width:34px;height:34px;border:2px solid #343a30;border-top-color:#d9ad55;border-radius:50%;animation:sf-spin .8s linear infinite}
+    .boot-loader__mark:after{position:absolute;inset:7px;border-radius:50%;background:#d9ad551c;content:""}
+    @keyframes sf-spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div id="root"><div class="boot-loader"><i class="boot-loader__mark"></i><span>Preparando janela...</span></div></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

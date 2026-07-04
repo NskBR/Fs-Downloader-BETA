@@ -90,7 +90,7 @@ pub fn replace_url(connection: &Connection, id: &str, url: &str) -> Result<()> {
 }
 
 pub fn recover_interrupted(connection: &Connection) -> Result<Vec<String>> {
-    let mut statement = connection.prepare("SELECT id,temp_path,total_downloaded FROM download_tasks WHERE status IN ('pending','downloading')")?;
+    let mut statement = connection.prepare("SELECT id,temp_path,total_downloaded FROM download_tasks WHERE status IN ('pending','checking_files','downloading','assembling','extracting')")?;
     let interrupted: Vec<(String, String, i64)> = statement
         .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
         .collect::<Result<_>>()?;

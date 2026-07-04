@@ -96,6 +96,7 @@ pub fn run() {
             commands::transfer::replace_download_url,
             commands::transfer::open_progress_window,
             commands::transfer::open_complete_window,
+            commands::transfer::show_ready_window,
             commands::transfer::update_speed_limit
         ])
         .run(tauri::generate_context!())

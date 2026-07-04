@@ -57,6 +57,12 @@ static CREATING_WINDOWS: LazyLock<Mutex<HashSet<String>>> =
     LazyLock::new(|| Mutex::new(HashSet::new()));
 
 #[tauri::command]
+pub fn show_ready_window(window: tauri::WebviewWindow) -> Result<(), String> {
+    window.show().map_err(|error| error.to_string())?;
+    window.set_focus().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 pub async fn open_download_confirmation(app: AppHandle) -> Result<(), String> {
     let label = "download-confirm";
     if let Some(window) = app.get_webview_window(label) {
@@ -89,6 +95,7 @@ pub async fn open_download_confirmation(app: AppHandle) -> Result<(), String> {
         .min_inner_size(500.0, 370.0)
         .resizable(false)
         .decorations(false)
+        .visible(false)
         .background_color(tauri::webview::Color(26, 29, 36, 255))
         .center()
         .build();
@@ -99,8 +106,7 @@ pub async fn open_download_confirmation(app: AppHandle) -> Result<(), String> {
         }
     }
 
-    let window = build_result.map_err(|error| format!("Falha ao abrir confirmação: {error}"))?;
-    let _ = window.set_focus();
+    build_result.map_err(|error| format!("Falha ao abrir confirmação: {error}"))?;
     Ok(())
 }
 
@@ -136,6 +142,7 @@ pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), Stri
         .inner_size(480.0, 320.0)
         .resizable(false)
         .decorations(false)
+        .visible(false)
         .background_color(tauri::webview::Color(26, 29, 36, 255))
         .center()
         .build();
@@ -146,8 +153,7 @@ pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), Stri
         }
     }
 
-    let window = build_result.map_err(|error| format!("Falha ao abrir progresso: {error}"))?;
-    let _ = window.set_focus();
+    build_result.map_err(|error| format!("Falha ao abrir progresso: {error}"))?;
     Ok(())
 }
 
@@ -183,6 +189,7 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
         .inner_size(480.0, 250.0)
         .resizable(false)
         .decorations(false)
+        .visible(false)
         .background_color(tauri::webview::Color(26, 29, 36, 255))
         .center()
         .build();
@@ -193,8 +200,7 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
         }
     }
 
-    let window = build_result.map_err(|error| format!("Falha ao abrir conclusão: {error}"))?;
-    let _ = window.set_focus();
+    build_result.map_err(|error| format!("Falha ao abrir conclusão: {error}"))?;
     Ok(())
 }
 

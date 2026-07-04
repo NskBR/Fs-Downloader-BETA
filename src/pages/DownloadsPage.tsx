@@ -8,7 +8,7 @@ import * as service from "../services/downloadService";
 import type { DownloadTask } from "../domain/download";
 
 const bytes=(value:number|null)=>{if(value===null)return"—";const units=["B","KB","MB","GB","TB"];let size=value,index=0;while(size>=1024&&index<4){size/=1024;index++}return`${size.toFixed(index?1:0)} ${units[index]}`};
-const labels:Record<string,string>={pending:"Preparando",downloading:"Baixando",completed:"Concluído",failed:"Falhou",cancelled:"Cancelado",paused:"Pausado"};
+const labels:Record<string,string>={pending:"Preparando",checking_files:"Verificando arquivos",downloading:"Baixando",paused:"Pausado",assembling:"Montando arquivo",extracting:"Extraindo arquivo",completed:"Concluído",failed:"Falhou",cancelled:"Cancelado"};
 const groups:Partial<Record<PageId,string[]>>={documents:["pdf","doc","docx","xls","xlsx","ppt","pptx","txt","csv"],music:["mp3","wav","flac","ogg","m4a","aac"],videos:["mp4","mkv","mov","avi","webm"],archives:["zip","rar","7z","tar","gz"],applications:["exe","msi","apk","bat","appimage","dmg","pkg"]};
 
 export function DownloadsPage({settings,filter}:{settings:AppSettings;filter:PageId}){
@@ -60,7 +60,7 @@ export function DownloadsPage({settings,filter}:{settings:AppSettings;filter:Pag
   
   const replaceLink=async(id:string)=>{const value=prompt("Cole a nova URL para este arquivo:");if(!value)return;setError(null);try{await service.replaceDownloadUrl(id,value.trim());await resume(id)}catch(cause){setError(String(cause))}};
   
-  const visible=downloads.filter(item=>{if(filter==="active"&&!['pending','downloading','paused','failed'].includes(item.status))return false;if(filter==="completed"&&item.status!=="completed")return false;const extensions=groups[filter];if(extensions&&!extensions.includes(item.extension?.toLowerCase()??""))return false;return item.fileName.toLowerCase().includes(search.toLowerCase())});
+  const visible=downloads.filter(item=>{if(filter==="active"&&!['pending','checking_files','downloading','paused','assembling','extracting','failed'].includes(item.status))return false;if(filter==="completed"&&item.status!=="completed")return false;const extensions=groups[filter];if(extensions&&!extensions.includes(item.extension?.toLowerCase()??""))return false;return item.fileName.toLowerCase().includes(search.toLowerCase())});
   
   const toggle=(id:string)=>setSelected(value=>{const next=new Set(value);next.has(id)?next.delete(id):next.add(id);return next});
   const picked=downloads.filter(item=>selected.has(item.id));

@@ -147,12 +147,15 @@ export function ProgressPage({ downloadId }: ProgressPageProps) {
 
   const statusLabel =
     status === "downloading" ? "Baixando" :
+    status === "checking_files" ? "Verificando arquivos..." :
+    status === "assembling" ? "Montando arquivo..." :
+    status === "extracting" ? "Extraindo arquivo..." :
     status === "paused" ? "Pausado" :
     status === "pending" ? "Conectando..." :
     status === "failed" ? "Falhou" :
     status === "cancelled" ? "Cancelado" : "Pronto";
 
-  const isDownloading = status === "downloading" || status === "pending";
+  const isDownloading = status === "downloading";
 
   return (
     <main className="confirm-window">
@@ -230,7 +233,7 @@ export function ProgressPage({ downloadId }: ProgressPageProps) {
         <footer>
           <button onClick={closeWindow}>Ocultar</button>
           <div style={{ display: "flex", gap: "6px", marginLeft: "auto" }}>
-            {["pending","downloading","paused"].includes(status)&&<button onClick={handleCancel}>Cancelar</button>}
+            {["pending","checking_files","downloading","paused"].includes(status)&&<button onClick={handleCancel}>Cancelar</button>}
             {["pending","downloading","paused","failed","cancelled"].includes(status)&&<button className="accent" onClick={handlePauseResume}>
               {["paused","failed","cancelled"].includes(status) ? "Retomar" : "Pausar"}
             </button>}

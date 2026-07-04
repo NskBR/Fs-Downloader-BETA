@@ -416,6 +416,25 @@ async fn transfer_segmented(
     let total = task
         .file_size
         .ok_or_else(|| "Download segmentado exige tamanho conhecido.".to_string())?;
+    update_state(
+        database,
+        &task.id,
+        DownloadStatus::CheckingFiles,
+        task.total_downloaded,
+        0.0,
+        task.speed_average,
+    );
+    let _ = app.emit(
+        "download-progress",
+        DownloadProgress {
+            id: task.id.clone(),
+            downloaded: task.total_downloaded,
+            total: task.file_size,
+            speed: 0.0,
+            status: DownloadStatus::CheckingFiles,
+            error: None,
+        },
+    );
     let part_existed = tokio::fs::metadata(&task.temp_path).await.is_ok();
     let mut part = OpenOptions::new()
         .create(true)
@@ -536,6 +555,7 @@ async fn transfer_segmented(
                     started,
                     request_headers.clone(),
                     throttle.clone(),
+                    initial,
                 )
                 .await
                 {
@@ -589,6 +609,25 @@ async fn transfer_segmented(
     if control.cancellation.is_cancelled() {
         return Err("Download interrompido pelo usuário.".into());
     }
+    update_state(
+        database,
+        &task.id,
+        DownloadStatus::Assembling,
+        total,
+        0.0,
+        task.speed_average,
+    );
+    let _ = app.emit(
+        "download-progress",
+        DownloadProgress {
+            id: task.id.clone(),
+            downloaded: total,
+            total: Some(total),
+            speed: 0.0,
+            status: DownloadStatus::Assembling,
+            error: None,
+        },
+    );
     let plan = {
         let connection = database.connect()?;
         chunks::list(&connection, &task.id).map_err(|error| error.to_string())?
@@ -619,7 +658,7 @@ async fn transfer_segmented(
         let _ = tokio::fs::remove_dir(temp_folder).await;
     }
     let elapsed = started.elapsed();
-    let speed = total as f64 / elapsed.as_secs_f64().max(0.001);
+    let speed = (total - initial).max(0) as f64 / elapsed.as_secs_f64().max(0.001);
     update_state(
         database,
         &task.id,
@@ -659,6 +698,7 @@ async fn download_piece(
     started: Instant,
     request_headers: HeaderMap,
     throttle: AdaptiveThrottle,
+    session_offset: i64,
 ) -> Result<(), String> {
     let length = chunk.end_byte - chunk.start_byte + 1;
     for attempt in 0..MAX_CHUNK_ATTEMPTS {
@@ -737,7 +777,7 @@ async fn download_piece(
                 let slice = &data[..];
                 file.write_all(slice).await.map_err(|error| error.to_string())?; chunk.downloaded_bytes += slice.len() as i64; response_downloaded += slice.len() as i64;
                 control.throttle(slice.len()).await;
-                let aggregate = total_downloaded.fetch_add(slice.len() as i64, Ordering::SeqCst) + slice.len() as i64; let speed = aggregate as f64 / started.elapsed().as_secs_f64().max(0.001);
+                let aggregate = total_downloaded.fetch_add(slice.len() as i64, Ordering::SeqCst) + slice.len() as i64; let speed = (aggregate - session_offset).max(0) as f64 / started.elapsed().as_secs_f64().max(0.001);
                 let _ = app.emit("download-progress", DownloadProgress { id: task.id.clone(), downloaded: aggregate, total: task.file_size, speed, status: DownloadStatus::Downloading, error: None });
                 if last_save.elapsed() >= Duration::from_millis(500) { if let Ok(connection) = database.connect() { let _ = chunks::update_progress(&connection, &chunk.id, chunk.downloaded_bytes, "downloading"); } update_state(&database, &task.id, DownloadStatus::Downloading, aggregate, speed, speed); last_save = Instant::now(); }
                 if chunk.downloaded_bytes >= length { break; }
@@ -973,6 +1013,25 @@ async fn transfer(
             },
         );
     }
+    update_state(
+        database,
+        &task.id,
+        DownloadStatus::Assembling,
+        downloaded,
+        0.0,
+        task.speed_average,
+    );
+    let _ = app.emit(
+        "download-progress",
+        DownloadProgress {
+            id: task.id.clone(),
+            downloaded,
+            total: task.file_size.or(Some(downloaded)),
+            speed: 0.0,
+            status: DownloadStatus::Assembling,
+            error: None,
+        },
+    );
     file.flush()
         .await
         .map_err(|error| format!("Falha ao finalizar o arquivo: {error}"))?;

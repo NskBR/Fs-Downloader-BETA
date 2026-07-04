@@ -4,6 +4,12 @@ Downloads pausados preservam o arquivo `.part`. Ao continuar, o núcleo mede o t
 
 Downloads segmentados preservam cada arquivo de chunk e o progresso registrado no SQLite. Ao retomar, chunks concluídos são mantidos; chunks interrompidos são reconciliados com o tamanho real em disco e continuam a partir do último byte confirmado.
 
+## Estados visíveis
+
+- `checking_files`: reconcilia SQLite, `.part` e partes legadas; velocidade de rede permanece zerada.
+- `downloading`: somente bytes recebidos pela rede entram no cálculo de velocidade da sessão.
+- `assembling`: valida os chunks, sincroniza o `.part` e realiza a renomeação final sem contabilizar I/O de disco como download.
+
 ## Proteções
 
 - Uma retomada com dados parciais exige resposta HTTP `206 Partial Content`.

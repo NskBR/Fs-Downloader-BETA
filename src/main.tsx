@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { invoke } from "@tauri-apps/api/core";
 import { App } from "./app/App";
 import { ConfirmationPage } from "./pages/ConfirmationPage";
 import { ProgressPage } from "./pages/ProgressPage";
@@ -32,3 +33,13 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       : <App />}
   </React.StrictMode>,
 );
+
+if (label !== "main") {
+  const reveal = () => void invoke("show_ready_window").catch(console.error);
+  const fallback = window.setTimeout(reveal, 2000);
+  requestAnimationFrame(() => requestAnimationFrame(async () => {
+    await document.fonts?.ready;
+    window.clearTimeout(fallback);
+    reveal();
+  }));
+}
