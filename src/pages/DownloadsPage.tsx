@@ -317,7 +317,6 @@ export function DownloadsPage({
   const canPause = picked.some((item) => item.status === "downloading");
   const canResume = picked.some((item) => resumableStates.includes(item.status));
   const canCancel = picked.some((item) => cancelableStates.includes(item.status));
-  const canReplaceLink = picked.length === 1 && ["paused", "failed"].includes(picked[0].status);
 
   const handlePauseSelected = () => {
     picked.forEach((item) => {
@@ -335,10 +334,6 @@ export function DownloadsPage({
     picked.forEach((item) => {
       if (cancelableStates.includes(item.status)) void cancel(item.id);
     });
-  };
-
-  const handleReplaceLinkSelected = () => {
-    if (picked.length === 1) void replaceLink(picked[0].id);
   };
 
   const openDetails = (event: React.MouseEvent) => {
@@ -365,40 +360,6 @@ export function DownloadsPage({
         </button>
         <button
           className="toolbar-action"
-          disabled={!selected.size}
-          onClick={() => {
-            if (
-              window.confirm(
-                selected.size === 1
-                  ? "Tem certeza que deseja excluir o download selecionado?"
-                  : `Tem certeza que deseja excluir os ${selected.size} downloads selecionados?`,
-              )
-            ) {
-              void remove([...selected]).then(() => setSelected(new Set()));
-            }
-          }}
-        >
-          <Trash2 />
-          Excluir
-        </button>
-        <button
-          className="toolbar-action"
-          disabled={picked.length !== 1 || picked[0].status !== "completed"}
-          onClick={() => void service.openFile(picked[0].finalPath)}
-        >
-          <ExternalLink />
-          Abrir
-        </button>
-        <button
-          className="toolbar-action"
-          disabled={picked.length !== 1}
-          onClick={() => void service.revealInFolder(picked[0].finalPath)}
-        >
-          <FolderOpen />
-          Pasta
-        </button>
-        <button
-          className="toolbar-action"
           disabled={!canPause}
           onClick={handlePauseSelected}
         >
@@ -420,14 +381,6 @@ export function DownloadsPage({
         >
           <Ban />
           Cancelar
-        </button>
-        <button
-          className="toolbar-action"
-          disabled={!canReplaceLink}
-          onClick={handleReplaceLinkSelected}
-        >
-          <Link2 />
-          Novo Link
         </button>
         <i className="toolbar-divider" />
         <label className="toolbar-search">
@@ -644,6 +597,18 @@ export function DownloadsPage({
               Retomar download
             </button>
           ) : null}
+
+          {["paused", "failed"].includes(contextMenu.status) && (
+            <button
+              className="context-menu-item"
+              onClick={() => {
+                void replaceLink(contextMenu.downloadId);
+                setContextMenu(null);
+              }}
+            >
+              Fornecer novo link
+            </button>
+          )}
 
           <button
             className="context-menu-item"
