@@ -65,10 +65,6 @@ export function CompletePage({ downloadId }: { downloadId: string }) {
               <FileText />
               Tamanho final <b>{bytes(task.fileSize)}</b>
             </span>
-            <span>
-              <CheckCircle2 />
-              Status <b>Concluído</b>
-            </span>
             {extraction && (
               <span
                 className={
