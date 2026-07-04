@@ -40,9 +40,33 @@ Ajustamos o comportamento de redimensionamento da tabela para aproveitar melhor 
 - **Modificados:** [manifest.chromium.json](file:///C:/Users/skell/Documents/Projeto/browser-extension/manifest.chromium.json) e [manifest.firefox.json](file:///C:/Users/skell/Documents/Projeto/browser-extension/manifest.firefox.json)
 - Atualizada a versão da extensão para `0.2.1` e gerado os builds na pasta `browser-extension/dist` para envio à Mozilla.
 
+### 7. Janelas Independentes de Download (Confirmação, Progresso e Conclusão)
+- **Modificados:** `ConfirmationPage.tsx`, `ProgressPage.tsx`, `CompletePage.tsx` e `downloadService.ts`
+- Toda a interface das janelas secundárias foi reestilizada com o arquivo CSS `download-windows.css`.
+- A janela de **Confirmação** permite escolher destino, categoria, limite de velocidade e fornecer senhas para extração segura de arquivos ZIP/7z.
+- A janela de **Progresso** exibe bytes recebidos, velocidade de rede, tempo estimado (ETA) e o estado real da tarefa (`verificando`, `baixando`, `montando` ou `extraindo`).
+- A janela de **Conclusão** exibe o destino final e atalhos rápidos para abrir o arquivo ou sua pasta.
+
+### 8. Descompressão Automática Segura (ZIP e 7z)
+- **Modificados:** `engine.rs`, `extraction.rs`, `runtime.rs` e `lib.rs`
+- Adicionado suporte no backend em Rust para descompactação automática de arquivos `.zip` e `.7z` (inclusive protegidos por senha) logo após a conclusão do download.
+- As senhas fornecidas pelo usuário são armazenadas estritamente em memória durante a execução do download para garantir a máxima segurança, sendo apagadas logo em seguida.
+- Implementadas checagens de segurança contra ataques de caminhos inseguros (`zip slip`), sobrescrita acidental e taxas de expansão abusivas.
+
+### 9. Categorias Personalizadas e Validações
+- **Modificados:** `SettingsPage.tsx`, `categories.ts`, `folderService.ts` e `engine.rs`
+- O usuário agora pode cadastrar categorias personalizadas em **Configurações > Categorias**.
+- O sistema de organização cria subpastas automaticamente com base na categoria sugerida ou selecionada.
+- O backend em Rust e o frontend em React realizam validações rígidas de caracteres para impedir nomes com caracteres especiais perigosos ou separadores de pasta (`/`, `\`, `..`).
+
+### 10. Resiliência do Navegador (Extração UTF-8)
+- **Modificado:** `background.js` (Extensão)
+- Adicionado suporte completo à RFC 5987 para leitura de nomes de arquivos codificados em UTF-8 no cabeçalho `Content-Disposition` (como `filename*=utf-8''...`), garantindo que acentos e caracteres internacionais sejam extraídos perfeitamente.
+
 ---
 
 ## Validação Realizada
 - **Compilação do Frontend:** Executado `npm run build` com sucesso completo.
+- **Compilação do Rust:** Executado `cargo check` com sucesso completo.
 - **Compilação da Extensão:** Executado `node build.mjs` com sucesso completo.
 - **Integração Git:** Commits registrados e enviados com sucesso para o branch `main`.

@@ -32,6 +32,22 @@ Abaixo estão todas as tarefas executadas nesta sessão:
   - `[x]` Implementar reordenação de colunas por arraste (Drag-and-Drop) com persistência em localStorage (v4)
   - `[x]` Mapear Nome como coluna flexível `1fr` e remapear Data para ser redimensionável
 
+- `[x]` **Janelas de Download Standalone (Codex)**
+  - `[x]` Refatorar a janela de confirmação (tamanho, destino, limite de velocidade, senha ZIP/7z)
+  - `[x]` Refatorar a janela de progresso (estado real, velocidade, ETA, bytes)
+  - `[x]` Refatorar a janela de conclusão (caminho final, atalhos de abrir arquivo/pasta)
+
+- `[x]` **Descompressão ZIP e 7z Automática (Codex)**
+  - `[x]` Suporte a extração segura de arquivos ZIP/7z (inclusive protegidos por senha)
+  - `[x]` Salvamento seguro de senhas em memória
+
+- `[x]` **Categorias Personalizadas (Codex)**
+  - `[x]` Cadastro de categorias em Configurações > Categorias
+  - `[x]` Validação de caminhos e caracteres especiais no Rust/React
+
+- `[x]` **Melhorias do Navegador (Codex)**
+  - `[x]` Suporte a nomes codificados em UTF-8 (RFC 5987 / `filename*=`)
+
 - `[x]` **Verificação e Compilação**
-  - `[x]` Executar `npm run build` com sucesso completo
+  - `[x]` Executar `npm run build` e `cargo check` com sucesso completo
   - `[x]` Compilar extensão com `node build.mjs` com sucesso completo
