@@ -51,28 +51,26 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
     <section className="simple-settings">
       <header>
         <div>
-          <span>PREFERÊNCIAS</span>
           <h1>Configurações</h1>
           <p>Somente o essencial para usar o SF Downloader.</p>
         </div>
         <button className="settings-save-btn" disabled={busy} onClick={submit}>
-          {saved ? <Check size={14} /> : <Save size={14} />}
+          {saved ? <Check size={13} /> : <Save size={13} />}
           {busy ? "Salvando..." : saved ? "Salvo" : "Salvar"}
         </button>
       </header>
       {error && <div className="error-banner">{error}</div>}
+      
       <div className="simple-settings-list">
-        <article>
-          <div className="setting-info">
-            <i>
-              <Languages />
-            </i>
-            <div className="setting-copy">
-              <strong>Idioma da interface</strong>
-              <span>Define o idioma usado nos textos do aplicativo.</span>
-            </div>
-          </div>
+        <div className="setting-section">
+          <h2>Geral</h2>
+        </div>
+
+        <div className="setting-item">
+          <label htmlFor="language-select">Idioma da interface</label>
+          <span className="description">Define o idioma usado nos textos do aplicativo.</span>
           <select
+            id="language-select"
             value={draft.language}
             onChange={(event) =>
               update("language", event.target.value as AppLanguage)
@@ -81,27 +79,20 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
             <option value="pt-BR">Português (Brasil)</option>
             <option value="en-US">English (em preparação)</option>
           </select>
-        </article>
+        </div>
 
-        <article>
-          <div className="setting-info">
-            <i>
-              <FolderOpen />
-            </i>
-            <div className="setting-copy">
-              <strong>Local padrão dos arquivos</strong>
-              <span>
-                Downloads e categorias serão armazenados a partir desta pasta.
-              </span>
+        <div className="setting-item">
+          <label>Local padrão dos arquivos</label>
+          <span className="description">Downloads e categorias serão armazenados a partir desta pasta.</span>
+          {draft.rootDownloadFolder && (
+            <div className="path-display" title={draft.rootDownloadFolder}>
+              {draft.rootDownloadFolder}
             </div>
-          </div>
-          <div className="compact-folder-picker">
-            <span title={draft.rootDownloadFolder}>
-              {draft.rootDownloadFolder || "Nenhuma pasta selecionada"}
-            </span>
-            <button onClick={selectFolder}>Escolher pasta</button>
-          </div>
-        </article>
+          )}
+          <button className="flat-link-btn" onClick={selectFolder}>
+            Alterar pasta de destino
+          </button>
+        </div>
       </div>
     </section>
   );

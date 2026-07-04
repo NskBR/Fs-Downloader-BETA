@@ -12,30 +12,23 @@ export function TitleBar({
   onThemeChange: (theme: AppTheme) => void;
 }) {
   const getThemeIcon = () => {
-    switch (theme) {
-      case "light":
-        return <Sun size={15} />;
-      case "midnight":
-        return <Moon size={15} />;
-      default:
-        return <Monitor size={15} />;
+    if (theme === "light") {
+      return <Sun size={15} />;
+    } else {
+      return <Moon size={15} />;
     }
   };
 
   const getThemeTitle = () => {
-    switch (theme) {
-      case "light":
-        return "Tema: Claro (clique para alterar)";
-      case "midnight":
-        return "Tema: Escuro (clique para alterar)";
-      default:
-        return "Tema: Sistema (clique para alterar)";
+    if (theme === "light") {
+      return "Tema: Claro (clique para alternar para Escuro)";
+    } else {
+      return "Tema: Escuro (clique para alternar para Claro)";
     }
   };
 
   const cycleTheme = () => {
-    const list: AppTheme[] = ["midnight", "light", "system"];
-    const next = list[(list.indexOf(theme) + 1) % list.length];
+    const next = theme === "light" ? "midnight" : "light";
     onThemeChange(next);
   };
 
