@@ -75,10 +75,10 @@ export function DownloadsPage({
   const [columns, setColumns] = useState<number[]>(() => {
     try {
       return JSON.parse(
-        localStorage.getItem("sf-downloader.columns") || "[170,100]",
+        localStorage.getItem("sf-downloader.columns-v3") || "[320,100]",
       );
     } catch {
-      return [170, 100];
+      return [320, 100];
     }
   });
   const [contextMenu, setContextMenu] = useState<{
@@ -131,7 +131,7 @@ export function DownloadsPage({
     return () => window.removeEventListener("sf-download-request", receive);
   }, [settings.rootDownloadFolder]);
   useEffect(() => {
-    localStorage.setItem("sf-downloader.columns", JSON.stringify(columns));
+    localStorage.setItem("sf-downloader.columns-v3", JSON.stringify(columns));
   }, [columns]);
 
   useEffect(() => {
@@ -142,9 +142,9 @@ export function DownloadsPage({
         old.map((value, index) =>
           index === current.index
             ? Math.min(
-                index === 0 ? 260 : 180,
+                index === 0 ? 600 : 180,
                 Math.max(
-                  index === 0 ? 115 : 75,
+                  index === 0 ? 150 : 75,
                   current.width + event.clientX - current.x,
                 ),
               )
@@ -260,7 +260,7 @@ export function DownloadsPage({
     });
   const picked = downloads.filter((item) => selected.has(item.id));
   const style = {
-    "--date-width": `${columns[0]}px`,
+    "--name-width": `${columns[0]}px`,
     "--size-width": `${columns[1]}px`,
   } as CSSProperties;
   const openDetails = (event: React.MouseEvent) => {
@@ -360,9 +360,8 @@ export function DownloadsPage({
         <div className="table-head">
           <span />
           <span />
-          {heading("name", "Nome")}
           <span className="resizable">
-            {heading("date", "Data")}
+            {heading("name", "Nome")}
             <i
               onMouseDown={(event) =>
                 (drag.current = {
@@ -373,6 +372,7 @@ export function DownloadsPage({
               }
             />
           </span>
+          {heading("date", "Data")}
           <span className="resizable">
             {heading("size", "Tamanho")}
             <i

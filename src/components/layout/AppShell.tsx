@@ -134,17 +134,22 @@ export function AppShell({
             )}
           </nav>
           <div className="sidebar-actions">
-            <button className="settings-link" onClick={() => setHelpOpen(true)}>
-              <HelpCircle />
-              <span>Ajuda</span>
-            </button>
-            <button
-              className={`settings-link ${activePage === "settings" ? "settings-link--active" : ""}`}
-              onClick={() => navigate("settings")}
-            >
-              <Settings />
-              <span>Configurações</span>
-            </button>
+            <div className="sidebar-footer-row">
+              <button
+                className={`sidebar-footer-btn ${activePage === "settings" ? "active" : ""}`}
+                onClick={() => navigate("settings")}
+                title="Configurações"
+              >
+                <Settings />
+              </button>
+              <button
+                className="sidebar-footer-btn"
+                onClick={() => setHelpOpen(true)}
+                title="Ajuda"
+              >
+                <HelpCircle />
+              </button>
+            </div>
             <div className={`sidebar-extension ${extension}`}>
               <i />
               <span>

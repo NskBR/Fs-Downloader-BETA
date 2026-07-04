@@ -55,20 +55,22 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
           <h1>Configurações</h1>
           <p>Somente o essencial para usar o SF Downloader.</p>
         </div>
-        <button className="primary-button" disabled={busy} onClick={submit}>
-          {saved ? <Check /> : <Save />}
+        <button className="settings-save-btn" disabled={busy} onClick={submit}>
+          {saved ? <Check size={14} /> : <Save size={14} />}
           {busy ? "Salvando..." : saved ? "Salvo" : "Salvar"}
         </button>
       </header>
       {error && <div className="error-banner">{error}</div>}
       <div className="simple-settings-list">
         <article>
-          <i>
-            <Languages />
-          </i>
-          <div className="setting-copy">
-            <strong>Idioma da interface</strong>
-            <span>Define o idioma usado nos textos do aplicativo.</span>
+          <div className="setting-info">
+            <i>
+              <Languages />
+            </i>
+            <div className="setting-copy">
+              <strong>Idioma da interface</strong>
+              <span>Define o idioma usado nos textos do aplicativo.</span>
+            </div>
           </div>
           <select
             value={draft.language}
@@ -80,15 +82,18 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
             <option value="en-US">English (em preparação)</option>
           </select>
         </article>
+
         <article>
-          <i>
-            <FolderOpen />
-          </i>
-          <div className="setting-copy">
-            <strong>Local padrão dos arquivos</strong>
-            <span>
-              Downloads e categorias serão armazenados a partir desta pasta.
-            </span>
+          <div className="setting-info">
+            <i>
+              <FolderOpen />
+            </i>
+            <div className="setting-copy">
+              <strong>Local padrão dos arquivos</strong>
+              <span>
+                Downloads e categorias serão armazenados a partir desta pasta.
+              </span>
+            </div>
           </div>
           <div className="compact-folder-picker">
             <span title={draft.rootDownloadFolder}>

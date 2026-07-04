@@ -1,4 +1,4 @@
-import { Minus, Square, X } from "lucide-react";
+import { Minus, Square, X, Sun, Moon, Monitor } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { AppTheme } from "../../domain/settings";
 
@@ -11,26 +11,49 @@ export function TitleBar({
   theme: AppTheme;
   onThemeChange: (theme: AppTheme) => void;
 }) {
+  const getThemeIcon = () => {
+    switch (theme) {
+      case "light":
+        return <Sun size={15} />;
+      case "midnight":
+        return <Moon size={15} />;
+      default:
+        return <Monitor size={15} />;
+    }
+  };
+
+  const getThemeTitle = () => {
+    switch (theme) {
+      case "light":
+        return "Tema: Claro (clique para alterar)";
+      case "midnight":
+        return "Tema: Escuro (clique para alterar)";
+      default:
+        return "Tema: Sistema (clique para alterar)";
+    }
+  };
+
+  const cycleTheme = () => {
+    const list: AppTheme[] = ["midnight", "light", "system"];
+    const next = list[(list.indexOf(theme) + 1) % list.length];
+    onThemeChange(next);
+  };
+
   return (
     <header
       className="titlebar"
       data-tauri-drag-region
       onDoubleClick={() => void appWindow.toggleMaximize()}
     >
-      <label
-        className="titlebar-theme"
+      <button
+        className="titlebar-theme-btn"
+        onClick={cycleTheme}
+        title={getThemeTitle()}
         onDoubleClick={(event) => event.stopPropagation()}
+        aria-label="Alterar tema"
       >
-        <span>Tema:</span>
-        <select
-          value={theme}
-          onChange={(event) => onThemeChange(event.target.value as AppTheme)}
-        >
-          <option value="system">Sistema</option>
-          <option value="light">Claro</option>
-          <option value="midnight">Escuro</option>
-        </select>
-      </label>
+        {getThemeIcon()}
+      </button>
       <div className="window-controls">
         <button
           aria-label="Minimizar"
