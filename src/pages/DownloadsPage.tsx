@@ -96,9 +96,9 @@ export function DownloadsPage({
   const [colOrder, setColOrder] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("sf-downloader.column-order-v3");
-      return saved ? JSON.parse(saved) : ["name", "date", "size", "status"];
+      return saved ? JSON.parse(saved) : ["name", "status", "size", "date"];
     } catch {
-      return ["name", "date", "size", "status"];
+      return ["name", "status", "size", "date"];
     }
   });
 
@@ -139,7 +139,7 @@ export function DownloadsPage({
   };
 
   const tableGridStyle = {
-    gridTemplateColumns: `25px 38px ${colOrder.map(getColWidth).join(" ")} 56px`,
+    gridTemplateColumns: `25px 38px ${colOrder.map(getColWidth).join(" ")}`,
     "--name-width": `${columns[0]}px`,
     "--size-width": `${columns[1]}px`,
   } as CSSProperties;
@@ -480,7 +480,6 @@ export function DownloadsPage({
             );
             return null;
           })}
-          <span />
         </div>
         <div className="download-list">
           {loading ? (
@@ -516,20 +515,57 @@ export function DownloadsPage({
                     if (col === "name") return (
                       <div key="name" className={`reference-name status-${item.status} col-name`}>
                         <strong>{item.fileName}</strong>
-                        {
-                          <>
-                            <div className="progress-track">
-                              <i style={{ width: `${progress}%` }} />
-                            </div>
-                            <small>
-                              {labels[item.status]} · {bytes(item.totalDownloaded)}{" "}
-                              / {bytes(item.fileSize)} ·{" "}
-                              {item.status === "downloading"
-                                ? `${bytes(item.speedCurrent)}/s`
-                                : `${progress.toFixed(0)}%`}
-                            </small>
-                          </>
-                        }
+                        <div className="progress-track">
+                          <i style={{ width: `${progress}%` }} />
+                        </div>
+                        <div className="name-footer-row">
+                          <small>
+                            {labels[item.status]} · {bytes(item.totalDownloaded)}{" "}
+                            / {bytes(item.fileSize)} ·{" "}
+                            {item.status === "downloading"
+                              ? `${bytes(item.speedCurrent)}/s`
+                              : `${progress.toFixed(0)}%`}
+                          </small>
+                          <div
+                            className="inline-row-actions"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {item.status === "downloading" && (
+                              <button
+                                title="Pausar"
+                                onClick={() => void pause(item.id)}
+                              >
+                                <Pause />
+                              </button>
+                            )}
+                            {resumable && (
+                              <button
+                                title="Continuar"
+                                onClick={() => void resume(item.id)}
+                              >
+                                <Play />
+                              </button>
+                            )}
+                            {["paused", "failed"].includes(item.status) && (
+                              <button
+                                title="Fornecer novo link"
+                                onClick={() => void replaceLink(item.id)}
+                              >
+                                <Link2 />
+                              </button>
+                            )}
+                            {["pending", "downloading", "paused"].includes(
+                              item.status,
+                            ) && (
+                              <button
+                                title="Cancelar"
+                                onClick={() => void cancel(item.id)}
+                              >
+                                <Ban />
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     );
                     if (col === "date") return (
@@ -549,45 +585,6 @@ export function DownloadsPage({
                     );
                     return null;
                   })}
-                  <div
-                    className="row-actions"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    {item.status === "downloading" && (
-                      <button
-                        title="Pausar"
-                        onClick={() => void pause(item.id)}
-                      >
-                        <Pause />
-                      </button>
-                    )}
-                    {resumable && (
-                      <button
-                        title="Continuar"
-                        onClick={() => void resume(item.id)}
-                      >
-                        <Play />
-                      </button>
-                    )}
-                    {["paused", "failed"].includes(item.status) && (
-                      <button
-                        title="Fornecer novo link"
-                        onClick={() => void replaceLink(item.id)}
-                      >
-                        <Link2 />
-                      </button>
-                    )}
-                    {["pending", "downloading", "paused"].includes(
-                      item.status,
-                    ) && (
-                      <button
-                        title="Cancelar"
-                        onClick={() => void cancel(item.id)}
-                      >
-                        <Ban />
-                      </button>
-                    )}
-                  </div>
                 </article>
               );
             })
