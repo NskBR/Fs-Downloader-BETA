@@ -93,6 +93,57 @@ export function DownloadsPage({
     useDownloads(settings);
   const drag = useRef<{ index: number; x: number; width: number } | null>(null);
 
+  const [colOrder, setColOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("sf-downloader.column-order-v3");
+      return saved ? JSON.parse(saved) : ["name", "date", "size", "status"];
+    } catch {
+      return ["name", "date", "size", "status"];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("sf-downloader.column-order-v3", JSON.stringify(colOrder));
+  }, [colOrder]);
+
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIdx(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIdx: number) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === targetIdx) return;
+    const nextOrder = [...colOrder];
+    const [moved] = nextOrder.splice(draggedIdx, 1);
+    nextOrder.splice(targetIdx, 0, moved);
+    setColOrder(nextOrder);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+  };
+
+  const getColWidth = (col: string) => {
+    if (col === "name") return "var(--name-width)";
+    if (col === "date") return "minmax(100px, 1fr)";
+    if (col === "size") return "var(--size-width)";
+    if (col === "status") return "82px";
+    return "";
+  };
+
+  const tableGridStyle = {
+    gridTemplateColumns: `25px 38px ${colOrder.map(getColWidth).join(" ")} 56px`,
+    "--name-width": `${columns[0]}px`,
+    "--size-width": `${columns[1]}px`,
+  } as CSSProperties;
+
   const inspect = async (raw: string) => {
     if (!raw.trim()) return;
     setStarting(true);
@@ -259,10 +310,6 @@ export function DownloadsPage({
       return next;
     });
   const picked = downloads.filter((item) => selected.has(item.id));
-  const style = {
-    "--name-width": `${columns[0]}px`,
-    "--size-width": `${columns[1]}px`,
-  } as CSSProperties;
   const openDetails = (event: React.MouseEvent) => {
     const row = (event.target as HTMLElement).closest<HTMLElement>(
       ".reference-row",
@@ -356,36 +403,83 @@ export function DownloadsPage({
         </div>
       )}
       {error && <div className="error-banner">{error}</div>}
-      <div className="reference-table" style={style}>
-        <div className="table-head">
+      <div className="reference-table" style={tableGridStyle}>
+        <div className="table-head" style={tableGridStyle}>
           <span />
           <span />
-          <span className="resizable">
-            {heading("name", "Nome")}
-            <i
-              onMouseDown={(event) =>
-                (drag.current = {
-                  index: 0,
-                  x: event.clientX,
-                  width: columns[0],
-                })
-              }
-            />
-          </span>
-          {heading("date", "Data")}
-          <span className="resizable">
-            {heading("size", "Tamanho")}
-            <i
-              onMouseDown={(event) =>
-                (drag.current = {
-                  index: 1,
-                  x: event.clientX,
-                  width: columns[1],
-                })
-              }
-            />
-          </span>
-          {heading("status", "Status")}
+          {colOrder.map((col, idx) => {
+            if (col === "name") return (
+              <span
+                key="name"
+                className="resizable col-name"
+                draggable
+                onDragStart={(e) => handleDragStart(e, idx)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragEnd={handleDragEnd}
+              >
+                {heading("name", "Nome")}
+                <i
+                  onMouseDown={(event) =>
+                    (drag.current = {
+                      index: 0,
+                      x: event.clientX,
+                      width: columns[0],
+                    })
+                  }
+                />
+              </span>
+            );
+            if (col === "date") return (
+              <span
+                key="date"
+                className="col-date"
+                draggable
+                onDragStart={(e) => handleDragStart(e, idx)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragEnd={handleDragEnd}
+              >
+                {heading("date", "Data")}
+              </span>
+            );
+            if (col === "size") return (
+              <span
+                key="size"
+                className="resizable col-size"
+                draggable
+                onDragStart={(e) => handleDragStart(e, idx)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragEnd={handleDragEnd}
+              >
+                {heading("size", "Tamanho")}
+                <i
+                  onMouseDown={(event) =>
+                    (drag.current = {
+                      index: 1,
+                      x: event.clientX,
+                      width: columns[1],
+                    })
+                  }
+                />
+              </span>
+            );
+            if (col === "status") return (
+              <span
+                key="status"
+                className="col-status"
+                draggable
+                onDragStart={(e) => handleDragStart(e, idx)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragEnd={handleDragEnd}
+              >
+                {heading("status", "Status")}
+              </span>
+            );
+            return null;
+          })}
           <span />
         </div>
         <div className="download-list">
@@ -411,35 +505,50 @@ export function DownloadsPage({
                   key={item.id}
                   onClick={() => toggle(item.id)}
                   onContextMenu={(event) => handleContextMenu(event, item)}
+                  style={tableGridStyle}
                 >
                   <button className="row-check">
                     {selected.has(item.id) ? <CheckSquare /> : <Square />}
                   </button>
                   <FileIcon extension={item.extension} />
-                  <div className={`reference-name status-${item.status}`}>
-                    <strong>{item.fileName}</strong>
-                    {
-                      <>
-                        <div className="progress-track">
-                          <i style={{ width: `${progress}%` }} />
-                        </div>
-                        <small>
-                          {labels[item.status]} · {bytes(item.totalDownloaded)}{" "}
-                          / {bytes(item.fileSize)} ·{" "}
-                          {item.status === "downloading"
-                            ? `${bytes(item.speedCurrent)}/s`
-                            : `${progress.toFixed(0)}%`}
-                        </small>
-                      </>
-                    }
-                  </div>
-                  <time>
-                    {new Date(item.createdAt).toLocaleDateString("pt-BR")}
-                  </time>
-                  <span className="reference-size">{bytes(item.fileSize)}</span>
-                  <span className={`status-badge status-badge--${item.status}`}>
-                    {labels[item.status]}
-                  </span>
+                  
+                  {colOrder.map((col) => {
+                    if (col === "name") return (
+                      <div key="name" className={`reference-name status-${item.status} col-name`}>
+                        <strong>{item.fileName}</strong>
+                        {
+                          <>
+                            <div className="progress-track">
+                              <i style={{ width: `${progress}%` }} />
+                            </div>
+                            <small>
+                              {labels[item.status]} · {bytes(item.totalDownloaded)}{" "}
+                              / {bytes(item.fileSize)} ·{" "}
+                              {item.status === "downloading"
+                                ? `${bytes(item.speedCurrent)}/s`
+                                : `${progress.toFixed(0)}%`}
+                            </small>
+                          </>
+                        }
+                      </div>
+                    );
+                    if (col === "date") return (
+                      <time key="date" className="col-date">
+                        {new Date(item.createdAt).toLocaleDateString("pt-BR")}
+                      </time>
+                    );
+                    if (col === "size") return (
+                      <span key="size" className="reference-size col-size">
+                        {bytes(item.fileSize)}
+                      </span>
+                    );
+                    if (col === "status") return (
+                      <span key="status" className={`status-badge status-badge--${item.status} col-status`}>
+                        {labels[item.status]}
+                      </span>
+                    );
+                    return null;
+                  })}
                   <div
                     className="row-actions"
                     onClick={(event) => event.stopPropagation()}

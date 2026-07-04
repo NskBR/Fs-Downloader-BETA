@@ -50,6 +50,10 @@ impl BrowserBridge {
         self.last_seen.store(Self::now_seconds(), Ordering::SeqCst);
     }
 
+    pub fn mark_disconnected(&self) {
+        self.last_seen.store(0, Ordering::SeqCst);
+    }
+
     pub fn is_connected(&self) -> bool {
         Self::now_seconds().saturating_sub(self.last_seen.load(Ordering::SeqCst)) <= 90
             && self.last_seen.load(Ordering::SeqCst) > 0
@@ -155,6 +159,7 @@ pub fn start(app: AppHandle, bridge: BrowserBridge) {
         let router = Router::new()
             .route("/sync", get(sync).options(handle_options))
             .route("/download", post(download).options(handle_options))
+            .route("/disconnect", post(disconnect).options(handle_options))
             .with_state(state);
         let address = format!("127.0.0.1:{BRIDGE_PORT}");
         match tokio::net::TcpListener::bind(&address).await {
@@ -186,6 +191,14 @@ async fn handle_options() -> impl IntoResponse {
         HeaderValue::from_static("true"),
     );
     (StatusCode::NO_CONTENT, headers)
+}
+
+async fn disconnect(State(state): State<BridgeState>) -> impl IntoResponse {
+    state.bridge.mark_disconnected();
+    let _ = state.app.emit("browser-extension-status", false);
+    let mut headers = HeaderMap::new();
+    headers.insert("access-control-allow-origin", HeaderValue::from_static("*"));
+    (headers, Json(serde_json::json!({ "ok": true })))
 }
 
 async fn sync(State(state): State<BridgeState>) -> impl IntoResponse {

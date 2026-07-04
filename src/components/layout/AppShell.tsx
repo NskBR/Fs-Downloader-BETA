@@ -18,6 +18,7 @@ import { downloadCategories } from "../../domain/categories";
 import * as downloadService from "../../services/downloadService";
 import { TitleBar } from "./TitleBar";
 import logo from "../../assets/sf-logo.png";
+import { getVersion } from "@tauri-apps/api/app";
 
 interface Props extends PropsWithChildren {
   activePage: PageId;
@@ -58,9 +59,13 @@ export function AppShell({
   const [open, setOpen] = useState(false),
     [categoriesOpen, setCategoriesOpen] = useState(true),
     [helpOpen, setHelpOpen] = useState(false),
+    [appVersion, setAppVersion] = useState("0.1.0"),
     [extension, setExtension] = useState<
       "checking" | "connected" | "disconnected"
     >("checking");
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(() => {});
+  }, []);
   useEffect(() => {
     const refresh = () =>
       void downloadService
@@ -150,15 +155,18 @@ export function AppShell({
                 <HelpCircle />
               </button>
             </div>
-            <div className={`sidebar-extension ${extension}`}>
-              <i />
-              <span>
-                {extension === "connected"
+            <div className="sidebar-footer-info">
+              <div className={`sidebar-extension ${extension}`} title={
+                extension === "connected"
                   ? "Extensão conectada"
                   : extension === "checking"
-                    ? "Verificando extensão..."
-                    : "Extensão desconectada"}
-              </span>
+                    ? "Verificando..."
+                    : "Extensão desconectada"
+              }>
+                <i />
+                <span>extensão</span>
+              </div>
+              <span className="sidebar-app-version">v{appVersion}</span>
             </div>
           </div>
         </aside>

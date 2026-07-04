@@ -8,6 +8,17 @@ const intercepted = new Set();
 const validUrl = url => /^https?:\/\//i.test(url || "");
 
 async function syncBridge() {
+  const { captureEnabled = true } = await new Promise(resolve => {
+    chrome.storage.local.get("captureEnabled", resolve);
+  });
+  if (!captureEnabled) {
+    if (bridge.connected) {
+      fetch(`${BRIDGE}/disconnect`, { method: "POST" }).catch(() => {});
+    }
+    bridge.connected = false;
+    return;
+  }
+
   try {
     const response = await fetch(`${BRIDGE}/sync`, { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -324,8 +335,18 @@ chrome.contextMenus.onClicked.addListener(info => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "capture-toggled") {
+    void syncBridge().finally(() => sendResponse({ ok: true }));
+    return true;
+  }
   if (message?.type === "bridge-status") {
-    void syncBridge().finally(() => sendResponse({ connected: bridge.connected }));
+    chrome.storage.local.get("captureEnabled", ({ captureEnabled = true }) => {
+      if (!captureEnabled) {
+        sendResponse({ connected: false });
+      } else {
+        void syncBridge().finally(() => sendResponse({ connected: bridge.connected }));
+      }
+    });
     return true;
   }
   if (message?.type !== "send-to-app") return;

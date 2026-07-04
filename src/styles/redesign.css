@@ -87,36 +87,45 @@
 .redesigned-sidebar .settings-link svg {
   width: 15px;
 }
+.sidebar-footer-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 0 8px;
+}
 .sidebar-extension {
   display: flex;
-  min-height: 36px;
   align-items: center;
-  gap: 7px;
-  margin-top: 5px;
-  padding: 0 8px;
-  border: 1px solid #253029;
-  border-radius: 6px;
+  gap: 6px;
   color: #87928a;
-  background: #0d1512;
-  font-size: 8px;
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: lowercase;
 }
 .sidebar-extension i {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   flex: 0 0 auto;
   border-radius: 50%;
   background: #6c746d;
 }
 .sidebar-extension.connected i {
   background: #22d86e;
-  box-shadow: 0 0 8px #22d86e;
+  box-shadow: 0 0 6px #22d86e;
 }
 .sidebar-extension.checking i {
   background: #e3aa35;
-  box-shadow: 0 0 7px #e3aa3555;
+  box-shadow: 0 0 6px #e3aa3555;
 }
 .sidebar-extension.disconnected i {
-  background: #dc655d;
+  background: #6c746d;
+  box-shadow: none;
+}
+.sidebar-app-version {
+  font-size: 9px;
+  color: #55625c;
+  font-family: monospace;
 }
 .window-frame .titlebar {
   left: 160px;
@@ -503,12 +512,17 @@
   background: #f1f4f8;
 }
 [data-theme="light"] .titlebar-theme-btn,
-[data-theme="light"] .sidebar-extension,
 [data-theme="light"] .help-dialog,
 [data-theme="light"] .help-category-list article {
   border-color: #d8dee7;
   color: #263244;
   background: #fff;
+}
+[data-theme="light"] .sidebar-extension {
+  color: #475467;
+}
+[data-theme="light"] .sidebar-app-version {
+  color: #8896a6;
 }
 [data-theme="light"] .setting-item select,
 [data-theme="light"] .path-display {
@@ -699,4 +713,24 @@
 .sidebar-footer-btn:focus,
 .category-toggle:focus {
   outline: none;
+}
+
+/* Center data and size columns, and add a vertical divider to size column */
+.col-date .sort-heading,
+.col-size .sort-heading {
+  width: 100%;
+  justify-content: center;
+}
+.col-date,
+.col-size {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.col-size {
+  border-left: 1px solid var(--line);
+}
+[data-theme="light"] .col-size {
+  border-left-color: #d8dee7;
 }
