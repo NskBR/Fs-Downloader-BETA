@@ -13,6 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -20,7 +21,8 @@ import {
   type FormEvent,
 } from "react";
 import { FileIcon } from "../components/downloads/FileIcon";
-import { createPortal } from "react-dom";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import type { AppSettings } from "../domain/settings";
 import type { PageId } from "../app/navigation";
 import { useDownloads } from "../hooks/useDownloads";
@@ -82,13 +84,7 @@ export function DownloadsPage({
       return [110, 100];
     }
   });
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    downloadId: string;
-    status: string;
-    filePath: string;
-  } | null>(null);
+
 
   const { downloads, loading, error, setError, remove, cancel, pause, resume } =
     useDownloads(settings);
@@ -213,21 +209,74 @@ export function DownloadsPage({
     };
   }, []);
 
-  // Fechar o menu de contexto ao clicar em qualquer lugar
+  // Handler de ações do menu nativo de contexto
+  const handleMenuAction = useCallback(
+    (action: string, downloadId: string) => {
+      const dl = downloads.find((d) => d.id === downloadId);
+      switch (action) {
+        case "pause":
+          pause(downloadId);
+          break;
+        case "resume":
+          resume(downloadId);
+          break;
+        case "newlink":
+          void replaceLink(downloadId);
+          break;
+        case "limit": {
+          const val = prompt(
+            "Digite o limite de velocidade para este download (em MB/s, 0 para ilimitado):",
+          );
+          if (val !== null) {
+            const parsed = Number.parseFloat(val);
+            if (Number.isFinite(parsed) && parsed >= 0) {
+              void service.updateSpeedLimit(
+                downloadId,
+                Math.round(parsed * 1024 * 1024),
+              );
+            }
+          }
+          break;
+        }
+        case "cancel":
+          cancel(downloadId);
+          break;
+        case "folder":
+          if (dl) service.revealInFolder(dl.finalPath);
+          break;
+        case "open":
+          if (dl) service.openFile(dl.finalPath);
+          break;
+        case "delete":
+          if (window.confirm("Tem certeza que deseja excluir este download?")) {
+            remove([downloadId]);
+          }
+          break;
+      }
+    },
+    [downloads, pause, resume, cancel, remove],
+  );
+
+  // Escutar eventos de ação do menu nativo
   useEffect(() => {
-    const closeMenu = () => setContextMenu(null);
-    window.addEventListener("click", closeMenu);
-    return () => window.removeEventListener("click", closeMenu);
-  }, []);
+    const unlisten = listen<{ action: string; downloadId: string }>(
+      "context-menu-action",
+      (event) => {
+        handleMenuAction(event.payload.action, event.payload.downloadId);
+      },
+    );
+    return () => {
+      void unlisten.then((fn) => fn());
+    };
+  }, [handleMenuAction]);
 
   const handleContextMenu = (e: React.MouseEvent, item: DownloadTask) => {
     e.preventDefault();
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      downloadId: item.id,
-      status: item.status,
-      filePath: item.finalPath,
+    void invoke("show_download_context_menu", {
+      request: {
+        download_id: item.id,
+        status: item.status,
+      },
     });
   };
 
@@ -567,125 +616,7 @@ export function DownloadsPage({
           )}
         </div>
       </div>
-      {/* Menu de Contexto */}
-      {contextMenu && createPortal(
-        <div
-          className="context-menu"
-          style={{
-            top: `${contextMenu.y}px`,
-            left: `${contextMenu.x}px`,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {contextMenu.status === "downloading" ? (
-            <button
-              className="context-menu-item"
-              onClick={() => {
-                pause(contextMenu.downloadId);
-                setContextMenu(null);
-              }}
-            >
-              Pausar download
-            </button>
-          ) : ["paused", "failed", "cancelled"].includes(contextMenu.status) ? (
-            <button
-              className="context-menu-item"
-              onClick={() => {
-                resume(contextMenu.downloadId);
-                setContextMenu(null);
-              }}
-            >
-              Retomar download
-            </button>
-          ) : null}
 
-          {["paused", "failed"].includes(contextMenu.status) && (
-            <button
-              className="context-menu-item"
-              onClick={() => {
-                void replaceLink(contextMenu.downloadId);
-                setContextMenu(null);
-              }}
-            >
-              Fornecer novo link
-            </button>
-          )}
-
-          <button
-            className="context-menu-item"
-            onClick={() => {
-              const val = prompt(
-                "Digite o limite de velocidade para este download (em MB/s, 0 para ilimitado):",
-              );
-              if (val !== null) {
-                const parsed = Number.parseFloat(val);
-                if (Number.isFinite(parsed) && parsed >= 0) {
-                  void service.updateSpeedLimit(
-                    contextMenu.downloadId,
-                    Math.round(parsed * 1024 * 1024),
-                  );
-                }
-              }
-              setContextMenu(null);
-            }}
-          >
-            Limitar velocidade
-          </button>
-
-          {["pending", "downloading", "paused"].includes(
-            contextMenu.status,
-          ) && (
-            <button
-              className="context-menu-item"
-              onClick={() => {
-                cancel(contextMenu.downloadId);
-                setContextMenu(null);
-              }}
-            >
-              Cancelar download
-            </button>
-          )}
-
-          <div className="context-menu-divider" />
-
-          <button
-            className="context-menu-item"
-            onClick={() => {
-              service.revealInFolder(contextMenu.filePath);
-              setContextMenu(null);
-            }}
-          >
-            Abrir pasta de destino
-          </button>
-
-          {contextMenu.status === "completed" && (
-            <button
-              className="context-menu-item"
-              onClick={() => {
-                service.openFile(contextMenu.filePath);
-                setContextMenu(null);
-              }}
-            >
-              Abrir arquivo
-            </button>
-          )}
-
-          <button
-            className="context-menu-item danger"
-            onClick={() => {
-              if (
-                window.confirm("Tem certeza que deseja excluir este download?")
-              ) {
-                remove([contextMenu.downloadId]);
-              }
-              setContextMenu(null);
-            }}
-          >
-            Excluir download
-          </button>
-        </div>,
-        document.body
-      )}
     </section>
   );
 }

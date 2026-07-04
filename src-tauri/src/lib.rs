@@ -98,9 +98,19 @@ pub fn run() {
             }
             Ok(())
         })
+        .on_menu_event(|app, event| {
+            let id_str = event.id().as_ref().to_string();
+            if let Some((action, download_id)) = id_str.split_once('_') {
+                let _ = app.emit("context-menu-action", serde_json::json!({
+                    "action": action,
+                    "downloadId": download_id
+                }));
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             create_category_folders,
             browser_bridge::browser_extension_status,
+            commands::context_menu::show_download_context_menu,
             commands::downloads::create_download,
             commands::downloads::list_downloads,
             commands::downloads::update_download,
@@ -133,6 +143,7 @@ mod database;
 mod download;
 
 use tauri::Manager;
+use tauri::Emitter;
 
 #[cfg(test)]
 mod category_tests {
