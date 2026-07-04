@@ -20,6 +20,7 @@ import {
   type FormEvent,
 } from "react";
 import { FileIcon } from "../components/downloads/FileIcon";
+import { createPortal } from "react-dom";
 import type { AppSettings } from "../domain/settings";
 import type { PageId } from "../app/navigation";
 import { useDownloads } from "../hooks/useDownloads";
@@ -567,7 +568,7 @@ export function DownloadsPage({
         </div>
       </div>
       {/* Menu de Contexto */}
-      {contextMenu && (
+      {contextMenu && createPortal(
         <div
           className="context-menu"
           style={{
@@ -682,7 +683,8 @@ export function DownloadsPage({
           >
             Excluir download
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </section>
   );
