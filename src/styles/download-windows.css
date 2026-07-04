@@ -712,7 +712,7 @@ input[type="number"] {
 }
 .complete-compact .download-window-content {
   min-height: 0;
-  flex: 1;
+  flex: 0 0 auto;
   padding: 10px 16px 8px;
   overflow: hidden;
 }

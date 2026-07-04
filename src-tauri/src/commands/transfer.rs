@@ -190,7 +190,7 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
 
     let build_result = WebviewWindowBuilder::new(&app, &label, url)
         .title("SF Downloader - Concluído")
-        .inner_size(560.0, 300.0)
+        .inner_size(560.0, 195.0)
         .resizable(false)
         .decorations(false)
         .visible(false)
