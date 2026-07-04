@@ -310,6 +310,37 @@ export function DownloadsPage({
       return next;
     });
   const picked = downloads.filter((item) => selected.has(item.id));
+
+  const resumableStates = ["paused", "failed", "cancelled"];
+  const cancelableStates = ["pending", "downloading", "paused"];
+
+  const canPause = picked.some((item) => item.status === "downloading");
+  const canResume = picked.some((item) => resumableStates.includes(item.status));
+  const canCancel = picked.some((item) => cancelableStates.includes(item.status));
+  const canReplaceLink = picked.length === 1 && ["paused", "failed"].includes(picked[0].status);
+
+  const handlePauseSelected = () => {
+    picked.forEach((item) => {
+      if (item.status === "downloading") void pause(item.id);
+    });
+  };
+
+  const handleResumeSelected = () => {
+    picked.forEach((item) => {
+      if (resumableStates.includes(item.status)) void resume(item.id);
+    });
+  };
+
+  const handleCancelSelected = () => {
+    picked.forEach((item) => {
+      if (cancelableStates.includes(item.status)) void cancel(item.id);
+    });
+  };
+
+  const handleReplaceLinkSelected = () => {
+    if (picked.length === 1) void replaceLink(picked[0].id);
+  };
+
   const openDetails = (event: React.MouseEvent) => {
     const row = (event.target as HTMLElement).closest<HTMLElement>(
       ".reference-row",
@@ -365,6 +396,38 @@ export function DownloadsPage({
         >
           <FolderOpen />
           Pasta
+        </button>
+        <button
+          className="toolbar-action"
+          disabled={!canPause}
+          onClick={handlePauseSelected}
+        >
+          <Pause />
+          Pausar
+        </button>
+        <button
+          className="toolbar-action"
+          disabled={!canResume}
+          onClick={handleResumeSelected}
+        >
+          <Play />
+          Resumir
+        </button>
+        <button
+          className="toolbar-action"
+          disabled={!canCancel}
+          onClick={handleCancelSelected}
+        >
+          <Ban />
+          Cancelar
+        </button>
+        <button
+          className="toolbar-action"
+          disabled={!canReplaceLink}
+          onClick={handleReplaceLinkSelected}
+        >
+          <Link2 />
+          Novo Link
         </button>
         <i className="toolbar-divider" />
         <label className="toolbar-search">
@@ -518,54 +581,13 @@ export function DownloadsPage({
                         <div className="progress-track">
                           <i style={{ width: `${progress}%` }} />
                         </div>
-                        <div className="name-footer-row">
-                          <small>
-                            {labels[item.status]} · {bytes(item.totalDownloaded)}{" "}
-                            / {bytes(item.fileSize)} ·{" "}
-                            {item.status === "downloading"
-                              ? `${bytes(item.speedCurrent)}/s`
-                              : `${progress.toFixed(0)}%`}
-                          </small>
-                          <div
-                            className="inline-row-actions"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            {item.status === "downloading" && (
-                              <button
-                                title="Pausar"
-                                onClick={() => void pause(item.id)}
-                              >
-                                <Pause />
-                              </button>
-                            )}
-                            {resumable && (
-                              <button
-                                title="Continuar"
-                                onClick={() => void resume(item.id)}
-                              >
-                                <Play />
-                              </button>
-                            )}
-                            {["paused", "failed"].includes(item.status) && (
-                              <button
-                                title="Fornecer novo link"
-                                onClick={() => void replaceLink(item.id)}
-                              >
-                                <Link2 />
-                              </button>
-                            )}
-                            {["pending", "downloading", "paused"].includes(
-                              item.status,
-                            ) && (
-                              <button
-                                title="Cancelar"
-                                onClick={() => void cancel(item.id)}
-                              >
-                                <Ban />
-                              </button>
-                            )}
-                          </div>
-                        </div>
+                        <small>
+                          {labels[item.status]} · {bytes(item.totalDownloaded)}{" "}
+                          / {bytes(item.fileSize)} ·{" "}
+                          {item.status === "downloading"
+                            ? `${bytes(item.speedCurrent)}/s`
+                            : `${progress.toFixed(0)}%`}
+                        </small>
                       </div>
                     );
                     if (col === "date") return (
