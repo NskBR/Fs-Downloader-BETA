@@ -95,7 +95,7 @@ export function DownloadsPage({
 
   const [colOrder, setColOrder] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem("sf-downloader.column-order-v3");
+      const saved = localStorage.getItem("sf-downloader.column-order-v4");
       return saved ? JSON.parse(saved) : ["name", "status", "size", "date"];
     } catch {
       return ["name", "status", "size", "date"];
@@ -103,7 +103,7 @@ export function DownloadsPage({
   });
 
   useEffect(() => {
-    localStorage.setItem("sf-downloader.column-order-v3", JSON.stringify(colOrder));
+    localStorage.setItem("sf-downloader.column-order-v4", JSON.stringify(colOrder));
   }, [colOrder]);
 
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
