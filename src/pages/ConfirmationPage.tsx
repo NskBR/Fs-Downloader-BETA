@@ -1,147 +1,237 @@
-import { X, FolderOpen, Download, Clock3 } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  Archive,
+  Download,
+  Eye,
+  EyeOff,
+  FolderOpen,
+  LockKeyhole,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { FileIcon } from "../components/downloads/FileIcon";
+import { categoryForFile, downloadCategories } from "../domain/categories";
 import { loadSettings } from "../services/settingsStorage";
 import * as service from "../services/downloadService";
 
-interface Payload { url:string; destination:string; requestId?:string; preview?:service.DownloadPreview }
-const bytes=(value:number|null)=>{if(value===null)return"Tamanho desconhecido";const units=["B","KB","MB","GB","TB"];let size=value,index=0;while(size>=1024&&index<4){size/=1024;index++}return`${size.toFixed(index?1:0)} ${units[index]}`};
+interface Payload {
+  url: string;
+  destination: string;
+  requestId?: string;
+  preview?: service.DownloadPreview;
+}
+const bytes = (value: number | null) => {
+  if (value === null) return "Desconhecido";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let size = value,
+    index = 0;
+  while (size >= 1024 && index < 4) {
+    size /= 1024;
+    index++;
+  }
+  return `${size.toFixed(index ? 1 : 0)} ${units[index]}`;
+};
 
-export function ConfirmationPage(){
-  const payload=(()=>{try{return JSON.parse(localStorage.getItem("sf-downloader.confirmation")||"") as Payload}catch{return null}})();
-  const [destination,setDestination]=useState(payload?.destination||"");
-  const [preview,setPreview]=useState<service.DownloadPreview|null>(payload?.preview||null);
-  const [loading,setLoading]=useState(Boolean(payload&&!payload.preview));
-  const [busy,setBusy]=useState(false);
-  const [error,setError]=useState<string|null>(null);
-  const [resumeSupport, setResumeSupport] = useState(true);
-  const [alreadyDownloaded, setAlreadyDownloaded] = useState(false);
-  const appWindow=getCurrentWindow();
-
-  useEffect(()=>{if(!payload||payload.preview)return;let active=true;void service.inspectDownload(payload.url).then(result=>{if(active)setPreview(result)}).catch(cause=>{if(active)setError(String(cause))}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[payload?.url]);
-
+export function ConfirmationPage() {
+  const payload = useMemo(() => {
+      try {
+        return JSON.parse(
+          localStorage.getItem("sf-downloader.confirmation") || "",
+        ) as Payload;
+      } catch {
+        return null;
+      }
+    }, []),
+    appWindow = getCurrentWindow(),
+    settings = useMemo(loadSettings, []);
+  const [destination, setDestination] = useState(payload?.destination || ""),
+    [preview, setPreview] = useState<service.DownloadPreview | null>(
+      payload?.preview || null,
+    ),
+    [loading, setLoading] = useState(Boolean(payload && !payload.preview)),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState<string | null>(null),
+    [autoExtract, setAutoExtract] = useState(false),
+    [hasPassword, setHasPassword] = useState(false),
+    [password, setPassword] = useState(""),
+    [showPassword, setShowPassword] = useState(false),
+    [selectedCategory, setSelectedCategory] = useState("Outros");
   useEffect(() => {
-    if (!preview) return;
-    service.listDownloads().then(list => {
-      const found = list.some(item =>
-        item.status === "completed" &&
-        (item.fileName === preview.fileName || item.originalUrl === preview.url)
+    if (!payload || payload.preview) return;
+    let active = true;
+    void service
+      .inspectDownload(payload.url)
+      .then((result) => active && setPreview(result))
+      .catch((cause) => active && setError(String(cause)))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [payload]);
+  useEffect(() => {
+    if (preview) {
+      setSelectedCategory(
+        categoryForFile(preview.fileName, settings.customCategories),
       );
-      setAlreadyDownloaded(found);
-    }).catch(console.error);
-  }, [preview]);
-
-  const close=()=>void appWindow.close();
-  
-  const finish=async(mode:"now"|"later")=>{
-    if(!preview)return;
+    }
+  }, [preview, settings.customCategories]);
+  const close = () => void appWindow.close(),
+    isArchive = ["zip", "7z"].includes(preview?.extension?.toLowerCase() ?? ""),
+    categories = [
+      ...downloadCategories.map((item) => item.name),
+      ...settings.customCategories.map((item) => item.name),
+    ],
+    destinationSeparator = destination.includes("\\") ? "\\" : "/",
+    effectiveDestination = destination
+      ? `${destination.replace(/[\\/]$/, "")}${destinationSeparator}${selectedCategory}`
+      : "";
+  const chooseFolder = async () => {
+    const path = await open({ directory: true });
+    if (typeof path === "string") setDestination(path);
+  };
+  const finish = async () => {
+    if (!preview) return;
+    if (autoExtract && hasPassword && !password) {
+      setError("Informe a senha usada para extrair o arquivo.");
+      return;
+    }
     setBusy(true);
     setError(null);
-    try{
-      const settings=loadSettings();
-      const task=mode==="now"
-        ? await service.startDownload(preview.url,settings,destination,payload?.requestId,resumeSupport)
-        : await service.queueDownload(preview.url,settings,destination,payload?.requestId,resumeSupport);
-      await emit("download-created",task);
+    try {
+      const task = await service.startDownload(
+        preview.url,
+        settings,
+        destination,
+        payload?.requestId,
+        true,
+        autoExtract,
+        isArchive && hasPassword ? password : undefined,
+        selectedCategory,
+      );
+      await emit("download-created", task);
       localStorage.removeItem("sf-downloader.confirmation");
       close();
-    }catch(cause){
+    } catch (cause) {
       setError(String(cause));
-    }finally{
+    } finally {
       setBusy(false);
     }
   };
-
-  if(!payload)return <main className="confirm-window"><div className="confirm-titlebar" data-tauri-drag-region><span>SF Downloader</span><button onClick={close}><X/></button></div><div className="confirm-empty">Solicitação de download não encontrada.</div></main>;
-  
+  if (!payload)
+    return (
+      <main className="download-window">
+        <header className="download-window-title" data-tauri-drag-region>
+          <span>Confirmar download</span>
+          <button onClick={close}>
+            <X />
+          </button>
+        </header>
+        <p className="window-error">Solicitação não encontrada.</p>
+      </main>
+    );
   return (
-    <main className="confirm-window">
-      <div className="confirm-titlebar" data-tauri-drag-region>
-        <span>Novo download</span>
-        <button onClick={close}><X/></button>
-      </div>
-      
-      <section className="confirm-body xdm-confirm">
-        <div className="confirm-form">
-          <label>
-            <span>Endereço</span>
-            <input readOnly value={payload.url}/>
-          </label>
-          <label>
-            <span>Arquivo</span>
-            <input readOnly value={preview?.fileName||(loading?"Consultando...":"Arquivo desconhecido")}/>
-          </label>
-          
-          <div className="confirm-save-row">
-            <label style={{ flex: 1 }}>
-              <span>Salvar em</span>
-              <div style={{ display: "flex", width: "100%" }}>
-                <input value={destination} onChange={event=>setDestination(event.target.value)}/>
-                <button title="Escolher pasta" onClick={async()=>{const path=await open({directory:true});if(typeof path==="string")setDestination(path)}}><FolderOpen/></button>
-              </div>
-            </label>
-            <div className="confirm-file-info">
-              <FileIcon extension={preview?.extension??null}/>
-              <strong>{loading?"Consultando...":bytes(preview?.fileSize??null)}</strong>
-            </div>
-          </div>
-          
-          <div className="confirm-details">
-            <span>{preview?.extension?.toUpperCase()||"ARQUIVO"}</span>
-            <span>{preview?.mimeType||"Tipo não informado"}</span>
-          </div>
-
-          {/* Chavinha de Permissão de Retomada */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "8px", borderTop: "1px solid var(--line)", paddingTop: "8px" }}>
-            <span style={{ color: "#aab2a4", fontSize: "11px" }}>Permitir retomar downloads parados/cancelados</span>
-            <button 
-              type="button" 
-              className={`mini-toggle ${resumeSupport ? "mini-toggle--on" : ""}`}
-              onClick={() => setResumeSupport(!resumeSupport)}
-              style={{ flex: "0 0 auto", width: "30px", height: "16px", cursor: "pointer", position: "relative" }}
-            >
-              <i style={{ 
-                position: "absolute", 
-                top: "2px", 
-                left: resumeSupport ? "16px" : "2px", 
-                width: "12px", 
-                height: "12px", 
-                borderRadius: "50%", 
-                background: resumeSupport ? "var(--accent)" : "#818896", 
-                transition: "left 0.15s ease, background 0.15s ease" 
-              }} />
-            </button>
-          </div>
+    <main className="download-window confirmation-compact">
+      <header className="download-window-title" data-tauri-drag-region>
+        <span>
+          <Download />
+          Confirmar download
+        </span>
+        <button onClick={close}>
+          <X />
+        </button>
+      </header>
+      <section className="download-window-content">
+        <div className="window-file-summary">
+          <FileIcon extension={preview?.extension ?? null} />
+          <strong title={preview?.fileName}>
+            {preview?.fileName ||
+              (loading ? "Consultando arquivo..." : "Arquivo desconhecido")}
+          </strong>
+          <b>{loading ? "—" : bytes(preview?.fileSize ?? null)}</b>
         </div>
-
-        {alreadyDownloaded && (
-          <div style={{
-            background: "rgba(217, 173, 85, 0.08)",
-            border: "1px solid rgba(217, 173, 85, 0.4)",
-            borderRadius: "4px",
-            padding: "6px 10px",
-            color: "var(--accent)",
-            fontSize: "10.5px",
-            marginTop: "8px",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px"
-          }}>
-            <span>⚠️ Este arquivo já foi baixado anteriormente. Será salva uma nova cópia.</span>
+        <div className="compact-field-row">
+          <span>
+            <FolderOpen />
+            Destino
+          </span>
+          <div className="destination-value" title={effectiveDestination}>
+            {effectiveDestination || "Escolha uma pasta"}
           </div>
-        )}
-
-        {error&&<p className="confirm-error">{error}</p>}
-        
-        <footer>
-          <button onClick={close}>Cancelar</button>
-          <button disabled={busy||loading||!preview} onClick={()=>void finish("later")}><Clock3/>Baixar depois</button>
-          <button className="accent" disabled={busy||loading||!preview} onClick={()=>void finish("now")}><Download/>{busy?"Iniciando...":"Baixar agora"}</button>
-        </footer>
+          <button onClick={chooseFolder}>Alterar</button>
+        </div>
+        <div className="compact-field-row">
+          <span>
+            <Archive />
+            Categoria
+          </span>
+          <select
+            className="category-select"
+            value={selectedCategory}
+            onChange={(event) => setSelectedCategory(event.target.value)}
+          >
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="window-options">
+          <label className={`check-row ${!isArchive ? "disabled" : ""}`}>
+            <input
+              type="checkbox"
+              checked={autoExtract}
+              disabled={!isArchive}
+              onChange={(event) => setAutoExtract(event.target.checked)}
+            />
+            <span>Extrair automaticamente após o download</span>
+          </label>
+          <label className={`password-row ${!autoExtract ? "disabled" : ""}`}>
+            <input
+              type="checkbox"
+              checked={hasPassword}
+              disabled={!autoExtract}
+              onChange={(event) => setHasPassword(event.target.checked)}
+            />
+            <span>
+              <LockKeyhole />
+              Arquivo com senha
+            </span>
+            <div>
+              <input
+                type={showPassword ? "text" : "password"}
+                disabled={!hasPassword}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Digite a senha"
+              />
+              <button
+                disabled={!hasPassword}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setShowPassword((value) => !value);
+                }}
+              >
+                {showPassword ? <EyeOff /> : <Eye />}
+              </button>
+            </div>
+          </label>
+        </div>
+        {error && <p className="window-error">{error}</p>}
       </section>
+      <footer className="download-window-actions">
+        <button onClick={close}>Cancelar</button>
+        <button
+          className="primary"
+          disabled={busy || loading || !preview}
+          onClick={() => void finish()}
+        >
+          <Download />
+          {busy ? "Iniciando..." : "Baixar"}
+        </button>
+      </footer>
     </main>
   );
 }

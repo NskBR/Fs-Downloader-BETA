@@ -18,6 +18,7 @@ import "./styles/settings-standalone.css";
 import "./styles/responsive.css";
 import "./styles/xdm-windows.css";
 import "./styles/redesign.css";
+import "./styles/download-windows.css";
 
 const label = getCurrentWindow().label;
 const isConfirmationWindow = label === "download-confirm";

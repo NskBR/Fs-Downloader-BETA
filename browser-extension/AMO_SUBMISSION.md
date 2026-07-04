@@ -1,4 +1,11 @@
-# SF Downloader Integration 0.2.2 — notas para revisão AMO
+# SF Downloader Integration 0.2.3 — notas para revisão AMO
+
+## Alterações da versão 0.2.3
+
+- Corrige a perda de downloads legítimos repetidos da mesma URL.
+- Reconhece nomes UTF-8 enviados pelo cabeçalho `Content-Disposition: filename*=`.
+- Alinha os tipos de arquivo monitorados às categorias suportadas pelo aplicativo.
+- Mantém o estado de conexão sincronizado quando a captura é ativada ou desativada.
 
 ## Finalidade
 

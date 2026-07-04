@@ -9,8 +9,24 @@ const CATEGORY_FOLDERS: [&str; 8] = [
     "Outros",
 ];
 
+fn valid_category_name(name: &str) -> bool {
+    let trimmed = name.trim();
+    !trimmed.is_empty()
+        && trimmed != "."
+        && trimmed != ".."
+        && !trimmed.chars().any(|character| {
+            matches!(
+                character,
+                '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'
+            ) || character.is_control()
+        })
+}
+
 #[tauri::command]
-fn create_category_folders(root_path: String) -> Result<Vec<String>, String> {
+fn create_category_folders(
+    root_path: String,
+    custom_categories: Vec<String>,
+) -> Result<Vec<String>, String> {
     let trimmed = root_path.trim();
     if trimmed.is_empty() {
         return Err("A pasta principal não pode ficar vazia.".into());
@@ -18,9 +34,17 @@ fn create_category_folders(root_path: String) -> Result<Vec<String>, String> {
     let root = std::path::PathBuf::from(trimmed);
     std::fs::create_dir_all(&root)
         .map_err(|error| format!("Não foi possível criar a pasta principal: {error}"))?;
-    CATEGORY_FOLDERS
+    let categories = CATEGORY_FOLDERS
+        .iter()
+        .map(|category| (*category).to_string())
+        .chain(custom_categories.into_iter())
+        .collect::<Vec<_>>();
+    categories
         .iter()
         .map(|category| {
+            if !valid_category_name(category) {
+                return Err(format!("Nome de categoria inválido: {category}"));
+            }
             let path = root.join(category);
             std::fs::create_dir_all(&path)
                 .map_err(|error| format!("Não foi possível criar '{}': {error}", path.display()))?;
@@ -97,7 +121,8 @@ pub fn run() {
             commands::transfer::open_progress_window,
             commands::transfer::open_complete_window,
             commands::transfer::show_ready_window,
-            commands::transfer::update_speed_limit
+            commands::transfer::update_speed_limit,
+            download::extraction::extraction_status
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o SF Downloader");
@@ -108,3 +133,16 @@ mod database;
 mod download;
 
 use tauri::Manager;
+
+#[cfg(test)]
+mod category_tests {
+    use super::valid_category_name;
+
+    #[test]
+    fn category_names_cannot_escape_the_download_root() {
+        assert!(valid_category_name("Jogos antigos"));
+        assert!(!valid_category_name("../Documentos"));
+        assert!(!valid_category_name("Jogos\\PC"));
+        assert!(!valid_category_name("."));
+    }
+}

@@ -92,6 +92,7 @@ pub async fn prepare_with_headers(
     url: &str,
     root: &str,
     auto_organize: bool,
+    selected_category: Option<&str>,
     request_headers: HeaderMap,
     max_connections: usize,
     max_parallel_downloads: usize,
@@ -140,7 +141,14 @@ pub async fn prepare_with_headers(
         .extension()
         .and_then(|value| value.to_str())
         .map(|value| value.to_lowercase());
-    let folder = if auto_organize {
+    let folder = if let Some(category) = selected_category.filter(|value| !value.trim().is_empty())
+    {
+        let category = category.trim();
+        if !valid_category_name(category) {
+            return Err("A categoria selecionada possui um nome inválido.".into());
+        }
+        PathBuf::from(root).join(category)
+    } else if auto_organize {
         PathBuf::from(root).join(category_for_extension(extension.as_deref()))
     } else {
         PathBuf::from(root)
@@ -219,6 +227,17 @@ pub async fn prepare_with_headers(
         },
         response,
     })
+}
+
+fn valid_category_name(name: &str) -> bool {
+    name != "."
+        && name != ".."
+        && !name.chars().any(|character| {
+            matches!(
+                character,
+                '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'
+            ) || character.is_control()
+        })
 }
 
 pub async fn prepare_resume(
@@ -306,12 +325,16 @@ pub async fn run(
         } else {
             DownloadStatus::Failed
         };
-        let (downloaded, average) = database
+        let (mut downloaded, average) = database
             .connect()
             .ok()
             .and_then(|connection| downloads::find(&connection, &task.id).ok().flatten())
             .map(|current| (current.total_downloaded, current.speed_average))
             .unwrap_or((0, 0.0));
+        if cancelled && control.should_delete_files() {
+            cleanup_partial(&database, &task).await;
+            downloaded = 0;
+        }
         update_state(
             &database,
             &task.id,
@@ -376,12 +399,16 @@ pub async fn run_segmented(
         } else {
             DownloadStatus::Failed
         };
-        let downloaded = database
+        let mut downloaded = database
             .connect()
             .ok()
             .and_then(|connection| chunks::list(&connection, &task.id).ok())
             .map(|items| items.iter().map(|chunk| chunk.downloaded_bytes).sum())
             .unwrap_or(0);
+        if cancelled && control.should_delete_files() {
+            cleanup_partial(&database, &task).await;
+            downloaded = 0;
+        }
         update_state(&database, &task.id, status.clone(), downloaded, 0.0, 0.0);
         if !paused {
             record_history(&database, &task, status.as_str(), started.elapsed(), 0.0);
@@ -401,6 +428,17 @@ pub async fn run_segmented(
                 },
             },
         );
+    }
+}
+
+async fn cleanup_partial(database: &Database, task: &DownloadTask) {
+    let _ = tokio::fs::remove_file(&task.temp_path).await;
+    if let Ok(connection) = database.connect() {
+        if let Ok(plan) = chunks::list(&connection, &task.id) {
+            for chunk in plan {
+                let _ = tokio::fs::remove_file(chunk_path(&task.temp_path, chunk.index)).await;
+            }
+        }
     }
 }
 
@@ -650,6 +688,7 @@ async fn transfer_segmented(
     tokio::fs::rename(&task.temp_path, &task.final_path)
         .await
         .map_err(|error| error.to_string())?;
+    run_auto_extraction(app, database, task).await;
     for chunk in &plan {
         let _ = tokio::fs::remove_file(chunk_path(&task.temp_path, chunk.index)).await;
     }
@@ -1039,6 +1078,7 @@ async fn transfer(
     tokio::fs::rename(&task.temp_path, &task.final_path)
         .await
         .map_err(|error| format!("Falha ao mover o arquivo concluído: {error}"))?;
+    run_auto_extraction(app, database, task).await;
     // Attempt to remove the temporary .sf-temp folder if it's empty
     if let Some(temp_folder) = Path::new(&task.temp_path).parent() {
         let _ = tokio::fs::remove_dir(temp_folder).await;
@@ -1071,6 +1111,38 @@ async fn transfer(
     }
     let _ = crate::commands::transfer::open_complete_window(app.clone(), task.id.clone()).await;
     Ok(())
+}
+
+async fn run_auto_extraction(app: &AppHandle, database: &Database, task: &DownloadTask) {
+    let Some(password) = crate::download::extraction::take(&task.id) else {
+        return;
+    };
+    update_state(
+        database,
+        &task.id,
+        DownloadStatus::Extracting,
+        task.file_size.unwrap_or(task.total_downloaded),
+        0.0,
+        task.speed_average,
+    );
+    let _ = app.emit(
+        "download-progress",
+        DownloadProgress {
+            id: task.id.clone(),
+            downloaded: task.file_size.unwrap_or(task.total_downloaded),
+            total: task.file_size,
+            speed: 0.0,
+            status: DownloadStatus::Extracting,
+            error: None,
+        },
+    );
+    let result =
+        match crate::download::extraction::extract_archive(task.final_path.clone(), password).await
+        {
+            Ok(path) => format!("Extração concluída em {}", path.display()),
+            Err(error) => format!("Erro na extração: {error}"),
+        };
+    crate::download::extraction::save_result(&task.id, result);
 }
 
 fn update_state(

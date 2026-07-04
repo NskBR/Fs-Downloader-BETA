@@ -2,6 +2,12 @@ export type SpeedUnit = "Mbps" | "MB/s";
 export type AppTheme = "system" | "midnight" | "graphite" | "light";
 export type AppLanguage = "pt-BR" | "en-US";
 
+export interface CustomCategory {
+  id: string;
+  name: string;
+  extensions: string[];
+}
+
 export interface AppSettings {
   rootDownloadFolder: string;
   autoOrganizeEnabled: boolean;
@@ -13,6 +19,7 @@ export interface AppSettings {
   theme: AppTheme;
   uiScale: number;
   language: AppLanguage;
+  customCategories: CustomCategory[];
 }
 
 export const defaultSettings: AppSettings = {
@@ -26,4 +33,5 @@ export const defaultSettings: AppSettings = {
   theme: "midnight",
   uiScale: 1.1,
   language: "pt-BR",
+  customCategories: [],
 };

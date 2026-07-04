@@ -18,6 +18,7 @@ pub struct StartDownloadInput {
     pub url: String,
     pub root_folder: String,
     pub auto_organize: bool,
+    pub selected_category: Option<String>,
     #[serde(default = "default_connections")]
     pub max_connections: usize,
     #[serde(default = "default_parallel_downloads")]
@@ -27,6 +28,9 @@ pub struct StartDownloadInput {
     pub browser_request_id: Option<String>,
     #[serde(default = "default_resume_support")]
     pub resume_support: bool,
+    #[serde(default)]
+    pub auto_extract: bool,
+    pub archive_password: Option<String>,
 }
 
 fn default_resume_support() -> bool {
@@ -91,8 +95,8 @@ pub async fn open_download_confirmation(app: AppHandle) -> Result<(), String> {
 
     let build_result = WebviewWindowBuilder::new(&app, label, confirmation_url)
         .title("Confirmar download")
-        .inner_size(540.0, 390.0)
-        .min_inner_size(500.0, 370.0)
+        .inner_size(540.0, 324.0)
+        .min_inner_size(520.0, 310.0)
         .resizable(false)
         .decorations(false)
         .visible(false)
@@ -139,7 +143,7 @@ pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), Stri
 
     let build_result = WebviewWindowBuilder::new(&app, &label, url)
         .title("SF Downloader - Progresso")
-        .inner_size(480.0, 320.0)
+        .inner_size(540.0, 278.0)
         .resizable(false)
         .decorations(false)
         .visible(false)
@@ -186,7 +190,7 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
 
     let build_result = WebviewWindowBuilder::new(&app, &label, url)
         .title("SF Downloader - Concluído")
-        .inner_size(480.0, 250.0)
+        .inner_size(560.0, 300.0)
         .resizable(false)
         .decorations(false)
         .visible(false)
@@ -313,6 +317,7 @@ pub async fn queue_download(
         &input.url,
         &input.root_folder,
         input.auto_organize,
+        input.selected_category.as_deref(),
         headers.clone(),
         input.max_connections,
         input.max_parallel_downloads,
@@ -324,6 +329,9 @@ pub async fn queue_download(
     let task = downloads::create(&connection, prepared.input)
         .map_err(|error| format!("Falha ao persistir o download: {error}"))?;
     browser_bridge.persist_headers(&task.id, &headers)?;
+    if input.auto_extract && matches!(task.extension.as_deref(), Some("zip" | "7z")) {
+        crate::download::extraction::register(task.id.clone(), input.archive_password.clone());
+    }
     downloads::update(
         &connection,
         crate::database::models::UpdateDownloadInput {
@@ -357,6 +365,7 @@ pub async fn start_download(
         &input.url,
         &input.root_folder,
         input.auto_organize,
+        input.selected_category.as_deref(),
         headers.clone(),
         input.max_connections,
         input.max_parallel_downloads,
@@ -368,6 +377,9 @@ pub async fn start_download(
     let task = downloads::create(&connection, prepared.input)
         .map_err(|error| format!("Falha ao persistir o download: {error}"))?;
     browser_bridge.persist_headers(&task.id, &headers)?;
+    if input.auto_extract && matches!(task.extension.as_deref(), Some("zip" | "7z")) {
+        crate::download::extraction::register(task.id.clone(), input.archive_password.clone());
+    }
     let _ = open_progress_window(app.clone(), task.id.clone()).await;
     let control = TaskControl::new();
     control.set_speed_limit(task.speed_limit_download).await;
@@ -449,8 +461,9 @@ pub fn cancel_download(
     runtime: State<'_, DownloadRuntime>,
     database: State<'_, Database>,
     id: String,
+    delete_files: bool,
 ) -> Result<bool, String> {
-    if runtime.cancel(&id)? {
+    if runtime.cancel(&id, delete_files)? {
         return Ok(true);
     }
     let connection = database.connect()?;
@@ -462,12 +475,24 @@ pub fn cancel_download(
     if task.status == crate::database::models::DownloadStatus::Completed {
         return Ok(false);
     }
+    if delete_files {
+        let _ = std::fs::remove_file(&task.temp_path);
+        if let Ok(plan) = crate::database::repositories::chunks::list(&connection, &task.id) {
+            for chunk in plan {
+                let _ = std::fs::remove_file(format!("{}.chunk-{}", task.temp_path, chunk.index));
+            }
+        }
+    }
     downloads::update(
         &connection,
         crate::database::models::UpdateDownloadInput {
             id,
             status: crate::database::models::DownloadStatus::Cancelled,
-            total_downloaded: task.total_downloaded,
+            total_downloaded: if delete_files {
+                0
+            } else {
+                task.total_downloaded
+            },
             speed_current: 0.0,
             speed_average: task.speed_average,
         },

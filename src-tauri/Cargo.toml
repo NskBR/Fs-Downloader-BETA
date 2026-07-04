@@ -28,3 +28,8 @@ futures-util = "0.3"
 axum = "0.8"
 httpdate = "1"
 keyring = "3"
+zip = "2"
+sevenz-rust2 = { version = "0.21.2", features = ["aes256"] }
+
+[dev-dependencies]
+sevenz-rust2 = { version = "0.21.2", features = ["aes256", "compress"] }

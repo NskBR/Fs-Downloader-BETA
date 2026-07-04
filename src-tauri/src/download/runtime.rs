@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicI64, AtomicU8, Ordering},
+        atomic::{AtomicBool, AtomicI64, AtomicU8, Ordering},
         Arc, Mutex,
     },
 };
@@ -35,6 +35,7 @@ pub struct TaskControl {
     pub cancellation: CancellationToken,
     action: Arc<AtomicU8>,
     speed_limit: Arc<AtomicI64>,
+    delete_files: Arc<AtomicBool>,
     bandwidth: Arc<tokio::sync::Mutex<BandwidthState>>,
 }
 
@@ -49,6 +50,7 @@ impl TaskControl {
             cancellation: CancellationToken::new(),
             action: Arc::new(AtomicU8::new(ACTION_NONE)),
             speed_limit: Arc::new(AtomicI64::new(0)),
+            delete_files: Arc::new(AtomicBool::new(false)),
             bandwidth: Arc::new(tokio::sync::Mutex::new(BandwidthState {
                 started: std::time::Instant::now(),
                 transferred: 0,
@@ -59,7 +61,8 @@ impl TaskControl {
         self.action.store(ACTION_PAUSE, Ordering::SeqCst);
         self.cancellation.cancel();
     }
-    pub fn cancel(&self) {
+    pub fn cancel(&self, delete_files: bool) {
+        self.delete_files.store(delete_files, Ordering::SeqCst);
         self.action.store(ACTION_CANCEL, Ordering::SeqCst);
         self.cancellation.cancel();
     }
@@ -71,6 +74,9 @@ impl TaskControl {
     }
     pub fn was_cancelled(&self) -> bool {
         self.action.load(Ordering::SeqCst) == ACTION_CANCEL
+    }
+    pub fn should_delete_files(&self) -> bool {
+        self.delete_files.load(Ordering::SeqCst)
     }
     pub async fn set_speed_limit(&self, bytes_per_second: i64) {
         self.speed_limit
@@ -143,12 +149,12 @@ impl DownloadRuntime {
         Ok(())
     }
     pub fn pause(&self, id: &str) -> Result<bool, String> {
-        self.signal(id, true)
+        self.signal(id, true, false)
     }
-    pub fn cancel(&self, id: &str) -> Result<bool, String> {
-        self.signal(id, false)
+    pub fn cancel(&self, id: &str, delete_files: bool) -> Result<bool, String> {
+        self.signal(id, false, delete_files)
     }
-    fn signal(&self, id: &str, pause: bool) -> Result<bool, String> {
+    fn signal(&self, id: &str, pause: bool, delete_files: bool) -> Result<bool, String> {
         let tasks = self
             .tasks
             .lock()
@@ -157,7 +163,7 @@ impl DownloadRuntime {
             if pause {
                 control.pause()
             } else {
-                control.cancel()
+                control.cancel(delete_files)
             };
             return Ok(true);
         }
@@ -193,9 +199,15 @@ mod tests {
         assert!(paused.was_paused());
         assert!(!paused.was_cancelled());
         let cancelled = TaskControl::new();
-        cancelled.cancel();
+        cancelled.cancel(false);
         assert!(cancelled.was_cancelled());
         assert!(!cancelled.was_paused());
+        assert!(!cancelled.should_delete_files());
+
+        let deleting = TaskControl::new();
+        deleting.cancel(true);
+        assert!(deleting.was_cancelled());
+        assert!(deleting.should_delete_files());
     }
 
     #[tokio::test]

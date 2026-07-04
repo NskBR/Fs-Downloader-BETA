@@ -1,106 +1,107 @@
+import {
+  CheckCircle2,
+  FileText,
+  FolderOpen,
+  PackageCheck,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { X } from "lucide-react";
 import { FileIcon } from "../components/downloads/FileIcon";
 import * as service from "../services/downloadService";
 import type { DownloadTask } from "../domain/download";
 
-interface CompletePageProps {
-  downloadId: string;
-}
-
-export function CompletePage({ downloadId }: CompletePageProps) {
-  const [task, setTask] = useState<DownloadTask | null>(null);
-  const [dontShowAgain, setDontShowAgain] = useState(false);
-  const appWindow = getCurrentWindow();
-
+const bytes = (value: number | null) => {
+  if (value === null) return "Desconhecido";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let size = value,
+    index = 0;
+  while (size >= 1024 && index < 4) {
+    size /= 1024;
+    index++;
+  }
+  return `${size.toFixed(index ? 1 : 0)} ${units[index]}`;
+};
+export function CompletePage({ downloadId }: { downloadId: string }) {
+  const [task, setTask] = useState<DownloadTask | null>(null),
+    [extraction, setExtraction] = useState<string | null>(null),
+    appWindow = getCurrentWindow();
   useEffect(() => {
-    // Fetch initial task state to get filenames and paths
-    service.listDownloads().then(list => {
-      const found = list.find(t => t.id === downloadId);
-      if (found) {
-        setTask(found);
-      }
-    }).catch(console.error);
-
-    // Read initial checkbox setting
-    const saved = localStorage.getItem("sf-downloader.dont-show-complete") === "true";
-    setDontShowAgain(saved);
+    void service
+      .listDownloads()
+      .then((list) =>
+        setTask(list.find((item) => item.id === downloadId) ?? null),
+      );
+    void service.extractionStatus(downloadId).then(setExtraction);
   }, [downloadId]);
-
-  const closeWindow = () => {
-    void appWindow.close();
-  };
-
-  const handleDontShowAgainChange = (checked: boolean) => {
-    setDontShowAgain(checked);
-    localStorage.setItem("sf-downloader.dont-show-complete", String(checked));
-  };
-
-  const handleOpenFolder = async () => {
-    if (!task) return;
-    await service.revealInFolder(task.finalPath);
-    closeWindow();
-  };
-
-  const handleOpenFile = async () => {
-    if (!task) return;
-    await service.openFile(task.finalPath);
-    closeWindow();
-  };
-
-  if (!task) {
+  const close = () => void appWindow.close();
+  if (!task)
     return (
-      <main className="confirm-window">
-        <div className="confirm-titlebar" data-tauri-drag-region>
-          <span>Carregando...</span>
-          <button onClick={closeWindow}><X size={14} /></button>
-        </div>
-        <div className="confirm-empty">
-          Buscando detalhes do download...
-        </div>
+      <main className="download-window">
+        <div className="window-loading">Carregando...</div>
       </main>
     );
-  }
-
   return (
-    <main className="confirm-window">
-      <div className="confirm-titlebar" data-tauri-drag-region>
-        <span>Download Concluído</span>
-        <button onClick={closeWindow}><X size={14} /></button>
-      </div>
-
-      <section className="confirm-body xdm-confirm" style={{ gap: "8px" }}>
-        {/* Sumário do Arquivo */}
-        <div className="confirm-summary">
+    <main className="download-window complete-compact">
+      <header className="download-window-title success" data-tauri-drag-region>
+        <span>
+          <CheckCircle2 />
+          Download concluído
+        </span>
+        <button onClick={close}>
+          <X />
+        </button>
+      </header>
+      <section className="download-window-content">
+        <div className="complete-file">
           <FileIcon extension={task.extension} />
           <div>
-            <strong title={task.fileName}>{task.fileName}</strong>
-            <span title={task.finalPath}>{task.finalPath}</span>
+            <strong>{task.fileName}</strong>
+            <span>
+              <FolderOpen />
+              Salvo em <b>{task.finalPath}</b>
+            </span>
+            <span>
+              <FileText />
+              Tamanho final <b>{bytes(task.fileSize)}</b>
+            </span>
+            <span>
+              <CheckCircle2 />
+              Status <b>Concluído</b>
+            </span>
+            {extraction && (
+              <span
+                className={
+                  extraction.startsWith("Erro") ? "extraction-error" : ""
+                }
+              >
+                <PackageCheck />
+                Extração <b>{extraction}</b>
+              </span>
+            )}
           </div>
         </div>
-
-        {/* Opção Não Mostrar Novamente */}
-        <div className="confirm-fields" style={{ display: "flex", alignItems: "center", marginTop: "12px" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#aab2a4", fontSize: "11px", cursor: "pointer", userSelect: "none" }}>
-            <input
-              type="checkbox"
-              checked={dontShowAgain}
-              onChange={e => handleDontShowAgainChange(e.target.checked)}
-              style={{ cursor: "pointer", width: "14px", height: "14px", accentColor: "#d9ad55" }}
-            />
-            Não mostrar novamente esta janela ao terminar
-          </label>
-        </div>
-
-        {/* Ações */}
-        <footer>
-          <div style={{ display: "flex", gap: "6px", marginLeft: "auto" }}>
-            <button className="accent" onClick={handleOpenFolder}>Abrir pasta</button>
-            <button onClick={handleOpenFile}>Abrir arquivo</button>
-          </div>
-        </footer>
       </section>
+      <footer className="download-window-actions complete-actions">
+        <button
+          className="primary"
+          onClick={() => void service.openFile(task.finalPath)}
+        >
+          <FileText />
+          Abrir arquivo
+        </button>
+        <button
+          className="primary"
+          onClick={() => void service.revealInFolder(task.finalPath)}
+        >
+          <FolderOpen />
+          Abrir pasta
+        </button>
+        <button onClick={close}>
+          <X />
+          Fechar
+        </button>
+      </footer>
     </main>
   );
 }

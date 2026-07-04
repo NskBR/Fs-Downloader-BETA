@@ -392,6 +392,93 @@
   text-decoration: underline;
   opacity: 0.85;
 }
+.custom-category-editor {
+  width: 100%;
+}
+.category-create-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(190px, 1fr) auto;
+  width: 100%;
+  gap: 8px;
+  margin-top: 5px;
+}
+.category-create-row input {
+  min-width: 0;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text);
+  background: #0b100d;
+  outline: none;
+}
+.category-create-row input:focus {
+  border-color: #4da6ff;
+}
+.category-create-row button {
+  display: flex;
+  height: 30px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #3d78a7;
+  border-radius: 4px;
+  color: #ddecfa;
+  background: #174463;
+}
+.category-create-row button:disabled {
+  opacity: 0.45;
+}
+.category-create-row button svg,
+.custom-category-list svg {
+  width: 14px;
+}
+.custom-category-list {
+  display: grid;
+  width: 100%;
+  gap: 5px;
+  margin-top: 8px;
+}
+.custom-category-list > p {
+  padding: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+}
+.custom-category-list article {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 30px;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #0b100d;
+}
+.custom-category-list article > svg {
+  color: #d6a84d;
+}
+.custom-category-list strong,
+.custom-category-list span {
+  display: block;
+}
+.custom-category-list strong {
+  font-size: 12px;
+}
+.custom-category-list span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.custom-category-list article > button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  color: #ed716b;
+  background: transparent;
+}
 .help-overlay {
   position: fixed;
   inset: 0;
@@ -527,7 +614,9 @@
   color: #8896a6;
 }
 [data-theme="light"] .setting-item select,
-[data-theme="light"] .path-display {
+[data-theme="light"] .path-display,
+[data-theme="light"] .category-create-row input,
+[data-theme="light"] .custom-category-list article {
   color: #263244;
   background: #fff;
   border-color: #ccc;
@@ -540,7 +629,8 @@
 }
 
 /* Scrollbar & native color-scheme */
-:root, [data-theme="midnight"] {
+:root,
+[data-theme="midnight"] {
   color-scheme: dark;
 }
 :root[data-theme="light"] {

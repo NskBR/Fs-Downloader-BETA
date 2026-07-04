@@ -74,7 +74,15 @@ function shouldInterceptHeaders(info) {
       const parts = value.split(";");
       for (const part of parts) {
         const trimmed = part.trim();
-        if (trimmed.toLowerCase().startsWith("filename=")) {
+        if (trimmed.toLowerCase().startsWith("filename*=")) {
+          const encoded = trimmed.substring(10).trim().replace(/^['"]|['"]$/g, "");
+          const value = encoded.includes("''") ? encoded.split("''").slice(1).join("''") : encoded;
+          try {
+            filename = decodeURIComponent(value);
+          } catch {
+            filename = value;
+          }
+        } else if (trimmed.toLowerCase().startsWith("filename=")) {
           filename = trimmed.substring(9).replace(/['"]/g, "").trim();
         }
       }
@@ -130,21 +138,8 @@ function cookiesFor(url) {
   }));
 }
 
-const sentUrls = new Map();
-
 async function sendToApp(download) {
   const url = download.finalUrl || download.url;
-  
-  // Deduplicate requests for the same URL within 2 seconds
-  const now = Date.now();
-  if (sentUrls.has(url) && now - sentUrls.get(url) < 2000) {
-    console.log("Ignored duplicate request for URL:", url);
-    return;
-  }
-  sentUrls.set(url, now);
-  setTimeout(() => {
-    if (sentUrls.get(url) === now) sentUrls.delete(url);
-  }, 5000);
 
   const observed = recentHeaders.get(url) || {};
   const cookie = await cookiesFor(url);

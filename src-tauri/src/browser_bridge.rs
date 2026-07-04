@@ -212,8 +212,10 @@ async fn sync(State(state): State<BridgeState>) -> impl IntoResponse {
             enabled: true,
             token: state.bridge.token.clone(),
             file_exts: vec![
-                ".ZIP", ".RAR", ".7Z", ".TAR", ".GZ", ".EXE", ".MSI", ".PDF", ".DOC", ".DOCX",
-                ".XLS", ".XLSX", ".MP3", ".WAV", ".FLAC", ".MP4", ".MKV", ".AVI", ".ISO", ".BIN",
+                ".JPG", ".JPEG", ".PNG", ".WEBP", ".GIF", ".MP4", ".MKV", ".MOV", ".AVI", ".WEBM",
+                ".MP3", ".WAV", ".FLAC", ".OGG", ".PDF", ".DOC", ".DOCX", ".XLS", ".XLSX", ".PPTX",
+                ".TXT", ".ZIP", ".RAR", ".7Z", ".TAR", ".GZ", ".EXE", ".MSI", ".APK", ".BAT",
+                ".TORRENT", ".ISO", ".BIN",
             ],
             blocked_hosts: vec![],
         }),
