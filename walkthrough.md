@@ -1,6 +1,6 @@
-# Walkthrough: Otimização de Colunas, Redução de Espaço Vazio e Centralização de Status
+# Walkthrough: Otimização de Colunas, Redução de Espaço Vazio, Centralização de Status e Correções de UI
 
-Ajustamos o comportamento de redimensionamento da tabela para aproveitar melhor a largura do aplicativo, além de centralizar as informações da coluna de Status para um visual mais arejado.
+Ajustamos o comportamento de redimensionamento da tabela para aproveitar melhor a largura do aplicativo, centralizamos as informações da coluna de Status, reduzimos os espaços ociosos na tela de conclusão de download e corrigimos as coordenadas do menu de contexto para evitar cortes.
 
 ---
 
@@ -47,19 +47,29 @@ Ajustamos o comportamento de redimensionamento da tabela para aproveitar melhor 
 - A janela de **Progresso** exibe bytes recebidos, velocidade de rede, tempo estimado (ETA) e o estado real da tarefa (`verificando`, `baixando`, `montando` ou `extraindo`).
 - A janela de **Conclusão** exibe o destino final e atalhos rápidos para abrir o arquivo ou sua pasta.
 
-### 8. Descompressão Automática Segura (ZIP e 7z)
+### 8. Refinamento Visual e Correção dos Botões Cortados na Conclusão
+- **Modificados:** [CompletePage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/CompletePage.tsx) e [download-windows.css](file:///C:/Users/skell/Documents/Projeto/src/styles/download-windows.css)
+- **Status Removido:** Removida a linha redundante de "Status Concluído", pois a própria janela e o ícone de check no cabeçalho já expressam essa informação.
+- **Redução de Espaços:** Criada a classe CSS `.complete-compact` no arquivo `download-windows.css` para aplicar a mesma redução de paddings, margens e tamanhos que havia na janela de confirmação/progresso. Os paddings de topo e base foram reduzidos, e os espaçamentos entre linhas diminuíram de `7px` para `4px`.
+- **Botões Ajustados:** Com o encolhimento do conteúdo e a diminuição da altura dos botões inferiores para `32px`, todos os elementos de ação ("Abrir arquivo", "Abrir pasta" e "Fechar") agora cabem com bastante folga na janela e não são cortados.
+
+### 9. Abertura do Menu de Contexto na Posição Exata do Clique do Mouse
+- **Modificado:** [DownloadsPage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/DownloadsPage.tsx)
+- **Melhoria:** O menu de contexto foi configurado para sempre abrir na posição exata das coordenadas de clique do mouse (`clientX` e `clientY`), sem qualquer ajuste de limites que pudesse deslocar o menu para cima de outros arquivos da lista. O menu agora flutua livremente sobre a tabela.
+
+### 10. Descompressão Automática Segura (ZIP e 7z)
 - **Modificados:** `engine.rs`, `extraction.rs`, `runtime.rs` e `lib.rs`
 - Adicionado suporte no backend em Rust para descompactação automática de arquivos `.zip` e `.7z` (inclusive protegidos por senha) logo após a conclusão do download.
 - As senhas fornecidas pelo usuário são armazenadas estritamente em memória durante a execução do download para garantir a máxima segurança, sendo apagadas logo em seguida.
 - Implementadas checagens de segurança contra ataques de caminhos inseguros (`zip slip`), sobrescrita acidental e taxas de expansão abusivas.
 
-### 9. Categorias Personalizadas e Validações
+### 11. Categorias Personalizadas e Validações
 - **Modificados:** `SettingsPage.tsx`, `categories.ts`, `folderService.ts` e `engine.rs`
 - O usuário agora pode cadastrar categorias personalizadas em **Configurações > Categorias**.
 - O sistema de organização cria subpastas automaticamente com base na categoria sugerida ou selecionada.
 - O backend em Rust e o frontend em React realizam validações rígidas de caracteres para impedir nomes com caracteres especiais perigosos ou separadores de pasta (`/`, `\`, `..`).
 
-### 10. Resiliência do Navegador (Extração UTF-8)
+### 12. Resiliência do Navegador (Extração UTF-8)
 - **Modificado:** `background.js` (Extensão)
 - Adicionado suporte completo à RFC 5987 para leitura de nomes de arquivos codificados em UTF-8 no cabeçalho `Content-Disposition` (como `filename*=utf-8''...`), garantindo que acentos e caracteres internacionais sejam extraídos perfeitamente.
 

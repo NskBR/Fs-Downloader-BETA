@@ -221,24 +221,9 @@ export function DownloadsPage({
 
   const handleContextMenu = (e: React.MouseEvent, item: DownloadTask) => {
     e.preventDefault();
-    const menuHeight = 220;
-    const menuWidth = 180;
-    
-    let y = e.clientY;
-    let x = e.clientX;
-    
-    if (y + menuHeight > window.innerHeight) {
-      y = window.innerHeight - menuHeight - 10;
-      if (y < 0) y = 0;
-    }
-    if (x + menuWidth > window.innerWidth) {
-      x = window.innerWidth - menuWidth - 10;
-      if (x < 0) x = 0;
-    }
-
     setContextMenu({
-      x,
-      y,
+      x: e.clientX,
+      y: e.clientY,
       downloadId: item.id,
       status: item.status,
       filePath: item.finalPath,
