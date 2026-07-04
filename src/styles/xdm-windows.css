@@ -1,0 +1,238 @@
+/* Estilos adicionais para as janelas Standalone estilo XDM */
+
+.xdm-window {
+  width: 100vw;
+  height: 100vh;
+  background-color: #1a1d24;
+  color: #e3e6ec;
+  font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #2e3440;
+  box-sizing: border-box;
+}
+
+.xdm-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  background-color: #15181e;
+  padding: 0 10px;
+  user-select: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: #a0a6b2;
+  border-bottom: 1px solid #252a35;
+}
+
+.xdm-titlebar-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 80%;
+  cursor: default;
+}
+
+.xdm-titlebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.xdm-titlebar-btn {
+  background: transparent;
+  border: none;
+  color: #a0a6b2;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.xdm-titlebar-btn:hover {
+  background-color: #2b303c;
+  color: #ffffff;
+}
+
+.xdm-titlebar-btn.close:hover {
+  background-color: #bf616a;
+  color: #ffffff;
+}
+
+.xdm-body {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+  justify-content: space-between;
+}
+
+.xdm-info-section {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.xdm-file-icon-wrapper {
+  background-color: #252a35;
+  border: 1px solid #2e3440;
+  border-radius: 8px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.xdm-file-icon-wrapper svg {
+  width: 32px;
+  height: 32px;
+}
+
+.xdm-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.xdm-filename {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xdm-url {
+  font-size: 11px;
+  color: #818896;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xdm-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.xdm-progress-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #cdd3de;
+  font-weight: 500;
+}
+
+.xdm-progress-speed {
+  font-weight: 700;
+  color: #d08770; /* Cobre / Amber */
+}
+
+.xdm-progress-bar-wrapper {
+  height: 8px;
+  background-color: #252a35;
+  border-radius: 4px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.xdm-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #d08770 0%, #b48ead 100%); /* Cobre a roxo leve */
+  border-radius: 4px;
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.xdm-progress-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #818896;
+}
+
+.xdm-actions-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #252a35;
+  padding-top: 12px;
+}
+
+.xdm-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #818896;
+  cursor: pointer;
+  user-select: none;
+}
+
+.xdm-checkbox-label input {
+  accent-color: #d08770;
+  cursor: pointer;
+}
+
+.xdm-btn-group {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex: 1;
+}
+
+.xdm-btn {
+  background-color: #252a35;
+  color: #e3e6ec;
+  border: 1px solid #2e3440;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.xdm-btn:hover:not(:disabled) {
+  background-color: #2e3440;
+  border-color: #4c566a;
+  color: #ffffff;
+}
+
+.xdm-btn:active:not(:disabled) {
+  background-color: #1f232a;
+}
+
+.xdm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.xdm-btn.accent {
+  background-color: #d08770;
+  border-color: #d08770;
+  color: #1a1d24;
+}
+
+.xdm-btn.accent:hover:not(:disabled) {
+  background-color: #e5987e;
+  border-color: #e5987e;
+  color: #111319;
+}

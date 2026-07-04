@@ -1,0 +1,27 @@
+# SF Downloader Integration
+
+Integração Manifest V3 para Chromium (Chrome, Edge, Brave e Opera) e Firefox.
+
+## Funcionamento
+
+- Sincroniza com o aplicativo em `http://127.0.0.1:17831`.
+- Intercepta arquivos em `downloads.onDeterminingFilename`.
+- Cancela e remove o registro nativo do navegador antes de encaminhar ao app.
+- Envia URL final, nome, tamanho, MIME, referer e headers necessários.
+- Cookies e headers ficam somente na memória do núcleo Rust; não são gravados em SQLite ou `localStorage`.
+- Usa `sfdownloader://` apenas como fallback quando a ponte local não está disponível.
+
+O endpoint local exige um token aleatório criado a cada execução do aplicativo. A extensão obtém esse token pelo endpoint de sincronização.
+
+## Build
+
+```powershell
+npm run extension:build
+```
+
+Carregue como extensão descompactada:
+
+- Chromium: `browser-extension/dist/chromium`
+- Firefox: `browser-extension/dist/firefox`
+
+Após reconstruir, recarregue a extensão na página de extensões do navegador.

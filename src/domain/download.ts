@@ -1,0 +1,3 @@
+export type DownloadStatus = "pending" | "downloading" | "paused" | "completed" | "failed" | "cancelled";
+export interface DownloadTask { id:string; fileName:string; fileSize:number|null; originalUrl:string; currentUrl:string; savePath:string; tempPath:string; finalPath:string; status:DownloadStatus; mimeType:string|null; extension:string|null; supportsRange:boolean; etag:string|null; lastModified:string|null; totalDownloaded:number; speedCurrent:number; speedAverage:number; createdAt:string; updatedAt:string; completedAt:string|null; }
+export interface DownloadProgress { id:string; downloaded:number; total:number|null; speed:number; status:DownloadStatus; error:string|null; }
