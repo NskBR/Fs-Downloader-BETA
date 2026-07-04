@@ -1,26 +1,103 @@
-import { ArrowLeft, Check, Download, FolderCog, FolderOpen, Gauge, Network, Palette, Save, Settings2, SlidersHorizontal } from "lucide-react";
+import { Check, FolderOpen, Languages, Save } from "lucide-react";
 import { useState } from "react";
-import type { AppSettings, AppTheme, SpeedUnit } from "../domain/settings";
-import { downloadCategories } from "../domain/categories";
-import { chooseDownloadFolder, createCategoryFolders } from "../services/folderService";
-import { Toggle } from "../components/ui/Toggle";
+import type { AppLanguage, AppSettings } from "../domain/settings";
+import {
+  chooseDownloadFolder,
+  createCategoryFolders,
+} from "../services/folderService";
 
-interface Props { settings:AppSettings; onSave:(settings:AppSettings)=>void; saved:boolean; onBack:()=>void; }
-type Topic="general"|"downloads"|"organization"|"appearance";
-const topics=[{id:"general" as Topic,label:"Geral",icon:Settings2},{id:"downloads" as Topic,label:"Downloads",icon:Download},{id:"organization" as Topic,label:"Organização",icon:FolderCog},{id:"appearance" as Topic,label:"Aparência",icon:Palette}];
+interface Props {
+  settings: AppSettings;
+  onSave: (settings: AppSettings) => void;
+  saved: boolean;
+  onBack: () => void;
+}
 
-export function SettingsPage({settings,onSave,saved,onBack}:Props){
-  const[draft,setDraft]=useState(settings);const[busy,setBusy]=useState(false);const[error,setError]=useState<string|null>(null);const[topic,setTopic]=useState<Topic>(()=>(localStorage.getItem("sf-downloader.settings-topic") as Topic)||"general");
-  const update=<K extends keyof AppSettings>(key:K,value:AppSettings[K])=>setDraft(current=>({...current,[key]:value}));
-  const chooseTopic=(next:Topic)=>{setTopic(next);localStorage.setItem("sf-downloader.settings-topic",next)};
-  const selectFolder=async()=>{setError(null);try{const folder=await chooseDownloadFolder();if(folder)update("rootDownloadFolder",folder)}catch{setError("Não foi possível abrir o seletor de pastas.")}};
-  const submit=async()=>{setBusy(true);setError(null);try{if(!draft.rootDownloadFolder.trim())throw new Error("Escolha a pasta principal de downloads.");if(draft.autoOrganizeEnabled)await createCategoryFolders(draft.rootDownloadFolder);onSave(draft)}catch(cause){setError(cause instanceof Error?cause.message:"Não foi possível salvar as configurações.")}finally{setBusy(false)}};
-  return <section className="settings-hub"><header className="settings-header"><div className="settings-heading"><button className="settings-back" onClick={onBack} title="Voltar"><ArrowLeft/></button><div><h1>Configurações</h1><p>Personalize o SF Downloader.</p></div></div><button className="primary-button" disabled={busy} onClick={submit}>{saved?<Check/>:<Save/>}{busy?"Salvando...":saved?"Salvo":"Salvar alterações"}</button></header>{error&&<div className="error-banner">{error}</div>}
-    <div className="settings-layout"><nav className="settings-topics">{topics.map(({id,label,icon:Icon})=><button className={topic===id?"active":""} key={id} onClick={()=>chooseTopic(id)}><Icon/><span>{label}</span></button>)}</nav><div className="settings-content">
-      {topic==="general"&&<><div className="topic-heading"><h2>Preferências gerais</h2><p>Destino padrão e comportamento básico.</p></div><article className="option-group"><div className="option-title"><FolderOpen/><div><strong>Pasta principal</strong><span>Todos os arquivos serão armazenados a partir deste local.</span></div></div><div className="folder-picker"><div className="path-display">{draft.rootDownloadFolder||"Nenhuma pasta selecionada"}</div><button className="secondary-button" onClick={selectFolder}>Escolher pasta</button></div></article><article className="option-group option-row"><div><strong>Organização automática</strong><span>Classifica downloads automaticamente por formato.</span></div><Toggle label="Organização automática" checked={draft.autoOrganizeEnabled} onChange={value=>update("autoOrganizeEnabled",value)}/></article></>}
-      {topic==="downloads"&&<><div className="topic-heading"><h2>Opções de download</h2><p>Conexões, fila e limites de velocidade.</p></div><div className="option-columns"><article className="option-group"><div className="option-title"><Gauge/><strong>Velocidade base</strong></div><label className="field-label">Velocidade da conexão</label><div className="joined-input"><input type="number" min=".1" value={draft.defaultSpeedValue} onChange={event=>update("defaultSpeedValue",Math.max(.1,Number(event.target.value)))}/><select value={draft.defaultSpeedUnit} onChange={event=>update("defaultSpeedUnit",event.target.value as SpeedUnit)}><option>Mbps</option><option>MB/s</option></select></div></article><article className="option-group"><div className="option-title"><Network/><strong>Conexões por arquivo</strong></div><select className="full-select" value={draft.maxConnectionsPerDownload} onChange={event=>update("maxConnectionsPerDownload",Number(event.target.value))}>{[1,2,4,8,16,32].map(value=><option key={value}>{value}</option>)}</select></article><article className="option-group"><div className="option-title"><SlidersHorizontal/><strong>Downloads simultâneos</strong></div><select className="full-select" value={draft.maxParallelDownloads} onChange={event=>update("maxParallelDownloads",Number(event.target.value))}>{[1,2,3,4,5,8,10].map(value=><option key={value}>{value}</option>)}</select></article><article className="option-group"><div className="option-title"><Gauge/><strong>Limite por download</strong></div><label className="field-label">MB/s (0 = sem limite)</label><input className="full-select" type="number" min="0" step="0.5" value={draft.speedLimitDownloadMbps} onChange={event=>update("speedLimitDownloadMbps",Math.max(0,Number(event.target.value)))}/></article></div></>}
-      {topic==="organization"&&<><div className="topic-heading"><h2>Organização de arquivos</h2><p>Categorias e extensões usadas pelo classificador.</p></div><div className="settings-category-grid">{downloadCategories.map(({name,extensions,icon:Icon,color})=><article key={name}><i style={{color,background:`${color}18`}}><Icon/></i><div><strong>{name}</strong><span>{extensions.length?extensions.map(value=>`.${value}`).join(", "):"Arquivos não classificados"}</span></div></article>)}</div></>}
-      {topic==="appearance"&&<><div className="topic-heading"><h2>Aparência do aplicativo</h2><p>Tema e tamanho da interface, aplicados após salvar.</p></div><article className="option-group option-row"><div><strong>Escala da interface</strong><span>Aumenta textos, ícones e controles proporcionalmente.</span></div><select className="full-select scale-select" value={draft.uiScale} onChange={event=>update("uiScale",Number(event.target.value))}>{[[.9,"90% — menor"],[1,"100% — padrão"],[1.1,"110%"],[1.25,"125% — confortável"],[1.5,"150% — grande"]].map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></article><div className="theme-grid">{([{id:"midnight",label:"Midnight",colors:["#0b1421","#5662d4"]},{id:"graphite",label:"Graphite",colors:["#16181d","#696f7a"]},{id:"light",label:"Claro",colors:["#f4f6fa","#5363d6"]}] as {id:AppTheme;label:string;colors:string[]}[]).map(theme=><button key={theme.id} className={draft.theme===theme.id?"active":""} onClick={()=>update("theme",theme.id)}><span style={{background:`linear-gradient(135deg,${theme.colors.join(",")})`}}/><strong>{theme.label}</strong>{draft.theme===theme.id&&<Check/>}</button>)}</div></>}
-    </div></div>
-  </section>
+export function SettingsPage({ settings, onSave, saved }: Props) {
+  const [draft, setDraft] = useState(settings),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState<string | null>(null);
+  const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) =>
+    setDraft((current) => ({ ...current, [key]: value }));
+  const selectFolder = async () => {
+    setError(null);
+    try {
+      const folder = await chooseDownloadFolder();
+      if (folder) update("rootDownloadFolder", folder);
+    } catch {
+      setError("Não foi possível abrir o seletor de pastas.");
+    }
+  };
+  const submit = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      if (!draft.rootDownloadFolder.trim())
+        throw new Error("Escolha a pasta principal de downloads.");
+      if (draft.autoOrganizeEnabled)
+        await createCategoryFolders(draft.rootDownloadFolder);
+      onSave({ ...draft, theme: settings.theme });
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Não foi possível salvar as configurações.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="simple-settings">
+      <header>
+        <div>
+          <span>PREFERÊNCIAS</span>
+          <h1>Configurações</h1>
+          <p>Somente o essencial para usar o SF Downloader.</p>
+        </div>
+        <button className="primary-button" disabled={busy} onClick={submit}>
+          {saved ? <Check /> : <Save />}
+          {busy ? "Salvando..." : saved ? "Salvo" : "Salvar"}
+        </button>
+      </header>
+      {error && <div className="error-banner">{error}</div>}
+      <div className="simple-settings-list">
+        <article>
+          <i>
+            <Languages />
+          </i>
+          <div className="setting-copy">
+            <strong>Idioma da interface</strong>
+            <span>Define o idioma usado nos textos do aplicativo.</span>
+          </div>
+          <select
+            value={draft.language}
+            onChange={(event) =>
+              update("language", event.target.value as AppLanguage)
+            }
+          >
+            <option value="pt-BR">Português (Brasil)</option>
+            <option value="en-US">English (em preparação)</option>
+          </select>
+        </article>
+        <article>
+          <i>
+            <FolderOpen />
+          </i>
+          <div className="setting-copy">
+            <strong>Local padrão dos arquivos</strong>
+            <span>
+              Downloads e categorias serão armazenados a partir desta pasta.
+            </span>
+          </div>
+          <div className="compact-folder-picker">
+            <span title={draft.rootDownloadFolder}>
+              {draft.rootDownloadFolder || "Nenhuma pasta selecionada"}
+            </span>
+            <button onClick={selectFolder}>Escolher pasta</button>
+          </div>
+        </article>
+      </div>
+    </section>
+  );
 }

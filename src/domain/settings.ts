@@ -1,5 +1,6 @@
 export type SpeedUnit = "Mbps" | "MB/s";
-export type AppTheme = "midnight" | "graphite" | "light";
+export type AppTheme = "system" | "midnight" | "graphite" | "light";
+export type AppLanguage = "pt-BR" | "en-US";
 
 export interface AppSettings {
   rootDownloadFolder: string;
@@ -11,6 +12,7 @@ export interface AppSettings {
   speedLimitDownloadMbps: number;
   theme: AppTheme;
   uiScale: number;
+  language: AppLanguage;
 }
 
 export const defaultSettings: AppSettings = {
@@ -23,4 +25,5 @@ export const defaultSettings: AppSettings = {
   speedLimitDownloadMbps: 0,
   theme: "midnight",
   uiScale: 1.1,
+  language: "pt-BR",
 };
