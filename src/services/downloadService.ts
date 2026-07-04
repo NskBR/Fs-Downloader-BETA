@@ -41,6 +41,8 @@ export const openDownloadConfirmation = () =>
   invoke<void>("open_download_confirmation");
 export const openProgressWindow = (id: string) =>
   invoke<void>("open_progress_window", { id });
+export const openCompleteWindow = (id: string) =>
+  invoke<void>("open_complete_window", { id });
 export const startDownload = (
   url: string,
   settings: AppSettings,

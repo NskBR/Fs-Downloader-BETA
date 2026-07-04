@@ -395,7 +395,13 @@ export function DownloadsPage({
       ...row.parentElement!.querySelectorAll(".reference-row"),
     ].indexOf(row);
     const item = visible[index];
-    if (item) void service.openProgressWindow(item.id);
+    if (item) {
+      if (item.status === "completed") {
+        void service.openCompleteWindow(item.id);
+      } else {
+        void service.openProgressWindow(item.id);
+      }
+    }
   };
 
   return (
