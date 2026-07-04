@@ -75,10 +75,10 @@ export function DownloadsPage({
   const [columns, setColumns] = useState<number[]>(() => {
     try {
       return JSON.parse(
-        localStorage.getItem("sf-downloader.columns-v3") || "[320,100]",
+        localStorage.getItem("sf-downloader.columns-v4") || "[110,100]",
       );
     } catch {
-      return [320, 100];
+      return [110, 100];
     }
   });
   const [contextMenu, setContextMenu] = useState<{
@@ -131,8 +131,8 @@ export function DownloadsPage({
   };
 
   const getColWidth = (col: string) => {
-    if (col === "name") return "var(--name-width)";
-    if (col === "date") return "minmax(100px, 1fr)";
+    if (col === "name") return "minmax(150px, 1fr)";
+    if (col === "date") return "var(--date-width)";
     if (col === "size") return "var(--size-width)";
     if (col === "status") return "82px";
     return "";
@@ -140,7 +140,7 @@ export function DownloadsPage({
 
   const tableGridStyle = {
     gridTemplateColumns: `25px 38px ${colOrder.map(getColWidth).join(" ")}`,
-    "--name-width": `${columns[0]}px`,
+    "--date-width": `${columns[0]}px`,
     "--size-width": `${columns[1]}px`,
   } as CSSProperties;
 
@@ -182,7 +182,7 @@ export function DownloadsPage({
     return () => window.removeEventListener("sf-download-request", receive);
   }, [settings.rootDownloadFolder]);
   useEffect(() => {
-    localStorage.setItem("sf-downloader.columns-v3", JSON.stringify(columns));
+    localStorage.setItem("sf-downloader.columns-v4", JSON.stringify(columns));
   }, [columns]);
 
   useEffect(() => {
@@ -193,9 +193,9 @@ export function DownloadsPage({
         old.map((value, index) =>
           index === current.index
             ? Math.min(
-                index === 0 ? 600 : 180,
+                index === 0 ? 250 : 180,
                 Math.max(
-                  index === 0 ? 150 : 75,
+                  index === 0 ? 90 : 75,
                   current.width + event.clientX - current.x,
                 ),
               )
@@ -427,7 +427,7 @@ export function DownloadsPage({
             if (col === "name") return (
               <span
                 key="name"
-                className="resizable col-name"
+                className="col-name"
                 draggable
                 onDragStart={(e) => handleDragStart(e, idx)}
                 onDragOver={handleDragOver}
@@ -435,6 +435,19 @@ export function DownloadsPage({
                 onDragEnd={handleDragEnd}
               >
                 {heading("name", "Nome")}
+              </span>
+            );
+            if (col === "date") return (
+              <span
+                key="date"
+                className="resizable col-date"
+                draggable
+                onDragStart={(e) => handleDragStart(e, idx)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragEnd={handleDragEnd}
+              >
+                {heading("date", "Data")}
                 <i
                   onMouseDown={(event) =>
                     (drag.current = {
@@ -444,19 +457,6 @@ export function DownloadsPage({
                     })
                   }
                 />
-              </span>
-            );
-            if (col === "date") return (
-              <span
-                key="date"
-                className="col-date"
-                draggable
-                onDragStart={(e) => handleDragStart(e, idx)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, idx)}
-                onDragEnd={handleDragEnd}
-              >
-                {heading("date", "Data")}
               </span>
             );
             if (col === "size") return (

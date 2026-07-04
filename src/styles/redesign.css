@@ -717,12 +717,14 @@
   outline: none;
 }
 
-/* Center data and size columns, and add a vertical divider to size column */
+/* Center status, data and size columns, and add a vertical divider to size column */
+.col-status .sort-heading,
 .col-date .sort-heading,
 .col-size .sort-heading {
   width: 100%;
   justify-content: center;
 }
+.col-status,
 .col-date,
 .col-size {
   display: flex !important;
