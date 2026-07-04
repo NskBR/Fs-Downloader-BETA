@@ -44,10 +44,32 @@ pub fn reveal_in_folder(path: String) -> Result<(), String> {
         return Err("Caminho do arquivo indisponível.".into());
     }
     #[cfg(target_os = "windows")]
-    std::process::Command::new("explorer.exe")
-        .arg(format!("/select,{path}"))
-        .spawn()
-        .map_err(|error| format!("Não foi possível abrir a pasta: {error}"))?;
+    {
+        let normalized = path.replace('/', "\\");
+        let p = std::path::Path::new(&normalized);
+        if p.is_file() {
+            std::process::Command::new("explorer.exe")
+                .arg("/select,")
+                .arg(&normalized)
+                .spawn()
+                .map_err(|error| format!("Não foi possível abrir a pasta: {error}"))?;
+        } else if p.is_dir() {
+            std::process::Command::new("explorer.exe")
+                .arg(&normalized)
+                .spawn()
+                .map_err(|error| format!("Não foi possível abrir a pasta: {error}"))?;
+        } else if let Some(parent) = p.parent() {
+            if !parent.exists() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            std::process::Command::new("explorer.exe")
+                .arg(parent)
+                .spawn()
+                .map_err(|error| format!("Não foi possível abrir a pasta: {error}"))?;
+        } else {
+            return Err("Pasta de destino indisponível.".into());
+        }
+    }
     #[cfg(target_os = "linux")]
     std::process::Command::new("xdg-open")
         .arg(
@@ -67,12 +89,13 @@ pub fn reveal_in_folder(path: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn open_file(path: String) -> Result<(), String> {
-    if !std::path::Path::new(&path).exists() {
-        return Err("O arquivo não existe mais neste local.".into());
+    let normalized = path.replace('/', "\\");
+    if !std::path::Path::new(&normalized).exists() {
+        return Err("Arquivo não encontrado no disco.".into());
     }
     #[cfg(target_os = "windows")]
     std::process::Command::new("cmd")
-        .args(["/C", "start", "", &path])
+        .args(["/C", "start", "", &normalized])
         .spawn()
         .map_err(|error| format!("Não foi possível abrir o arquivo: {error}"))?;
     #[cfg(target_os = "linux")]

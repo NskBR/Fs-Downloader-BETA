@@ -27,33 +27,7 @@ struct AdaptiveThrottle {
     permits: Arc<Semaphore>,
     concurrency: Arc<AtomicUsize>,
     cooldown_until: Arc<StdMutex<Instant>>,
-}
-
-#[derive(Clone)]
-struct BandwidthLimiter {
-    bytes_per_second: u64,
-    transferred: Arc<AtomicI64>,
-    started: Instant,
-}
-
-impl BandwidthLimiter {
-    fn new(bytes_per_second: i64) -> Self {
-        Self {
-            bytes_per_second: bytes_per_second.max(0) as u64,
-            transferred: Arc::new(AtomicI64::new(0)),
-            started: Instant::now(),
-        }
-    }
-    async fn consume(&self, bytes: usize) {
-        if self.bytes_per_second == 0 {
-            return;
-        }
-        let total = self.transferred.fetch_add(bytes as i64, Ordering::SeqCst) + bytes as i64;
-        let expected = Duration::from_secs_f64(total as f64 / self.bytes_per_second as f64);
-        if expected > self.started.elapsed() {
-            tokio::time::sleep(expected - self.started.elapsed()).await;
-        }
-    }
+    fallback_lock: Arc<AsyncMutex<()>>,
 }
 
 impl AdaptiveThrottle {
@@ -63,6 +37,7 @@ impl AdaptiveThrottle {
             permits: Arc::new(Semaphore::new(connections)),
             concurrency: Arc::new(AtomicUsize::new(connections)),
             cooldown_until: Arc::new(StdMutex::new(Instant::now())),
+            fallback_lock: Arc::new(AsyncMutex::new(())),
         }
     }
 
@@ -92,7 +67,7 @@ impl AdaptiveThrottle {
 use tauri::{AppHandle, Emitter};
 use tokio::{
     fs::{File, OpenOptions},
-    io::AsyncWriteExt,
+    io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
     sync::{Mutex as AsyncMutex, Semaphore},
 };
 
@@ -113,6 +88,7 @@ pub struct PreparedDownload {
 }
 
 pub async fn prepare_with_headers(
+    taken_paths: Vec<String>,
     url: &str,
     root: &str,
     auto_organize: bool,
@@ -179,8 +155,12 @@ pub async fn prepare_with_headers(
         .await
         .map_err(|error| format!("Não foi possível criar a pasta temporária: {error}"))?;
 
-    let final_path = available_path(&folder, &file_name);
-    let temp_path = temp_folder.join(format!("{}.part", file_name));
+    let final_path = available_path(&folder, &file_name, &taken_paths);
+    let temp_name = final_path
+        .file_name()
+        .and_then(|v| v.to_str())
+        .unwrap_or(&file_name);
+    let temp_path = temp_folder.join(format!("{}.part", temp_name));
 
     let size = response
         .content_length()
@@ -245,7 +225,7 @@ pub async fn prepare_resume(
     task: &DownloadTask,
     offset: i64,
     request_headers: HeaderMap,
-) -> Result<Response, String> {
+) -> Result<(Response, i64), String> {
     if offset < 0 || task.file_size.is_some_and(|size| offset > size) {
         return Err("O arquivo parcial possui um tamanho incompatível.".into());
     }
@@ -254,27 +234,36 @@ pub async fn prepare_resume(
         .redirect(reqwest::redirect::Policy::limited(10))
         .build()
         .map_err(|error| format!("Falha ao preparar conexão: {error}"))?;
-    let mut request = client.get(&task.current_url).headers(request_headers);
+    let mut request = client
+        .get(&task.current_url)
+        .headers(request_headers.clone());
     if offset > 0 {
         request = request.header(header::RANGE, format!("bytes={offset}-"));
-        if let Some(value) = task.etag.as_ref().or(task.last_modified.as_ref()) {
-            request = request.header(header::IF_RANGE, value);
-        }
     }
-    let response = request
+    let mut response = request
         .send()
         .await
         .map_err(|error| format!("Falha ao reconectar: {error}"))?;
+
     if offset > 0 && response.status() != reqwest::StatusCode::PARTIAL_CONTENT {
-        return Err(
-            "Este servidor não aceita retomada por HTTP Range. O arquivo parcial foi preservado."
-                .into(),
-        );
+        response = client
+            .get(&task.current_url)
+            .headers(minimal_range_headers(&request_headers))
+            .header(header::RANGE, format!("bytes={offset}-"))
+            .send()
+            .await
+            .map_err(|error| format!("Falha ao repetir a retomada: {error}"))?;
+    }
+
+    if offset > 0 && response.status() != reqwest::StatusCode::PARTIAL_CONTENT {
+        return Err(format!(
+            "O servidor recusou a retomada por HTTP Range (HTTP {}). O arquivo parcial foi preservado.",
+            response.status()
+        ));
     }
     if offset > 0 {
         validate_content_range(&response, offset, task.file_size, None)?;
-    }
-    if offset == 0 && !response.status().is_success() {
+    } else if !response.status().is_success() {
         return Err(format!(
             "O servidor respondeu com HTTP {}.",
             response.status()
@@ -291,18 +280,10 @@ pub async fn prepare_resume(
             return Err("O ETag mudou; a retomada foi bloqueada para evitar corrupção.".into());
         }
     }
-    if let (Some(expected), Some(received)) = (
-        &task.last_modified,
-        response
-            .headers()
-            .get(header::LAST_MODIFIED)
-            .and_then(|value| value.to_str().ok()),
-    ) {
-        if expected != received {
-            return Err("O arquivo remoto foi modificado; a retomada foi bloqueada.".into());
-        }
-    }
-    Ok(response)
+    // CDNs e links assinados frequentemente recalculam Last-Modified entre
+    // requisições. O valor é apenas informativo; a segurança da retomada vem
+    // de ETag forte (quando estável), Content-Range e tamanho total.
+    Ok((response, offset))
 }
 
 pub async fn run(
@@ -316,10 +297,6 @@ pub async fn run(
     let started = Instant::now();
     let result = transfer(&app, &database, &task, response, &control, started, offset).await;
     if let Err(error) = result {
-        let progress_label = format!("download-progress-{}", task.id);
-        if let Some(window) = tauri::Manager::get_webview_window(&app, &progress_label) {
-            let _ = window.close();
-        }
         let paused = control.was_paused();
         let cancelled = control.was_cancelled();
         let status = if paused {
@@ -390,10 +367,6 @@ pub async fn run_segmented(
     )
     .await
     {
-        let progress_label = format!("download-progress-{}", task.id);
-        if let Some(window) = tauri::Manager::get_webview_window(&app, &progress_label) {
-            let _ = window.close();
-        }
         let paused = control.was_paused();
         let cancelled = control.was_cancelled();
         let status = if paused {
@@ -443,6 +416,18 @@ async fn transfer_segmented(
     let total = task
         .file_size
         .ok_or_else(|| "Download segmentado exige tamanho conhecido.".to_string())?;
+    let part_existed = tokio::fs::metadata(&task.temp_path).await.is_ok();
+    let mut part = OpenOptions::new()
+        .create(true)
+        .read(true)
+        .write(true)
+        .open(&task.temp_path)
+        .await
+        .map_err(|error| format!("Não foi possível criar o arquivo parcial: {error}"))?;
+    part.set_len(total as u64)
+        .await
+        .map_err(|error| format!("Não foi possível reservar espaço para o arquivo: {error}"))?;
+
     let mut connection = database.connect()?;
     let mut plan = chunks::list(&connection, &task.id).map_err(|error| error.to_string())?;
     if plan.is_empty() {
@@ -453,13 +438,25 @@ async fn transfer_segmented(
         chunks::reset_active(&connection, &task.id).map_err(|error| error.to_string())?;
     }
     let mut initial = 0_i64;
+    let mut migrated_paths = Vec::new();
     for chunk in &mut plan {
-        let actual = tokio::fs::metadata(chunk_path(&task.temp_path, chunk.index))
+        let legacy_path = chunk_path(&task.temp_path, chunk.index);
+        let legacy_size = tokio::fs::metadata(&legacy_path)
             .await
             .ok()
             .and_then(|metadata| i64::try_from(metadata.len()).ok())
-            .unwrap_or(0)
-            .min(chunk.end_byte - chunk.start_byte + 1);
+            .unwrap_or(0);
+        let length = chunk.end_byte - chunk.start_byte + 1;
+        let actual = if legacy_size > 0 {
+            let actual = legacy_size.min(length);
+            migrate_legacy_chunk(&mut part, &legacy_path, chunk.start_byte, actual).await?;
+            migrated_paths.push(legacy_path);
+            actual
+        } else if part_existed {
+            chunk.downloaded_bytes.clamp(0, length)
+        } else {
+            0
+        };
         chunk.downloaded_bytes = actual;
         initial += actual;
         chunks::update_progress(
@@ -473,6 +470,12 @@ async fn transfer_segmented(
             },
         )
         .map_err(|error| error.to_string())?;
+    }
+    part.flush().await.map_err(|error| error.to_string())?;
+    part.sync_data().await.map_err(|error| error.to_string())?;
+    drop(part);
+    for path in migrated_paths {
+        let _ = tokio::fs::remove_file(path).await;
     }
     drop(connection);
     update_state(
@@ -493,7 +496,6 @@ async fn transfer_segmented(
         .map_err(|error| error.to_string())?;
     let mut workers = Vec::new();
     let throttle = AdaptiveThrottle::new(max_connections);
-    let bandwidth = BandwidthLimiter::new(task.speed_limit_download);
     let pending: VecDeque<_> = plan
         .clone()
         .into_iter()
@@ -503,17 +505,7 @@ async fn transfer_segmented(
     let queue = Arc::new(AsyncMutex::new(pending));
     let first_error = Arc::new(StdMutex::new(None::<String>));
     for _ in 0..worker_count {
-        let (
-            client,
-            database,
-            task,
-            control,
-            app,
-            downloaded,
-            throttle,
-            request_headers,
-            bandwidth,
-        ) = (
+        let (client, database, task, control, app, downloaded, throttle, request_headers) = (
             client.clone(),
             database.clone(),
             task.clone(),
@@ -522,7 +514,6 @@ async fn transfer_segmented(
             downloaded.clone(),
             throttle.clone(),
             request_headers.clone(),
-            bandwidth.clone(),
         );
         let queue = queue.clone();
         let first_error = first_error.clone();
@@ -545,7 +536,6 @@ async fn transfer_segmented(
                     started,
                     request_headers.clone(),
                     throttle.clone(),
-                    bandwidth.clone(),
                 )
                 .await
                 {
@@ -574,6 +564,26 @@ async fn transfer_segmented(
     }
     let failure = first_error.lock().ok().and_then(|mut error| error.take());
     if let Some(error) = failure {
+        if error.contains("recusou HTTP Range") && downloaded.load(Ordering::SeqCst) == 0 {
+            let response = client
+                .get(&task.current_url)
+                .headers(minimal_range_headers(&request_headers))
+                .send()
+                .await
+                .map_err(|fallback| {
+                    format!("Range recusado e o download simples falhou: {fallback}")
+                })?;
+            if !response.status().is_success() {
+                return Err(format!(
+                    "Range recusado e o servidor também recusou o download simples (HTTP {}).",
+                    response.status()
+                ));
+            }
+            if let Ok(connection) = database.connect() {
+                let _ = chunks::delete_plan(&connection, &task.id);
+            }
+            return transfer(app, database, task, response, control, started, 0).await;
+        }
         return Err(error);
     }
     if control.cancellation.is_cancelled() {
@@ -583,21 +593,20 @@ async fn transfer_segmented(
         let connection = database.connect()?;
         chunks::list(&connection, &task.id).map_err(|error| error.to_string())?
     };
-    let mut output = File::create(&task.temp_path)
+    if plan.iter().any(|chunk| {
+        chunk.downloaded_bytes != chunk.end_byte - chunk.start_byte + 1 || chunk.status != "done"
+    }) {
+        return Err(
+            "Nem todas as partes foram concluídas; o arquivo parcial foi preservado.".into(),
+        );
+    }
+    let output = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&task.temp_path)
         .await
         .map_err(|error| error.to_string())?;
-    for chunk in &plan {
-        let mut input = File::open(chunk_path(&task.temp_path, chunk.index))
-            .await
-            .map_err(|error| format!("Parte {} ausente: {error}", chunk.index))?;
-        let copied = tokio::io::copy(&mut input, &mut output)
-            .await
-            .map_err(|error| error.to_string())?;
-        if copied as i64 != chunk.end_byte - chunk.start_byte + 1 {
-            return Err(format!("Parte {} incompleta.", chunk.index));
-        }
-    }
-    output.flush().await.map_err(|error| error.to_string())?;
+    output.sync_all().await.map_err(|error| error.to_string())?;
     drop(output);
     tokio::fs::rename(&task.temp_path, &task.final_path)
         .await
@@ -650,23 +659,29 @@ async fn download_piece(
     started: Instant,
     request_headers: HeaderMap,
     throttle: AdaptiveThrottle,
-    bandwidth: BandwidthLimiter,
 ) -> Result<(), String> {
     let length = chunk.end_byte - chunk.start_byte + 1;
-    let path = chunk_path(&task.temp_path, chunk.index);
     for attempt in 0..MAX_CHUNK_ATTEMPTS {
         if control.cancellation.is_cancelled() {
             return Err("Download interrompido pelo usuário.".into());
         }
         let start = chunk.start_byte + chunk.downloaded_bytes;
-        let mut request = client
+        let headers = if attempt == 0 {
+            request_headers.clone()
+        } else {
+            minimal_range_headers(&request_headers)
+        };
+        let request = client
             .get(&task.current_url)
-            .headers(request_headers.clone())
+            .headers(headers)
+            .header(header::ACCEPT_ENCODING, "identity")
             .header(header::RANGE, format!("bytes={start}-{}", chunk.end_byte));
-        if let Some(value) = task.etag.as_ref().or(task.last_modified.as_ref()) {
-            request = request.header(header::IF_RANGE, value);
-        }
         throttle.wait().await;
+        let _single_connection = if attempt > 0 {
+            Some(throttle.fallback_lock.lock().await)
+        } else {
+            None
+        };
         let permit = throttle
             .permits
             .acquire()
@@ -699,20 +714,29 @@ async fn download_piece(
             continue;
         }
         if status != reqwest::StatusCode::PARTIAL_CONTENT {
-            return Err(format!("Servidor recusou HTTP Range ({status})"));
+            drop(permit);
+            if attempt < 2 {
+                throttle.limit(Duration::from_millis(500));
+                tokio::time::sleep(retry_delay(None, attempt, chunk.index)).await;
+                continue;
+            }
+            return Err(format!(
+                "Servidor recusou HTTP Range ({status}) mesmo após tentativas com headers mínimos e menos conexões."
+            ));
         }
         let response_length =
             validate_content_range(&response, start, task.file_size, Some(chunk.end_byte))?;
         validate_remote_identity(&response, &task)?;
         let result = async {
-            let mut file = OpenOptions::new().create(true).append(true).open(&path).await.map_err(|error| error.to_string())?;
+            let mut file = OpenOptions::new().write(true).open(&task.temp_path).await.map_err(|error| error.to_string())?;
+            file.seek(std::io::SeekFrom::Start(start as u64)).await.map_err(|error| error.to_string())?;
             let mut stream = response.bytes_stream(); let mut last_save = Instant::now(); let mut response_downloaded = 0_i64;
             while let Some(next) = tokio::select! { _ = control.cancellation.cancelled() => return Err("Download interrompido pelo usuário.".into()), value = stream.next() => value } {
                 let data = next.map_err(|error| error.to_string())?; let remaining = (length - chunk.downloaded_bytes).min(response_length-response_downloaded).max(0) as usize;
                 if data.len() > remaining { return Err("O servidor enviou mais bytes do que declarou no Content-Range.".into()); }
                 let slice = &data[..];
                 file.write_all(slice).await.map_err(|error| error.to_string())?; chunk.downloaded_bytes += slice.len() as i64; response_downloaded += slice.len() as i64;
-                bandwidth.consume(slice.len()).await;
+                control.throttle(slice.len()).await;
                 let aggregate = total_downloaded.fetch_add(slice.len() as i64, Ordering::SeqCst) + slice.len() as i64; let speed = aggregate as f64 / started.elapsed().as_secs_f64().max(0.001);
                 let _ = app.emit("download-progress", DownloadProgress { id: task.id.clone(), downloaded: aggregate, total: task.file_size, speed, status: DownloadStatus::Downloading, error: None });
                 if last_save.elapsed() >= Duration::from_millis(500) { if let Ok(connection) = database.connect() { let _ = chunks::update_progress(&connection, &chunk.id, chunk.downloaded_bytes, "downloading"); } update_state(&database, &task.id, DownloadStatus::Downloading, aggregate, speed, speed); last_save = Instant::now(); }
@@ -834,22 +858,56 @@ fn validate_remote_identity(response: &Response, task: &DownloadTask) -> Result<
             return Err("O ETag mudou durante o download.".into());
         }
     }
-    if let (Some(expected), Some(received)) = (
-        &task.last_modified,
-        response
-            .headers()
-            .get(header::LAST_MODIFIED)
-            .and_then(|value| value.to_str().ok()),
-    ) {
-        if expected != received {
-            return Err("O arquivo remoto foi modificado durante o download.".into());
-        }
-    }
+    // Last-Modified não é um identificador confiável em CDNs; não interrompe
+    // chunks válidos que já passaram pelas verificações de Content-Range.
     Ok(())
 }
 
 fn chunk_path(temp_path: &str, index: i64) -> PathBuf {
     PathBuf::from(format!("{temp_path}.chunk-{index}"))
+}
+
+fn minimal_range_headers(original: &HeaderMap) -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    for name in [
+        header::AUTHORIZATION,
+        header::COOKIE,
+        header::REFERER,
+        header::ORIGIN,
+        header::USER_AGENT,
+        header::ACCEPT,
+        header::ACCEPT_LANGUAGE,
+    ] {
+        if let Some(value) = original.get(&name) {
+            headers.insert(name, value.clone());
+        }
+    }
+    headers.insert(
+        header::ACCEPT_ENCODING,
+        header::HeaderValue::from_static("identity"),
+    );
+    headers
+}
+
+async fn migrate_legacy_chunk(
+    part: &mut File,
+    legacy_path: &Path,
+    offset: i64,
+    length: i64,
+) -> Result<(), String> {
+    let legacy = File::open(legacy_path)
+        .await
+        .map_err(|error| format!("Falha ao abrir parte antiga: {error}"))?;
+    part.seek(std::io::SeekFrom::Start(offset as u64))
+        .await
+        .map_err(|error| error.to_string())?;
+    let copied = tokio::io::copy(&mut legacy.take(length as u64), part)
+        .await
+        .map_err(|error| format!("Falha ao migrar parte antiga: {error}"))?;
+    if copied != length as u64 {
+        return Err("Uma parte antiga terminou antes do tamanho registrado.".into());
+    }
+    Ok(())
 }
 
 async fn transfer(
@@ -870,7 +928,6 @@ async fn transfer(
     let mut stream = response.bytes_stream();
     let mut downloaded = offset;
     let mut last_persist = Instant::now();
-    let bandwidth = BandwidthLimiter::new(task.speed_limit_download);
     update_state(
         database,
         &task.id,
@@ -889,7 +946,7 @@ async fn transfer(
         file.write_all(&bytes)
             .await
             .map_err(|error| format!("Falha ao gravar o arquivo: {error}"))?;
-        bandwidth.consume(bytes.len()).await;
+        control.throttle(bytes.len()).await;
         downloaded += i64::try_from(bytes.len()).unwrap_or(0);
         let elapsed = started.elapsed().as_secs_f64().max(0.001);
         let speed = (downloaded - offset) as f64 / elapsed;
@@ -1038,9 +1095,21 @@ fn category_for_extension(extension: Option<&str>) -> &'static str {
         _ => "Outros",
     }
 }
-fn available_path(folder: &Path, file_name: &str) -> PathBuf {
+fn available_path(folder: &Path, file_name: &str, taken_paths: &[String]) -> PathBuf {
     let original = folder.join(file_name);
-    if !original.exists() {
+    let is_taken = |path: &Path| {
+        path.exists() || taken_paths.iter().any(|p| Path::new(p) == path) || {
+            if let (Some(parent), Some(name)) = (path.parent(), path.file_name()) {
+                parent
+                    .join(".sf-temp")
+                    .join(format!("{}.part", name.to_string_lossy()))
+                    .exists()
+            } else {
+                false
+            }
+        }
+    };
+    if !is_taken(&original) {
         return original;
     }
     let path = Path::new(file_name);
@@ -1054,7 +1123,7 @@ fn available_path(folder: &Path, file_name: &str) -> PathBuf {
             Some(ext) => folder.join(format!("{stem} ({index}).{ext}")),
             None => folder.join(format!("{stem} ({index})")),
         };
-        if !candidate.exists() {
+        if !is_taken(&candidate) {
             return candidate;
         }
     }

@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicU8, Ordering},
+        atomic::{AtomicI64, AtomicU8, Ordering},
         Arc, Mutex,
     },
 };
@@ -34,6 +34,13 @@ const ACTION_CANCEL: u8 = 2;
 pub struct TaskControl {
     pub cancellation: CancellationToken,
     action: Arc<AtomicU8>,
+    speed_limit: Arc<AtomicI64>,
+    bandwidth: Arc<tokio::sync::Mutex<BandwidthState>>,
+}
+
+struct BandwidthState {
+    started: std::time::Instant,
+    transferred: i64,
 }
 
 impl TaskControl {
@@ -41,6 +48,11 @@ impl TaskControl {
         Self {
             cancellation: CancellationToken::new(),
             action: Arc::new(AtomicU8::new(ACTION_NONE)),
+            speed_limit: Arc::new(AtomicI64::new(0)),
+            bandwidth: Arc::new(tokio::sync::Mutex::new(BandwidthState {
+                started: std::time::Instant::now(),
+                transferred: 0,
+            })),
         }
     }
     pub fn pause(&self) {
@@ -59,6 +71,29 @@ impl TaskControl {
     }
     pub fn was_cancelled(&self) -> bool {
         self.action.load(Ordering::SeqCst) == ACTION_CANCEL
+    }
+    pub async fn set_speed_limit(&self, bytes_per_second: i64) {
+        self.speed_limit
+            .store(bytes_per_second.max(0), Ordering::SeqCst);
+        let mut state = self.bandwidth.lock().await;
+        state.started = std::time::Instant::now();
+        state.transferred = 0;
+    }
+    pub async fn throttle(&self, bytes: usize) {
+        let limit = self.speed_limit.load(Ordering::SeqCst);
+        if limit <= 0 {
+            return;
+        }
+        let delay = {
+            let mut state = self.bandwidth.lock().await;
+            state.transferred += bytes as i64;
+            let expected =
+                std::time::Duration::from_secs_f64(state.transferred as f64 / limit as f64);
+            expected.checked_sub(state.started.elapsed())
+        };
+        if let Some(delay) = delay {
+            tokio::time::sleep(delay).await;
+        }
     }
 }
 
@@ -132,6 +167,19 @@ impl DownloadRuntime {
         if let Ok(mut tasks) = self.tasks.lock() {
             tasks.remove(id);
         }
+    }
+    pub fn has(&self, id: &str) -> bool {
+        if let Ok(tasks) = self.tasks.lock() {
+            tasks.contains_key(id)
+        } else {
+            false
+        }
+    }
+    pub fn control(&self, id: &str) -> Result<Option<TaskControl>, String> {
+        self.tasks
+            .lock()
+            .map(|tasks| tasks.get(id).cloned())
+            .map_err(|_| "Falha ao acessar downloads ativos.".to_string())
     }
 }
 

@@ -96,8 +96,8 @@ export function CompletePage({ downloadId }: CompletePageProps) {
         {/* Ações */}
         <footer>
           <div style={{ display: "flex", gap: "6px", marginLeft: "auto" }}>
-            <button onClick={handleOpenFolder}>Abrir pasta</button>
-            <button className="accent" onClick={handleOpenFile}>Abrir arquivo</button>
+            <button className="accent" onClick={handleOpenFolder}>Abrir pasta</button>
+            <button onClick={handleOpenFile}>Abrir arquivo</button>
           </div>
         </footer>
       </section>

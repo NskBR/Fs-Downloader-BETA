@@ -76,6 +76,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             create_category_folders,
+            browser_bridge::browser_extension_status,
             commands::downloads::create_download,
             commands::downloads::list_downloads,
             commands::downloads::update_download,
@@ -94,7 +95,8 @@ pub fn run() {
             commands::transfer::resume_download,
             commands::transfer::replace_download_url,
             commands::transfer::open_progress_window,
-            commands::transfer::open_complete_window
+            commands::transfer::open_complete_window,
+            commands::transfer::update_speed_limit
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o SF Downloader");

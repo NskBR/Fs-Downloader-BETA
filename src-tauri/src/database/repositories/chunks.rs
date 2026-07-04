@@ -81,6 +81,14 @@ pub fn reset_active(connection: &Connection, download_id: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn delete_plan(connection: &Connection, download_id: &str) -> Result<()> {
+    connection.execute(
+        "DELETE FROM download_chunks WHERE download_id=?1",
+        [download_id],
+    )?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

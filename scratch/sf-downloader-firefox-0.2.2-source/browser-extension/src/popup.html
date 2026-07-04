@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="popup.css">
+  <title>SF Downloader</title>
+</head>
+<body>
+  <header>
+    <img src="icons/icon-32.png" alt="">
+    <div><strong>SF Downloader</strong><span>Integração do navegador</span></div>
+    <i id="connection" title="Aplicativo desconectado"></i>
+  </header>
+  <main>
+    <div class="setting">
+      <div><strong>Capturar downloads</strong><span>Enviar downloads automaticamente para o aplicativo.</span></div>
+      <button id="capture" role="switch" aria-checked="false" aria-label="Ativar integração"><i></i></button>
+    </div>
+    <p id="status" role="status">Verificando conexão...</p>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>

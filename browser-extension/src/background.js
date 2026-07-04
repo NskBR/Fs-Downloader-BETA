@@ -290,8 +290,9 @@ chrome.runtime.onStartup.addListener(() => void syncBridge());
 chrome.alarms.create("sf-bridge-sync", { periodInMinutes: 1 });
 chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === "sf-bridge-sync") void syncBridge(); });
 
-if (chrome.downloads && chrome.downloads.onDeterminingFilename) {
-  chrome.downloads.onDeterminingFilename.addListener(onDeterminingFilename);
+const determiningFilename = chrome.downloads?.["onDeterminingFilename"];
+if (determiningFilename) {
+  determiningFilename.addListener(onDeterminingFilename);
 } else if (chrome.downloads && chrome.downloads.onCreated) {
   chrome.downloads.onCreated.addListener(download => {
     chrome.storage.local.get("captureEnabled", ({ captureEnabled }) => {
@@ -323,6 +324,10 @@ chrome.contextMenus.onClicked.addListener(info => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "bridge-status") {
+    void syncBridge().finally(() => sendResponse({ connected: bridge.connected }));
+    return true;
+  }
   if (message?.type !== "send-to-app") return;
   const task = bridge.connected
     ? sendToApp({ url: message.url, finalUrl: message.url, filename: null, fileSize: -1, mime: null, referrer: null })

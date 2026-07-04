@@ -7,6 +7,7 @@ const input=(url:string,settings:AppSettings,rootFolder?:string,browserRequestId
 export const listDownloads=()=>invoke<DownloadTask[]>("list_downloads");
 export const inspectDownload=(url:string)=>invoke<DownloadPreview>("inspect_download",{url});
 export const openDownloadConfirmation=()=>invoke<void>("open_download_confirmation");
+export const openProgressWindow=(id:string)=>invoke<void>("open_progress_window",{id});
 export const startDownload=(url:string,settings:AppSettings,rootFolder?:string,browserRequestId?:string,resumeSupport?:boolean)=>invoke<DownloadTask>("start_download",{input:input(url,settings,rootFolder,browserRequestId,resumeSupport)});
 export const queueDownload=(url:string,settings:AppSettings,rootFolder?:string,browserRequestId?:string,resumeSupport?:boolean)=>invoke<DownloadTask>("queue_download",{input:input(url,settings,rootFolder,browserRequestId,resumeSupport)});
 export const cancelDownload=(id:string)=>invoke<boolean>("cancel_download",{id});
@@ -16,3 +17,5 @@ export const replaceDownloadUrl=(id:string,newUrl:string)=>invoke<DownloadTask>(
 export const removeDownload=(id:string)=>invoke<boolean>("remove_download",{id});
 export const revealInFolder=(path:string)=>invoke<void>("reveal_in_folder",{path});
 export const openFile=(path:string)=>invoke<void>("open_file",{path});
+export const updateSpeedLimit=(id:string,speedLimit:number)=>invoke<void>("update_speed_limit",{id,speedLimit});
+export const browserExtensionConnected=()=>invoke<boolean>("browser_extension_status");

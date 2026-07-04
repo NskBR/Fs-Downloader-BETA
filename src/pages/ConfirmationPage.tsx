@@ -18,9 +18,22 @@ export function ConfirmationPage(){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState<string|null>(null);
   const [resumeSupport, setResumeSupport] = useState(true);
+  const [alreadyDownloaded, setAlreadyDownloaded] = useState(false);
   const appWindow=getCurrentWindow();
 
   useEffect(()=>{if(!payload||payload.preview)return;let active=true;void service.inspectDownload(payload.url).then(result=>{if(active)setPreview(result)}).catch(cause=>{if(active)setError(String(cause))}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[payload?.url]);
+
+  useEffect(() => {
+    if (!preview) return;
+    service.listDownloads().then(list => {
+      const found = list.some(item =>
+        item.status === "completed" &&
+        (item.fileName === preview.fileName || item.originalUrl === preview.url)
+      );
+      setAlreadyDownloaded(found);
+    }).catch(console.error);
+  }, [preview]);
+
   const close=()=>void appWindow.close();
   
   const finish=async(mode:"now"|"later")=>{
@@ -82,7 +95,7 @@ export function ConfirmationPage(){
           </div>
 
           {/* Chavinha de Permissão de Retomada */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "12px", borderTop: "1px solid var(--line)", paddingTop: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "8px", borderTop: "1px solid var(--line)", paddingTop: "8px" }}>
             <span style={{ color: "#aab2a4", fontSize: "11px" }}>Permitir retomar downloads parados/cancelados</span>
             <button 
               type="button" 
@@ -103,6 +116,23 @@ export function ConfirmationPage(){
             </button>
           </div>
         </div>
+
+        {alreadyDownloaded && (
+          <div style={{
+            background: "rgba(217, 173, 85, 0.08)",
+            border: "1px solid rgba(217, 173, 85, 0.4)",
+            borderRadius: "4px",
+            padding: "6px 10px",
+            color: "var(--accent)",
+            fontSize: "10.5px",
+            marginTop: "8px",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px"
+          }}>
+            <span>⚠️ Este arquivo já foi baixado anteriormente. Será salva uma nova cópia.</span>
+          </div>
+        )}
 
         {error&&<p className="confirm-error">{error}</p>}
         

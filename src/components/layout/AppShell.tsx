@@ -7,7 +7,6 @@ interface Props extends PropsWithChildren { activePage:PageId; onNavigate:(page:
 const sections=[
   {key:"active",label:"Ativos",icon:Clock3,page:"active" as PageId},
   {key:"completed",label:"Concluídos",icon:CheckCircle2,page:"completed" as PageId},
-  {key:"history",label:"Histórico",icon:History,page:"history" as PageId},
   {key:"documents",label:"Documentos",icon:FileText,page:"documents" as PageId},
   {key:"music",label:"Músicas",icon:Music2,page:"music" as PageId},
   {key:"videos",label:"Vídeos",icon:Video,page:"videos" as PageId},

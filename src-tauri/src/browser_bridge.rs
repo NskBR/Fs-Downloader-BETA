@@ -10,7 +10,11 @@ use reqwest::header::{HeaderMap, HeaderName, HeaderValue, COOKIE, REFERER};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex,
+    },
+    time::{SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
@@ -21,6 +25,7 @@ pub const BRIDGE_PORT: u16 = 17_831;
 pub struct BrowserBridge {
     token: String,
     contexts: Arc<Mutex<HashMap<String, HeaderMap>>>,
+    last_seen: Arc<AtomicU64>,
 }
 
 impl Default for BrowserBridge {
@@ -28,11 +33,28 @@ impl Default for BrowserBridge {
         Self {
             token: Uuid::new_v4().to_string(),
             contexts: Arc::new(Mutex::new(HashMap::new())),
+            last_seen: Arc::new(AtomicU64::new(0)),
         }
     }
 }
 
 impl BrowserBridge {
+    fn now_seconds() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_secs())
+            .unwrap_or(0)
+    }
+
+    pub fn mark_seen(&self) {
+        self.last_seen.store(Self::now_seconds(), Ordering::SeqCst);
+    }
+
+    pub fn is_connected(&self) -> bool {
+        Self::now_seconds().saturating_sub(self.last_seen.load(Ordering::SeqCst)) <= 90
+            && self.last_seen.load(Ordering::SeqCst) > 0
+    }
+
     pub fn take_headers(&self, id: Option<&str>) -> HeaderMap {
         id.and_then(|id| self.contexts.lock().ok()?.remove(id))
             .unwrap_or_default()
@@ -151,13 +173,24 @@ pub fn start(app: AppHandle, bridge: BrowserBridge) {
 async fn handle_options() -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     headers.insert("access-control-allow-origin", HeaderValue::from_static("*"));
-    headers.insert("access-control-allow-methods", HeaderValue::from_static("GET, POST, OPTIONS"));
-    headers.insert("access-control-allow-headers", HeaderValue::from_static("content-type"));
-    headers.insert("access-control-allow-private-network", HeaderValue::from_static("true"));
+    headers.insert(
+        "access-control-allow-methods",
+        HeaderValue::from_static("GET, POST, OPTIONS"),
+    );
+    headers.insert(
+        "access-control-allow-headers",
+        HeaderValue::from_static("content-type"),
+    );
+    headers.insert(
+        "access-control-allow-private-network",
+        HeaderValue::from_static("true"),
+    );
     (StatusCode::NO_CONTENT, headers)
 }
 
 async fn sync(State(state): State<BridgeState>) -> impl IntoResponse {
+    state.bridge.mark_seen();
+    let _ = state.app.emit("browser-extension-status", true);
     let mut headers = HeaderMap::new();
     headers.insert("access-control-allow-origin", HeaderValue::from_static("*"));
     (
@@ -166,12 +199,17 @@ async fn sync(State(state): State<BridgeState>) -> impl IntoResponse {
             enabled: true,
             token: state.bridge.token.clone(),
             file_exts: vec![
-                ".ZIP", ".RAR", ".7Z", ".TAR", ".GZ", ".EXE", ".MSI", ".PDF", ".DOC", ".DOCX", ".XLS",
-                ".XLSX", ".MP3", ".WAV", ".FLAC", ".MP4", ".MKV", ".AVI", ".ISO", ".BIN",
+                ".ZIP", ".RAR", ".7Z", ".TAR", ".GZ", ".EXE", ".MSI", ".PDF", ".DOC", ".DOCX",
+                ".XLS", ".XLSX", ".MP3", ".WAV", ".FLAC", ".MP4", ".MKV", ".AVI", ".ISO", ".BIN",
             ],
             blocked_hosts: vec![],
         }),
     )
+}
+
+#[tauri::command]
+pub fn browser_extension_status(bridge: tauri::State<'_, BrowserBridge>) -> bool {
+    bridge.is_connected()
 }
 
 async fn download(State(state): State<BridgeState>, body: Bytes) -> impl IntoResponse {

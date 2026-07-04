@@ -35,7 +35,24 @@ export function ProgressPage({ downloadId }: ProgressPageProps) {
   const [speed, setSpeed] = useState(0);
   const [status, setStatus] = useState("pending");
   const [error, setError] = useState<string | null>(null);
+  const [limitValue, setLimitValue] = useState<string>("");
+  const [limitUnit, setLimitUnit] = useState<"KB" | "MB">("MB");
   const appWindow = getCurrentWindow();
+
+  const handleApplyLimit = async (val: string, unit: "KB" | "MB") => {
+    if (!task) return;
+    let bytesPerSec = 0;
+    const parsed = parseFloat(val);
+    if (!isNaN(parsed) && parsed > 0) {
+      bytesPerSec = Math.floor(parsed * (unit === "MB" ? 1024 * 1024 : 1024));
+    }
+    try {
+      await service.updateSpeedLimit(downloadId, bytesPerSec);
+      setTask(prev => prev ? { ...prev, speedLimitDownload: bytesPerSec } : null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     // Fetch initial task state
@@ -46,6 +63,17 @@ export function ProgressPage({ downloadId }: ProgressPageProps) {
         setDownloaded(found.totalDownloaded);
         setSpeed(found.speedCurrent);
         setStatus(found.status);
+        if (found.speedLimitDownload && found.speedLimitDownload > 0) {
+          if (found.speedLimitDownload >= 1024 * 1024) {
+            setLimitValue((found.speedLimitDownload / (1024 * 1024)).toFixed(0));
+            setLimitUnit("MB");
+          } else {
+            setLimitValue((found.speedLimitDownload / 1024).toFixed(0));
+            setLimitUnit("KB");
+          }
+        } else {
+          setLimitValue("");
+        }
       }
     }).catch(console.error);
 
@@ -55,6 +83,7 @@ export function ProgressPage({ downloadId }: ProgressPageProps) {
         setDownloaded(payload.downloaded);
         setSpeed(payload.speed);
         setStatus(payload.status);
+        setTask(current => current ? { ...current, status: payload.status, totalDownloaded: payload.downloaded, speedCurrent: payload.speed } : current);
         if (payload.error) {
           setError(payload.error);
         }
@@ -76,19 +105,25 @@ export function ProgressPage({ downloadId }: ProgressPageProps) {
 
   const handlePauseResume = async () => {
     if (!task) return;
-    if (status === "downloading" || status === "pending") {
-      await service.pauseDownload(downloadId);
-      setStatus("paused");
-      setSpeed(0);
-    } else {
-      await service.resumeDownload(downloadId);
-      setStatus("downloading");
+    setError(null);
+    try {
+      if (status === "downloading" || status === "pending") {
+        await service.pauseDownload(downloadId);
+        setStatus("paused");
+        setSpeed(0);
+      } else {
+        await service.resumeDownload(downloadId);
+        setStatus("downloading");
+      }
+    } catch (cause) {
+      setError(String(cause));
     }
   };
 
   const handleCancel = async () => {
     await service.cancelDownload(downloadId);
-    closeWindow();
+    setStatus("cancelled");
+    setSpeed(0);
   };
 
   if (!task) {
@@ -150,18 +185,40 @@ export function ProgressPage({ downloadId }: ProgressPageProps) {
 
         {/* Detalhes de Progresso */}
         <div className="confirm-fields" style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "10px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", color: "#eef1f7", fontSize: "11px", fontWeight: "600" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", color: "#eef1f7", fontSize: "13px", fontWeight: "600" }}>
             <span>{statusLabel} · {bytes(downloaded)} de {bytes(totalSize)}</span>
-            <span style={{ fontWeight: "700", color: "#d9ad55" }}>{isDownloading && speed > 0 ? `${bytes(speed)}/s` : "—"}</span>
+            <span style={{ fontWeight: "750", color: "#f0a45b" }}>{isDownloading && speed > 0 ? `${bytes(speed)}/s` : "—"}</span>
           </div>
           
           <div className="progress-track" style={{ height: "6px", width: "100%", background: "#1a1f29", borderRadius: "3px", overflow: "hidden", margin: "4px 0" }}>
             <div style={{ height: "100%", width: `${progressPercent}%`, background: "linear-gradient(90deg, #d9ad55 0%, #b58d3d 100%)", borderRadius: "3px", transition: "width 0.2s" }} />
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", color: "#a0a6b2", fontSize: "10px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "#b8c2d2", fontSize: "11px" }}>
             <span>Tempo restante: {isDownloading && speed > 0 ? formatTimeLeft(timeLeftSeconds) : "—"}</span>
-            <span>Sem limite de velocidade</span>
+            <div className="speed-limit-control">
+              <span>Limite</span>
+              <input
+                type="number"
+                min="0"
+                placeholder="Sem"
+                value={limitValue}
+                onChange={e => setLimitValue(e.target.value)}
+                onBlur={() => handleApplyLimit(limitValue, limitUnit)}
+                onKeyDown={e => e.key === "Enter" && handleApplyLimit(limitValue, limitUnit)}
+              />
+              <select
+                value={limitUnit}
+                onChange={e => {
+                  const newUnit = e.target.value as "KB" | "MB";
+                  setLimitUnit(newUnit);
+                  handleApplyLimit(limitValue, newUnit);
+                }}
+              >
+                <option value="KB" style={{ background: "#11130f", color: "#edf1e8" }}>KB/s</option>
+                <option value="MB" style={{ background: "#11130f", color: "#edf1e8" }}>MB/s</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -173,10 +230,11 @@ export function ProgressPage({ downloadId }: ProgressPageProps) {
         <footer>
           <button onClick={closeWindow}>Ocultar</button>
           <div style={{ display: "flex", gap: "6px", marginLeft: "auto" }}>
-            <button onClick={handleCancel}>Parar</button>
-            <button className="accent" onClick={handlePauseResume}>
-              {status === "paused" ? "Retomar" : "Pausar"}
-            </button>
+            {["pending","downloading","paused"].includes(status)&&<button onClick={handleCancel}>Cancelar</button>}
+            {["pending","downloading","paused","failed","cancelled"].includes(status)&&<button className="accent" onClick={handlePauseResume}>
+              {["paused","failed","cancelled"].includes(status) ? "Retomar" : "Pausar"}
+            </button>}
+            {status==="completed"&&<><button onClick={()=>void service.revealInFolder(task.finalPath)}>Abrir pasta</button><button className="accent" onClick={()=>void service.openFile(task.finalPath)}>Abrir arquivo</button></>}
           </div>
         </footer>
       </section>

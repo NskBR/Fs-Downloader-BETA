@@ -236,3 +236,51 @@
   border-color: #e5987e;
   color: #111319;
 }
+
+.speed-limit-control {
+  display: grid;
+  grid-template-columns: auto 58px 62px;
+  min-height: 32px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #3a4036;
+  border-radius: 7px;
+  color: #aeb7aa;
+  background: #0b0d0a;
+  box-shadow: inset 0 1px rgba(255,255,255,.025);
+}
+
+.speed-limit-control > span {
+  padding: 0 9px;
+  font-size: 11px;
+}
+
+.speed-limit-control input,
+.speed-limit-control select {
+  height: 100%;
+  min-width: 0;
+  border: 0;
+  border-left: 1px solid #30352d;
+  outline: 0;
+  color: #eef2e9;
+  background: #12150f;
+  font: 600 11px/1 inherit;
+  text-align: center;
+}
+
+.speed-limit-control input {
+  width: 58px;
+  padding: 0 5px;
+}
+
+.speed-limit-control select {
+  width: 62px;
+  padding: 0 5px;
+  color: #f0b44f;
+  cursor: pointer;
+}
+
+.speed-limit-control:focus-within {
+  border-color: #d9ad55;
+  box-shadow: 0 0 0 2px rgba(217,173,85,.12);
+}

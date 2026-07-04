@@ -173,3 +173,7 @@ body,.window-frame{background:var(--ink)}
   margin: 4px 0;
 }
 
+/* Readability pass: compact without sacrificing legibility. */
+.reference-name small{color:#b8c2d2;font-size:11px}.reference-size{color:#68b8ff;font-weight:650}.reference-name small b{color:#f0a45b}.downloads-statusbar{font-size:10px}
+.confirm-titlebar{height:36px;padding-left:14px;font-size:12px}.confirm-titlebar button{height:36px}.confirm-body{padding:16px}.confirm-summary strong{font-size:14px}.confirm-summary span{font-size:10px}.confirm-fields label{font-size:11px}.confirm-fields input{height:34px;font-size:11px}.confirm-fields dt{font-size:10px}.confirm-fields dd{font-size:11px}.confirm-body footer{margin-top:14px}.confirm-body footer button{min-height:34px;padding:0 12px;font-size:11px}.confirm-error,.confirm-empty{font-size:11px}
+.extension-connection>i{width:8px;height:8px;border-radius:50%;background:#687166;box-shadow:0 0 0 3px #68716620}.extension-connection>i.connected{background:#69d98b;box-shadow:0 0 0 3px #69d98b1f,0 0 8px #69d98b55}.extension-connection span{color:#aeb7aa}

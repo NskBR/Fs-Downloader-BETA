@@ -50,8 +50,8 @@ pub struct DownloadPreview {
     pub extension: Option<String>,
 }
 
-use std::sync::{LazyLock, Mutex};
 use std::collections::HashSet;
+use std::sync::{LazyLock, Mutex};
 
 static CREATING_WINDOWS: LazyLock<Mutex<HashSet<String>>> =
     LazyLock::new(|| Mutex::new(HashSet::new()));
@@ -85,8 +85,8 @@ pub async fn open_download_confirmation(app: AppHandle) -> Result<(), String> {
 
     let build_result = WebviewWindowBuilder::new(&app, label, confirmation_url)
         .title("Confirmar download")
-        .inner_size(540.0, 340.0)
-        .min_inner_size(500.0, 320.0)
+        .inner_size(540.0, 390.0)
+        .min_inner_size(500.0, 370.0)
         .resizable(false)
         .decorations(false)
         .background_color(tauri::webview::Color(26, 29, 36, 255))
@@ -133,7 +133,7 @@ pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), Stri
 
     let build_result = WebviewWindowBuilder::new(&app, &label, url)
         .title("SF Downloader - Progresso")
-        .inner_size(450.0, 320.0)
+        .inner_size(480.0, 320.0)
         .resizable(false)
         .decorations(false)
         .background_color(tauri::webview::Color(26, 29, 36, 255))
@@ -180,7 +180,7 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
 
     let build_result = WebviewWindowBuilder::new(&app, &label, url)
         .title("SF Downloader - Concluído")
-        .inner_size(450.0, 280.0)
+        .inner_size(480.0, 250.0)
         .resizable(false)
         .decorations(false)
         .background_color(tauri::webview::Color(26, 29, 36, 255))
@@ -296,7 +296,14 @@ pub async fn queue_download(
     input: StartDownloadInput,
 ) -> Result<DownloadTask, String> {
     let headers = browser_bridge.take_headers(input.browser_request_id.as_deref());
+    let taken_paths = {
+        let connection = database.connect()?;
+        downloads::list(&connection)
+            .map(|list| list.into_iter().map(|t| t.final_path).collect::<Vec<_>>())
+            .unwrap_or_default()
+    };
     let prepared = engine::prepare_with_headers(
+        taken_paths,
         &input.url,
         &input.root_folder,
         input.auto_organize,
@@ -333,7 +340,14 @@ pub async fn start_download(
     input: StartDownloadInput,
 ) -> Result<DownloadTask, String> {
     let headers = browser_bridge.take_headers(input.browser_request_id.as_deref());
+    let taken_paths = {
+        let connection = database.connect()?;
+        downloads::list(&connection)
+            .map(|list| list.into_iter().map(|t| t.final_path).collect::<Vec<_>>())
+            .unwrap_or_default()
+    };
     let prepared = engine::prepare_with_headers(
+        taken_paths,
         &input.url,
         &input.root_folder,
         input.auto_organize,
@@ -344,14 +358,13 @@ pub async fn start_download(
         input.resume_support,
     )
     .await?;
-    let task = {
-        let connection = database.connect()?;
-        downloads::create(&connection, prepared.input)
-            .map_err(|error| format!("Falha ao persistir o download: {error}"))?
-    };
+    let connection = database.connect()?;
+    let task = downloads::create(&connection, prepared.input)
+        .map_err(|error| format!("Falha ao persistir o download: {error}"))?;
     browser_bridge.persist_headers(&task.id, &headers)?;
     let _ = open_progress_window(app.clone(), task.id.clone()).await;
     let control = TaskControl::new();
+    control.set_speed_limit(task.speed_limit_download).await;
     runtime.register(task.id.clone(), control.clone())?;
     let database = database.inner().clone();
     let runtime = runtime.inner().clone();
@@ -532,7 +545,7 @@ pub async fn replace_download_url(
             .and_then(|value| value.to_str().ok()),
     ) {
         if expected != received {
-            return Err("Arquivo incompatível: ETag diferente.".into());
+            println!("Aviso de substituição: ETag mudou (esperado: {expected}, recebido: {received}). Prosseguindo.");
         }
     }
     if let (Some(expected), Some(received)) = (
@@ -542,7 +555,7 @@ pub async fn replace_download_url(
             .and_then(|value| value.to_str().ok()),
     ) {
         if expected != received {
-            return Err("Arquivo incompatível: Last-Modified diferente.".into());
+            println!("Aviso de substituição: Last-Modified mudou (esperado: {expected}, recebido: {received}). Prosseguindo.");
         }
     }
     let remote = response.bytes().await.map_err(|error| error.to_string())?;
@@ -582,31 +595,44 @@ pub async fn resume_owned(
             .map_err(|error| format!("Falha ao localizar o download: {error}"))?
             .ok_or_else(|| "Download não encontrado.".to_string())?
     };
-    if matches!(
-        task.status,
-        crate::database::models::DownloadStatus::Completed
-            | crate::database::models::DownloadStatus::Downloading
-    ) {
-        return Err("Este download não pode ser retomado no estado atual.".into());
+    if task.status == crate::database::models::DownloadStatus::Completed {
+        return Err("Este download já foi concluído.".into());
+    }
+    if runtime.has(&task.id) {
+        for _ in 0..50 {
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+            if !runtime.has(&task.id) {
+                break;
+            }
+        }
+        if runtime.has(&task.id) {
+            return Err(
+                "A pausa ainda está sendo salva. Tente retomar novamente em um instante.".into(),
+            );
+        }
     }
     let _ = open_progress_window(app.clone(), task.id.clone()).await;
+    let mut saved_headers = browser_bridge.load_headers(&task.id);
+    saved_headers.remove(header::HOST);
+    saved_headers.remove(header::CONTENT_LENGTH);
+    saved_headers.remove(header::RANGE);
+    saved_headers.remove(header::IF_RANGE);
     let existing_chunks = {
         let connection = database.connect()?;
         crate::database::repositories::chunks::list(&connection, &task.id)
             .map_err(|error| error.to_string())?
     };
-    let saved_headers = browser_bridge.load_headers(&task.id);
     if !existing_chunks.is_empty() {
         let control = TaskControl::new();
+        control.set_speed_limit(task.speed_limit_download).await;
         runtime.register(task.id.clone(), control.clone())?;
-        let database_clone = database.clone();
         let runtime_clone = runtime.clone();
+        let database_clone = database.clone();
         let spawned_task = task.clone();
         let connections = task.max_connections.clamp(1, 32) as usize;
-        let credential_store = browser_bridge.clone();
         tauri::async_runtime::spawn(async move {
             let id = spawned_task.id.clone();
-            let Ok(_queue_permit) = runtime_clone
+            let Ok(_permit) = runtime_clone
                 .acquire(spawned_task.max_parallel_downloads as usize, &control)
                 .await
             else {
@@ -615,7 +641,7 @@ pub async fn resume_owned(
             };
             engine::run_segmented(
                 app,
-                database_clone.clone(),
+                database_clone,
                 spawned_task,
                 connections,
                 control,
@@ -623,17 +649,6 @@ pub async fn resume_owned(
             )
             .await;
             runtime_clone.remove(&id);
-            if let Ok(connection) = database_clone.connect() {
-                if let Ok(Some(current)) = downloads::find(&connection, &id) {
-                    if matches!(
-                        current.status,
-                        crate::database::models::DownloadStatus::Completed
-                            | crate::database::models::DownloadStatus::Cancelled
-                    ) {
-                        credential_store.remove_headers(&id);
-                    }
-                }
-            }
         });
         return Ok(task);
     }
@@ -663,8 +678,9 @@ pub async fn resume_owned(
         )
         .map_err(|error| format!("Falha ao finalizar o download: {error}"));
     }
-    let response = engine::prepare_resume(&task, offset, saved_headers).await?;
+    let (response, actual_offset) = engine::prepare_resume(&task, offset, saved_headers).await?;
     let control = TaskControl::new();
+    control.set_speed_limit(task.speed_limit_download).await;
     runtime.register(task.id.clone(), control.clone())?;
     let database = database.clone();
     let runtime = runtime.clone();
@@ -685,7 +701,7 @@ pub async fn resume_owned(
             spawned_task,
             response,
             control,
-            offset,
+            actual_offset,
         )
         .await;
         runtime.remove(&id);
@@ -702,6 +718,23 @@ pub async fn resume_owned(
         }
     });
     Ok(task)
+}
+
+#[tauri::command]
+pub async fn update_speed_limit(
+    database: State<'_, Database>,
+    runtime: State<'_, DownloadRuntime>,
+    id: String,
+    speed_limit: i64,
+) -> Result<(), String> {
+    let connection = database.connect()?;
+    downloads::update_speed_limit(&connection, &id, speed_limit)
+        .map_err(|error| format!("Erro ao salvar limite: {error}"))?;
+
+    if let Some(control) = runtime.control(&id)? {
+        control.set_speed_limit(speed_limit).await;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

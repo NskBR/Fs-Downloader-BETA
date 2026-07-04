@@ -96,13 +96,29 @@ pub fn recover_interrupted(connection: &Connection) -> Result<Vec<String>> {
         .collect::<Result<_>>()?;
     drop(statement);
     for (id, temp_path, recorded) in &interrupted {
-        let actual = std::fs::metadata(temp_path)
-            .ok()
-            .and_then(|metadata| i64::try_from(metadata.len()).ok())
-            .unwrap_or(*recorded);
+        let (chunk_total, chunk_count): (i64, i64) = connection.query_row(
+            "SELECT COALESCE(SUM(downloaded_bytes),0),COUNT(*) FROM download_chunks WHERE download_id=?1",
+            [id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+        let actual = if chunk_count > 0 {
+            chunk_total
+        } else {
+            std::fs::metadata(temp_path)
+                .ok()
+                .and_then(|metadata| i64::try_from(metadata.len()).ok())
+                .unwrap_or(*recorded)
+        };
         connection.execute("UPDATE download_tasks SET status='paused',total_downloaded=?2,speed_current=0,updated_at=CURRENT_TIMESTAMP WHERE id=?1", params![id,actual])?;
     }
     Ok(interrupted.into_iter().map(|(id, _, _)| id).collect())
+}
+pub fn update_speed_limit(connection: &Connection, id: &str, speed_limit: i64) -> Result<()> {
+    connection.execute(
+        "UPDATE download_tasks SET speed_limit_download=?2, updated_at=CURRENT_TIMESTAMP WHERE id=?1",
+        params![id, speed_limit],
+    )?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -176,6 +192,37 @@ mod tests {
         let recovered = find(&connection, &created.id).unwrap().unwrap();
         assert_eq!(recovered.status, DownloadStatus::Paused);
         assert_eq!(recovered.total_downloaded, 4);
+        let _ = std::fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn preallocated_segmented_file_recovers_from_chunk_progress() {
+        let mut connection = Connection::open_in_memory().unwrap();
+        migrations::run(&mut connection).unwrap();
+        let temp_path = std::env::temp_dir().join(format!("sf-downloader-{}.part", Uuid::new_v4()));
+        let file = std::fs::File::create(&temp_path).unwrap();
+        file.set_len(1024).unwrap();
+        let mut new_download = input();
+        new_download.temp_path = temp_path.to_string_lossy().into_owned();
+        let created = create(&connection, new_download).unwrap();
+        connection.execute(
+            "INSERT INTO download_chunks(id,download_id,chunk_index,start_byte,end_byte,downloaded_bytes,status) VALUES('c',?1,0,0,1023,256,'downloading')",
+            [&created.id],
+        ).unwrap();
+        update(
+            &connection,
+            UpdateDownloadInput {
+                id: created.id.clone(),
+                status: DownloadStatus::Downloading,
+                total_downloaded: 128,
+                speed_current: 10.0,
+                speed_average: 10.0,
+            },
+        )
+        .unwrap();
+        recover_interrupted(&connection).unwrap();
+        let recovered = find(&connection, &created.id).unwrap().unwrap();
+        assert_eq!(recovered.total_downloaded, 256);
         let _ = std::fs::remove_file(temp_path);
     }
 }
