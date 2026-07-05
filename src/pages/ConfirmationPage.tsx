@@ -78,7 +78,12 @@ export function ConfirmationPage() {
     }
   }, [preview, settings.customCategories]);
   const close = () => void appWindow.close(),
-    isArchive = ["zip", "7z"].includes(preview?.extension?.toLowerCase() ?? ""),
+    isArchive = ["zip", "7z", "rar", "tar", "gz", "tgz"].includes(
+      preview?.extension?.toLowerCase() ?? "",
+    ),
+    supportsArchivePassword = ["zip", "7z", "rar"].includes(
+      preview?.extension?.toLowerCase() ?? "",
+    ),
     categories = [
       ...downloadCategories.map((item) => item.name),
       ...settings.customCategories.map((item) => item.name),
@@ -93,7 +98,7 @@ export function ConfirmationPage() {
   };
   const finish = async () => {
     if (!preview) return;
-    if (autoExtract && hasPassword && !password) {
+    if (autoExtract && supportsArchivePassword && hasPassword && !password) {
       setError("Informe a senha usada para extrair o arquivo.");
       return;
     }
@@ -107,7 +112,7 @@ export function ConfirmationPage() {
         payload?.requestId,
         true,
         autoExtract,
-        isArchive && hasPassword ? password : undefined,
+        supportsArchivePassword && hasPassword ? password : undefined,
         selectedCategory,
       );
       await emit("download-created", task);
@@ -188,11 +193,13 @@ export function ConfirmationPage() {
             />
             <span>Extrair automaticamente após o download</span>
           </label>
-          <label className={`password-row ${!autoExtract ? "disabled" : ""}`}>
+          <label
+            className={`password-row ${!autoExtract || !supportsArchivePassword ? "disabled" : ""}`}
+          >
             <input
               type="checkbox"
               checked={hasPassword}
-              disabled={!autoExtract}
+              disabled={!autoExtract || !supportsArchivePassword}
               onChange={(event) => setHasPassword(event.target.checked)}
             />
             <span>

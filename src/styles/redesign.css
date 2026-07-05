@@ -353,6 +353,20 @@
   color: var(--muted);
   margin-bottom: 4px;
 }
+.setting-item--toggle {
+  width: 290px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.setting-item--toggle > div {
+  min-width: 0;
+}
+.setting-item--toggle .description {
+  display: block;
+  margin: 3px 0 0;
+}
 .setting-item select {
   width: 290px;
   height: 28px;

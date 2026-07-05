@@ -37,7 +37,7 @@ fn create_category_folders(
     let categories = CATEGORY_FOLDERS
         .iter()
         .map(|category| (*category).to_string())
-        .chain(custom_categories.into_iter())
+        .chain(custom_categories)
         .collect::<Vec<_>>();
     categories
         .iter()
@@ -57,14 +57,44 @@ fn create_category_folders(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
+            show_main_window(app);
         }))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            let open_item =
+                MenuItem::with_id(app, "tray-open", "Abrir SF Downloader", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "tray-quit", "Sair", true, None::<&str>)?;
+            let tray_menu = Menu::with_items(app, &[&open_item, &quit_item])?;
+            let mut tray = TrayIconBuilder::with_id("main-tray")
+                .tooltip("SF Downloader")
+                .menu(&tray_menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id().as_ref() {
+                    "tray-open" => show_main_window(app),
+                    "tray-quit" => app.exit(0),
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if matches!(
+                        event,
+                        TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            ..
+                        } | TrayIconEvent::DoubleClick {
+                            button: MouseButton::Left,
+                            ..
+                        }
+                    ) {
+                        show_main_window(tray.app_handle());
+                    }
+                });
+            if let Some(icon) = app.default_window_icon() {
+                tray = tray.icon(icon.clone());
+            }
+            tray.build(app)?;
+
             #[cfg(any(windows, target_os = "linux"))]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
@@ -98,13 +128,27 @@ pub fn run() {
             }
             Ok(())
         })
+        .on_window_event(|window, event| {
+            if window.label() == "main" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .on_menu_event(|app, event| {
             let id_str = event.id().as_ref().to_string();
+            if id_str.starts_with("tray-") {
+                return;
+            }
             if let Some((action, download_id)) = id_str.split_once('_') {
-                let _ = app.emit("context-menu-action", serde_json::json!({
-                    "action": action,
-                    "downloadId": download_id
-                }));
+                let _ = app.emit(
+                    "context-menu-action",
+                    serde_json::json!({
+                        "action": action,
+                        "downloadId": download_id
+                    }),
+                );
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -142,8 +186,17 @@ mod commands;
 mod database;
 mod download;
 
-use tauri::Manager;
-use tauri::Emitter;
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{Emitter, Manager};
+
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
 
 #[cfg(test)]
 mod category_tests {

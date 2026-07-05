@@ -1,5 +1,6 @@
 import {
   CheckCircle2,
+  Clock3,
   FileText,
   FolderOpen,
   PackageCheck,
@@ -7,9 +8,11 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { LogicalSize } from "@tauri-apps/api/dpi";
 import { FileIcon } from "../components/downloads/FileIcon";
 import * as service from "../services/downloadService";
 import type { DownloadTask } from "../domain/download";
+import { elapsedSeconds, formatElapsed } from "../utils/elapsedTime";
 
 const bytes = (value: number | null) => {
   if (value === null) return "Desconhecido";
@@ -27,12 +30,16 @@ export function CompletePage({ downloadId }: { downloadId: string }) {
     [extraction, setExtraction] = useState<string | null>(null),
     appWindow = getCurrentWindow();
   useEffect(() => {
-    void service
-      .listDownloads()
-      .then((list) =>
-        setTask(list.find((item) => item.id === downloadId) ?? null),
+    void Promise.all([
+      service.listDownloads(),
+      service.extractionStatus(downloadId),
+    ]).then(([list, extractionResult]) => {
+      setTask(list.find((item) => item.id === downloadId) ?? null);
+      setExtraction(extractionResult);
+      void appWindow.setSize(
+        new LogicalSize(560, extractionResult ? 252 : 232),
       );
-    void service.extractionStatus(downloadId).then(setExtraction);
+    });
   }, [downloadId]);
   const close = () => void appWindow.close();
   if (!task)
@@ -64,6 +71,15 @@ export function CompletePage({ downloadId }: { downloadId: string }) {
             <span>
               <FileText />
               Tamanho final <b>{bytes(task.fileSize)}</b>
+            </span>
+            <span>
+              <Clock3 />
+              Tempo decorrido{" "}
+              <b>
+                {formatElapsed(
+                  elapsedSeconds(task.createdAt, task.completedAt),
+                )}
+              </b>
             </span>
             {extraction && (
               <span

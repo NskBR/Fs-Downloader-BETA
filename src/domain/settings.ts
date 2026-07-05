@@ -18,6 +18,7 @@ export interface AppSettings {
   speedLimitDownloadMbps: number;
   theme: AppTheme;
   uiScale: number;
+  startInTrayMode: boolean;
   language: AppLanguage;
   customCategories: CustomCategory[];
 }
@@ -32,6 +33,7 @@ export const defaultSettings: AppSettings = {
   speedLimitDownloadMbps: 0,
   theme: "midnight",
   uiScale: 1.1,
+  startInTrayMode: true,
   language: "pt-BR",
   customCategories: [],
 };

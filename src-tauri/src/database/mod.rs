@@ -23,6 +23,9 @@ impl Database {
             recovered_ids: Arc::new(Vec::new()),
         };
         let mut connection = database.connect()?;
+        connection
+            .execute_batch("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;")
+            .map_err(|error| format!("Falha ao otimizar o banco local: {error}"))?;
         migrations::run(&mut connection)
             .map_err(|error| format!("Falha ao migrar o banco: {error}"))?;
         let recovered = repositories::downloads::recover_interrupted(&connection)

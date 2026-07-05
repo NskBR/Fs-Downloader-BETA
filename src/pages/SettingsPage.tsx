@@ -6,6 +6,7 @@ import {
   chooseDownloadFolder,
   createCategoryFolders,
 } from "../services/folderService";
+import { Toggle } from "../components/ui/Toggle";
 
 interface Props {
   settings: AppSettings;
@@ -124,6 +125,20 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
             <option value="pt-BR">Português (Brasil)</option>
             <option value="en-US">English (em preparação)</option>
           </select>
+        </div>
+
+        <div className="setting-item setting-item--toggle">
+          <div>
+            <label>Inicializar em tray mode</label>
+            <span className="description">
+              Inicia o SF Downloader oculto na bandeja do sistema.
+            </span>
+          </div>
+          <Toggle
+            checked={draft.startInTrayMode}
+            onChange={(value) => update("startInTrayMode", value)}
+            label="Inicializar em tray mode"
+          />
         </div>
 
         <div className="setting-item">

@@ -60,3 +60,10 @@ Abaixo estão todas as tarefas executadas nesta sessão:
 - `[x]` **Verificação e Compilação**
   - `[x]` Executar `npm run build` e `cargo check` com sucesso completo
   - `[x]` Compilar extensão com `node build.mjs` com sucesso completo
+
+- `[x]` **Desempenho, tempo decorrido e extração ampliada (Codex)**
+  - `[x]` Limitar eventos globais de progresso a um a cada 200 ms por download
+  - `[x]` Reduzir persistência SQLite e eliminar o `SELECT` redundante após cada atualização
+  - `[x]` Ativar WAL e sincronização normal no SQLite
+  - `[x]` Exibir tempo decorrido na lista e na janela de conclusão
+  - `[x]` Adicionar extração para RAR, TAR, TAR.GZ/TGZ e GZ, além de ZIP e 7z

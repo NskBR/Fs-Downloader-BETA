@@ -25,7 +25,12 @@ const isConfirmationWindow = label === "download-confirm";
 const isProgressWindow = label.startsWith("download-progress-");
 const isCompleteWindow = label.startsWith("download-complete-");
 
-void getCurrentWebview().setZoom(loadSettings().uiScale).catch(console.error);
+const initialSettings = loadSettings();
+void getCurrentWebview().setZoom(initialSettings.uiScale).catch(console.error);
+
+if (label === "main" && !initialSettings.startInTrayMode) {
+  void getCurrentWindow().show().catch(console.error);
+}
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

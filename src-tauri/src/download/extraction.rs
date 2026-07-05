@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     fs, io,
+    io::Read,
     path::{Path, PathBuf},
     sync::{LazyLock, Mutex},
 };
@@ -42,11 +43,153 @@ pub async fn extract_archive(path: String, password: Option<String>) -> Result<P
         {
             Some("zip") => extract_zip_blocking(archive_path, password.as_deref()),
             Some("7z") => extract_7z_blocking(archive_path, password.as_deref()),
+            Some("rar") => extract_rar_blocking(archive_path, password.as_deref()),
+            Some("tar" | "tgz") => extract_tar_blocking(archive_path, false),
+            Some("gz") => {
+                let tar_gz = archive_path
+                    .file_name()
+                    .and_then(|value| value.to_str())
+                    .is_some_and(|name| name.to_ascii_lowercase().ends_with(".tar.gz"));
+                if tar_gz {
+                    extract_tar_blocking(archive_path, true)
+                } else {
+                    extract_gzip_blocking(archive_path)
+                }
+            }
             _ => Err("Formato de extração não suportado.".to_string()),
         }
     })
     .await
     .map_err(|error| error.to_string())?
+}
+
+fn safe_archive_path(path: &Path) -> bool {
+    use std::path::Component;
+    path.components()
+        .all(|component| matches!(component, Component::Normal(_) | Component::CurDir))
+}
+
+fn validate_archive_size(entries: usize, expanded: u64, compressed: u64) -> Result<(), String> {
+    const MAX_ENTRIES: usize = 10_000;
+    const MAX_EXPANDED_SIZE: u64 = 50 * 1024 * 1024 * 1024;
+    if entries > MAX_ENTRIES {
+        return Err("O arquivo contém itens demais e foi bloqueado por segurança.".into());
+    }
+    if expanded > MAX_EXPANDED_SIZE || (compressed > 0 && expanded / compressed > 200) {
+        return Err("O arquivo parece suspeito e foi bloqueado por segurança.".into());
+    }
+    Ok(())
+}
+
+fn extract_tar_blocking(archive_path: &Path, gzip: bool) -> Result<PathBuf, String> {
+    let inspect = fs::File::open(archive_path).map_err(|error| error.to_string())?;
+    let reader: Box<dyn io::Read> = if gzip {
+        Box::new(flate2::read::GzDecoder::new(inspect))
+    } else {
+        Box::new(inspect)
+    };
+    let mut archive = tar::Archive::new(reader);
+    let mut count = 0_usize;
+    let mut expanded = 0_u64;
+    for entry in archive.entries().map_err(|error| error.to_string())? {
+        let entry = entry.map_err(|error| error.to_string())?;
+        let path = entry.path().map_err(|error| error.to_string())?;
+        if !safe_archive_path(&path) {
+            return Err("O TAR contém um caminho inseguro.".into());
+        }
+        count += 1;
+        expanded = expanded.saturating_add(entry.size());
+    }
+    let compressed = fs::metadata(archive_path)
+        .map(|metadata| metadata.len())
+        .unwrap_or(0);
+    validate_archive_size(count, expanded, compressed)?;
+    let destination = extraction_destination(archive_path)?;
+    fs::create_dir_all(&destination).map_err(|error| error.to_string())?;
+    let source = fs::File::open(archive_path).map_err(|error| error.to_string())?;
+    let reader: Box<dyn io::Read> = if gzip {
+        Box::new(flate2::read::GzDecoder::new(source))
+    } else {
+        Box::new(source)
+    };
+    let mut archive = tar::Archive::new(reader);
+    if let Err(error) = archive.unpack(&destination) {
+        let _ = fs::remove_dir_all(&destination);
+        return Err(format!("Falha ao extrair TAR: {error}"));
+    }
+    Ok(destination)
+}
+
+fn extract_gzip_blocking(archive_path: &Path) -> Result<PathBuf, String> {
+    let compressed = fs::metadata(archive_path)
+        .map(|metadata| metadata.len())
+        .map_err(|error| error.to_string())?;
+    let destination = extraction_destination(archive_path)?;
+    fs::create_dir_all(&destination).map_err(|error| error.to_string())?;
+    let source = fs::File::open(archive_path).map_err(|error| error.to_string())?;
+    let decoder = flate2::read::GzDecoder::new(source);
+    let output_name = archive_path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("extraido");
+    let output_path = destination.join(output_name);
+    let mut output = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&output_path)
+        .map_err(|error| error.to_string())?;
+    let expanded = match io::copy(&mut decoder.take(50 * 1024 * 1024 * 1024 + 1), &mut output) {
+        Ok(expanded) => expanded,
+        Err(error) => {
+            let _ = fs::remove_dir_all(&destination);
+            return Err(error.to_string());
+        }
+    };
+    if validate_archive_size(1, expanded, compressed).is_err() {
+        let _ = fs::remove_dir_all(&destination);
+        return Err("O GZ parece suspeito e foi bloqueado por segurança.".into());
+    }
+    Ok(destination)
+}
+
+fn extract_rar_blocking(archive_path: &Path, password: Option<&str>) -> Result<PathBuf, String> {
+    let listing = match password {
+        Some(password) => unrar_ng::Archive::with_password(archive_path, password),
+        None => unrar_ng::Archive::new(archive_path),
+    }
+    .open_for_listing()
+    .map_err(|error| format!("RAR inválido ou senha incorreta: {error}"))?;
+    let compressed = fs::metadata(archive_path)
+        .map(|metadata| metadata.len())
+        .unwrap_or(0);
+    let mut count = 0_usize;
+    let mut expanded = 0_u64;
+    for header in listing {
+        let header = header.map_err(|error| format!("Falha ao inspecionar RAR: {error}"))?;
+        if !safe_archive_path(&header.filename) {
+            return Err("O RAR contém um caminho inseguro.".into());
+        }
+        count += 1;
+        expanded = expanded.saturating_add(header.unpacked_size);
+    }
+    validate_archive_size(count, expanded, compressed)?;
+    let destination = extraction_destination(archive_path)?;
+    fs::create_dir_all(&destination).map_err(|error| error.to_string())?;
+    let archive = match password {
+        Some(password) => unrar_ng::Archive::with_password(archive_path, password),
+        None => unrar_ng::Archive::new(archive_path),
+    }
+    .open_for_processing()
+    .map_err(|error| format!("Falha ao abrir RAR: {error}"))?;
+    let result = archive
+        .extract_all(&destination)
+        .map(|_| ())
+        .map_err(|error| format!("Falha ao extrair RAR; verifique a senha: {error}"));
+    if let Err(error) = result {
+        let _ = fs::remove_dir_all(&destination);
+        return Err(error);
+    }
+    Ok(destination)
 }
 
 fn extract_7z_blocking(archive_path: &Path, password: Option<&str>) -> Result<PathBuf, String> {
@@ -102,9 +245,19 @@ fn extract_7z_blocking(archive_path: &Path, password: Option<&str>) -> Result<Pa
 }
 
 fn extraction_destination(archive_path: &Path) -> Result<PathBuf, String> {
-    let stem = archive_path
-        .file_stem()
+    let name = archive_path
+        .file_name()
         .and_then(|value| value.to_str())
+        .unwrap_or("extraido");
+    let lower = name.to_ascii_lowercase();
+    let stem = [".tar.gz", ".tgz", ".zip", ".7z", ".rar", ".tar", ".gz"]
+        .iter()
+        .find_map(|suffix| {
+            lower
+                .strip_suffix(suffix)
+                .map(|_| &name[..name.len() - suffix.len()])
+        })
+        .filter(|value| !value.is_empty())
         .unwrap_or("extraido");
     let destination = archive_path
         .parent()
@@ -144,46 +297,53 @@ fn extract_zip_blocking(archive_path: &Path, password: Option<&str>) -> Result<P
     }
     let destination = extraction_destination(archive_path)?;
     fs::create_dir_all(&destination).map_err(|error| error.to_string())?;
-    for index in 0..archive.len() {
-        let mut entry = match password {
-            Some(password) => archive
-                .by_index_decrypt(index, password.as_bytes())
-                .map_err(|_| "Senha incorreta ou ausente.".to_string())?,
-            None => archive
-                .by_index(index)
-                .map_err(|error| format!("Falha ao ler ZIP: {error}"))?,
-        };
-        let relative = entry
-            .enclosed_name()
-            .ok_or_else(|| "O ZIP contém um caminho inseguro.".to_string())?;
-        let output = destination.join(relative);
-        if entry.is_dir() {
-            fs::create_dir_all(&output).map_err(|error| error.to_string())?;
-            continue;
+    let result = (|| -> Result<(), String> {
+        for index in 0..archive.len() {
+            let mut entry = match password {
+                Some(password) => archive
+                    .by_index_decrypt(index, password.as_bytes())
+                    .map_err(|_| "Senha incorreta ou ausente.".to_string())?,
+                None => archive
+                    .by_index(index)
+                    .map_err(|error| format!("Falha ao ler ZIP: {error}"))?,
+            };
+            let relative = entry
+                .enclosed_name()
+                .ok_or_else(|| "O ZIP contém um caminho inseguro.".to_string())?;
+            let output = destination.join(relative);
+            if entry.is_dir() {
+                fs::create_dir_all(&output).map_err(|error| error.to_string())?;
+                continue;
+            }
+            if output.exists() {
+                return Err(format!(
+                    "O arquivo '{}' já existe; nada foi sobrescrito.",
+                    output.display()
+                ));
+            }
+            if let Some(parent) = output.parent() {
+                fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+            }
+            let mut target = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&output)
+                .map_err(|error| error.to_string())?;
+            io::copy(&mut entry, &mut target).map_err(|error| error.to_string())?;
         }
-        if output.exists() {
-            return Err(format!(
-                "O arquivo '{}' já existe; nada foi sobrescrito.",
-                output.display()
-            ));
-        }
-        if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
-        }
-        let mut target = fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&output)
-            .map_err(|error| error.to_string())?;
-        io::copy(&mut entry, &mut target).map_err(|error| error.to_string())?;
+        Ok(())
+    })();
+    if let Err(error) = result {
+        let _ = fs::remove_dir_all(&destination);
+        return Err(error);
     }
     Ok(destination)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::extract_7z_blocking;
-    use std::fs;
+    use super::{extract_7z_blocking, extract_gzip_blocking, extract_tar_blocking};
+    use std::{fs, io::Write};
 
     #[test]
     fn extracts_a_real_7z_archive() {
@@ -198,6 +358,40 @@ mod tests {
         assert_eq!(
             fs::read(destination.join("conteudo.txt")).unwrap(),
             b"SF Downloader 7z"
+        );
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn extracts_tar_and_gzip_archives() {
+        let root = std::env::temp_dir().join(format!("sf-tar-test-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&root).unwrap();
+        let source = root.join("conteudo.txt");
+        fs::write(&source, b"SF Downloader TAR").unwrap();
+
+        let tar_path = root.join("pacote.tar");
+        let mut builder = tar::Builder::new(fs::File::create(&tar_path).unwrap());
+        builder
+            .append_path_with_name(&source, "conteudo.txt")
+            .unwrap();
+        builder.finish().unwrap();
+        let tar_destination = extract_tar_blocking(&tar_path, false).unwrap();
+        assert_eq!(
+            fs::read(tar_destination.join("conteudo.txt")).unwrap(),
+            b"SF Downloader TAR"
+        );
+
+        let gzip_path = root.join("dados.gz");
+        let mut encoder = flate2::write::GzEncoder::new(
+            fs::File::create(&gzip_path).unwrap(),
+            flate2::Compression::default(),
+        );
+        encoder.write_all(b"SF Downloader GZ").unwrap();
+        encoder.finish().unwrap();
+        let gzip_destination = extract_gzip_blocking(&gzip_path).unwrap();
+        assert_eq!(
+            fs::read(gzip_destination.join("dados")).unwrap(),
+            b"SF Downloader GZ"
         );
         let _ = fs::remove_dir_all(root);
     }

@@ -28,6 +28,7 @@ import type { PageId } from "../app/navigation";
 import { useDownloads } from "../hooks/useDownloads";
 import * as service from "../services/downloadService";
 import type { DownloadTask } from "../domain/download";
+import { elapsedSeconds, formatElapsed } from "../utils/elapsedTime";
 
 const bytes = (value: number | null) => {
   if (value === null) return "—";
@@ -85,7 +86,6 @@ export function DownloadsPage({
     }
   });
 
-
   const { downloads, loading, error, setError, remove, cancel, pause, resume } =
     useDownloads(settings);
   const drag = useRef<{ index: number; x: number; width: number } | null>(null);
@@ -100,7 +100,10 @@ export function DownloadsPage({
   });
 
   useEffect(() => {
-    localStorage.setItem("sf-downloader.column-order-v4", JSON.stringify(colOrder));
+    localStorage.setItem(
+      "sf-downloader.column-order-v4",
+      JSON.stringify(colOrder),
+    );
   }, [colOrder]);
 
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
@@ -365,8 +368,12 @@ export function DownloadsPage({
   const cancelableStates = ["pending", "downloading", "paused"];
 
   const canPause = picked.some((item) => item.status === "downloading");
-  const canResume = picked.some((item) => resumableStates.includes(item.status));
-  const canCancel = picked.some((item) => cancelableStates.includes(item.status));
+  const canResume = picked.some((item) =>
+    resumableStates.includes(item.status),
+  );
+  const canCancel = picked.some((item) =>
+    cancelableStates.includes(item.status),
+  );
 
   const handlePauseSelected = () => {
     picked.forEach((item) => {
@@ -480,76 +487,80 @@ export function DownloadsPage({
           <span />
           <span />
           {colOrder.map((col, idx) => {
-            if (col === "name") return (
-              <span
-                key="name"
-                className="col-name"
-                draggable
-                onDragStart={(e) => handleDragStart(e, idx)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, idx)}
-                onDragEnd={handleDragEnd}
-              >
-                {heading("name", "Nome")}
-              </span>
-            );
-            if (col === "date") return (
-              <span
-                key="date"
-                className="resizable col-date"
-                draggable
-                onDragStart={(e) => handleDragStart(e, idx)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, idx)}
-                onDragEnd={handleDragEnd}
-              >
-                {heading("date", "Data")}
-                <i
-                  onMouseDown={(event) =>
-                    (drag.current = {
-                      index: 0,
-                      x: event.clientX,
-                      width: columns[0],
-                    })
-                  }
-                />
-              </span>
-            );
-            if (col === "size") return (
-              <span
-                key="size"
-                className="resizable col-size"
-                draggable
-                onDragStart={(e) => handleDragStart(e, idx)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, idx)}
-                onDragEnd={handleDragEnd}
-              >
-                {heading("size", "Tamanho")}
-                <i
-                  onMouseDown={(event) =>
-                    (drag.current = {
-                      index: 1,
-                      x: event.clientX,
-                      width: columns[1],
-                    })
-                  }
-                />
-              </span>
-            );
-            if (col === "status") return (
-              <span
-                key="status"
-                className="col-status"
-                draggable
-                onDragStart={(e) => handleDragStart(e, idx)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, idx)}
-                onDragEnd={handleDragEnd}
-              >
-                {heading("status", "Status")}
-              </span>
-            );
+            if (col === "name")
+              return (
+                <span
+                  key="name"
+                  className="col-name"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, idx)}
+                  onDragEnd={handleDragEnd}
+                >
+                  {heading("name", "Nome")}
+                </span>
+              );
+            if (col === "date")
+              return (
+                <span
+                  key="date"
+                  className="resizable col-date"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, idx)}
+                  onDragEnd={handleDragEnd}
+                >
+                  {heading("date", "Data")}
+                  <i
+                    onMouseDown={(event) =>
+                      (drag.current = {
+                        index: 0,
+                        x: event.clientX,
+                        width: columns[0],
+                      })
+                    }
+                  />
+                </span>
+              );
+            if (col === "size")
+              return (
+                <span
+                  key="size"
+                  className="resizable col-size"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, idx)}
+                  onDragEnd={handleDragEnd}
+                >
+                  {heading("size", "Tamanho")}
+                  <i
+                    onMouseDown={(event) =>
+                      (drag.current = {
+                        index: 1,
+                        x: event.clientX,
+                        width: columns[1],
+                      })
+                    }
+                  />
+                </span>
+              );
+            if (col === "status")
+              return (
+                <span
+                  key="status"
+                  className="col-status"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, idx)}
+                  onDragEnd={handleDragEnd}
+                >
+                  {heading("status", "Status")}
+                </span>
+              );
             return null;
           })}
         </div>
@@ -582,38 +593,52 @@ export function DownloadsPage({
                     {selected.has(item.id) ? <CheckSquare /> : <Square />}
                   </button>
                   <FileIcon extension={item.extension} />
-                  
+
                   {colOrder.map((col) => {
-                    if (col === "name") return (
-                      <div key="name" className={`reference-name status-${item.status} col-name`}>
-                        <strong>{item.fileName}</strong>
-                        <div className="progress-track">
-                          <i style={{ width: `${progress}%` }} />
+                    if (col === "name")
+                      return (
+                        <div
+                          key="name"
+                          className={`reference-name status-${item.status} col-name`}
+                        >
+                          <strong>{item.fileName}</strong>
+                          <div className="progress-track">
+                            <i style={{ width: `${progress}%` }} />
+                          </div>
+                          <small>
+                            {labels[item.status]} ·{" "}
+                            {bytes(item.totalDownloaded)} /{" "}
+                            {bytes(item.fileSize)} ·{" "}
+                            {item.status === "downloading"
+                              ? `${bytes(item.speedCurrent)}/s`
+                              : `${progress.toFixed(0)}%`}
+                            {item.status === "completed" && item.completedAt
+                              ? ` · Tempo: ${formatElapsed(elapsedSeconds(item.createdAt, item.completedAt))}`
+                              : ""}
+                          </small>
                         </div>
-                        <small>
-                          {labels[item.status]} · {bytes(item.totalDownloaded)}{" "}
-                          / {bytes(item.fileSize)} ·{" "}
-                          {item.status === "downloading"
-                            ? `${bytes(item.speedCurrent)}/s`
-                            : `${progress.toFixed(0)}%`}
-                        </small>
-                      </div>
-                    );
-                    if (col === "date") return (
-                      <time key="date" className="col-date">
-                        {new Date(item.createdAt).toLocaleDateString("pt-BR")}
-                      </time>
-                    );
-                    if (col === "size") return (
-                      <span key="size" className="reference-size col-size">
-                        {bytes(item.fileSize)}
-                      </span>
-                    );
-                    if (col === "status") return (
-                      <span key="status" className={`status-badge status-badge--${item.status} col-status`}>
-                        {labels[item.status]}
-                      </span>
-                    );
+                      );
+                    if (col === "date")
+                      return (
+                        <time key="date" className="col-date">
+                          {new Date(item.createdAt).toLocaleDateString("pt-BR")}
+                        </time>
+                      );
+                    if (col === "size")
+                      return (
+                        <span key="size" className="reference-size col-size">
+                          {bytes(item.fileSize)}
+                        </span>
+                      );
+                    if (col === "status")
+                      return (
+                        <span
+                          key="status"
+                          className={`status-badge status-badge--${item.status} col-status`}
+                        >
+                          {labels[item.status]}
+                        </span>
+                      );
                     return null;
                   })}
                 </article>
@@ -622,7 +647,6 @@ export function DownloadsPage({
           )}
         </div>
       </div>
-
     </section>
   );
 }

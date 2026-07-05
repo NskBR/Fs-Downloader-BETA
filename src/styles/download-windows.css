@@ -712,7 +712,7 @@ input[type="number"] {
 }
 .complete-compact .download-window-content {
   min-height: 0;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   padding: 10px 16px 8px;
   overflow: hidden;
 }
@@ -731,6 +731,7 @@ input[type="number"] {
   margin-top: 4px;
 }
 .complete-compact .download-window-actions {
+  min-height: 48px;
   height: 48px;
   flex: 0 0 48px;
   padding-inline: 16px;

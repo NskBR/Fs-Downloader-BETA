@@ -59,7 +59,7 @@ export function AppShell({
   const [open, setOpen] = useState(false),
     [categoriesOpen, setCategoriesOpen] = useState(true),
     [helpOpen, setHelpOpen] = useState(false),
-    [appVersion, setAppVersion] = useState("0.1.0"),
+    [appVersion, setAppVersion] = useState("0.2.0"),
     [extension, setExtension] = useState<
       "checking" | "connected" | "disconnected"
     >("checking");
@@ -73,7 +73,7 @@ export function AppShell({
         .then((value) => setExtension(value ? "connected" : "disconnected"))
         .catch(() => setExtension("disconnected"));
     refresh();
-    const timer = window.setInterval(refresh, 5000);
+    const timer = window.setInterval(refresh, 2000);
     return () => window.clearInterval(timer);
   }, []);
   const navigate = (page: PageId) => {
@@ -166,7 +166,7 @@ export function AppShell({
                 <i />
                 <span>extensão</span>
               </div>
-              <span className="sidebar-app-version">v{appVersion}</span>
+              <span className="sidebar-app-version">v{appVersion} Fix</span>
             </div>
           </div>
         </aside>

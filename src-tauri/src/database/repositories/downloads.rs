@@ -62,6 +62,11 @@ pub fn list(connection: &Connection) -> Result<Vec<DownloadTask>> {
 }
 
 pub fn update(connection: &Connection, input: UpdateDownloadInput) -> Result<DownloadTask> {
+    update_progress(connection, &input)?;
+    find(connection, &input.id)?.ok_or(rusqlite::Error::QueryReturnedNoRows)
+}
+
+pub fn update_progress(connection: &Connection, input: &UpdateDownloadInput) -> Result<()> {
     let completed = matches!(input.status, DownloadStatus::Completed);
     let affected = connection.execute(
         "UPDATE download_tasks SET status=?2,total_downloaded=?3,speed_current=?4,speed_average=?5,updated_at=CURRENT_TIMESTAMP,completed_at=CASE WHEN ?6 THEN CURRENT_TIMESTAMP ELSE completed_at END WHERE id=?1",
@@ -70,7 +75,7 @@ pub fn update(connection: &Connection, input: UpdateDownloadInput) -> Result<Dow
     if affected == 0 {
         return Err(rusqlite::Error::QueryReturnedNoRows);
     }
-    find(connection, &input.id)?.ok_or(rusqlite::Error::QueryReturnedNoRows)
+    Ok(())
 }
 
 pub fn remove(connection: &Connection, id: &str) -> Result<bool> {

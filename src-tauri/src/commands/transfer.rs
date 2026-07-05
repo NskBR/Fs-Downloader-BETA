@@ -168,6 +168,11 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
         window.set_focus().map_err(|error| error.to_string())?;
         return Ok(());
     }
+    for (existing_label, window) in app.webview_windows() {
+        if existing_label.starts_with("download-complete-") && existing_label != label {
+            let _ = window.close();
+        }
+    }
 
     {
         let mut creating = CREATING_WINDOWS.lock().map_err(|error| error.to_string())?;
@@ -190,7 +195,7 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
 
     let build_result = WebviewWindowBuilder::new(&app, &label, url)
         .title("SF Downloader - Concluído")
-        .inner_size(560.0, 195.0)
+        .inner_size(560.0, 252.0)
         .resizable(false)
         .decorations(false)
         .visible(false)
@@ -329,7 +334,12 @@ pub async fn queue_download(
     let task = downloads::create(&connection, prepared.input)
         .map_err(|error| format!("Falha ao persistir o download: {error}"))?;
     browser_bridge.persist_headers(&task.id, &headers)?;
-    if input.auto_extract && matches!(task.extension.as_deref(), Some("zip" | "7z")) {
+    if input.auto_extract
+        && matches!(
+            task.extension.as_deref(),
+            Some("zip" | "7z" | "rar" | "tar" | "gz" | "tgz")
+        )
+    {
         crate::download::extraction::register(task.id.clone(), input.archive_password.clone());
     }
     downloads::update(
@@ -377,7 +387,12 @@ pub async fn start_download(
     let task = downloads::create(&connection, prepared.input)
         .map_err(|error| format!("Falha ao persistir o download: {error}"))?;
     browser_bridge.persist_headers(&task.id, &headers)?;
-    if input.auto_extract && matches!(task.extension.as_deref(), Some("zip" | "7z")) {
+    if input.auto_extract
+        && matches!(
+            task.extension.as_deref(),
+            Some("zip" | "7z" | "rar" | "tar" | "gz" | "tgz")
+        )
+    {
         crate::download::extraction::register(task.id.clone(), input.archive_password.clone());
     }
     let _ = open_progress_window(app.clone(), task.id.clone()).await;

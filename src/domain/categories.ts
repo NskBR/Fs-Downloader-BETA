@@ -36,7 +36,7 @@ export const downloadCategories = [
   },
   {
     name: "Compactados",
-    extensions: ["zip", "rar", "7z", "tar", "gz"],
+    extensions: ["zip", "rar", "7z", "tar", "gz", "tgz"],
     icon: Archive,
     color: "#fbbf24",
   },

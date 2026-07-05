@@ -14,13 +14,30 @@ use std::{
     collections::VecDeque,
     path::{Path, PathBuf},
     sync::{
-        atomic::{AtomicI64, AtomicUsize, Ordering},
+        atomic::{AtomicI64, AtomicU64, AtomicUsize, Ordering},
         Arc, Mutex as StdMutex,
     },
     time::{Duration, Instant, SystemTime},
 };
 
 const MAX_CHUNK_ATTEMPTS: usize = 8;
+const UI_UPDATE_INTERVAL: Duration = Duration::from_millis(200);
+const PERSIST_INTERVAL: Duration = Duration::from_secs(1);
+
+fn claim_interval(gate: &AtomicU64, elapsed: Duration, interval: Duration) -> bool {
+    let now = elapsed.as_millis().min(u64::MAX as u128) as u64;
+    let interval = interval.as_millis().min(u64::MAX as u128) as u64;
+    let mut previous = gate.load(Ordering::Relaxed);
+    loop {
+        if now.saturating_sub(previous) < interval {
+            return false;
+        }
+        match gate.compare_exchange_weak(previous, now, Ordering::Relaxed, Ordering::Relaxed) {
+            Ok(_) => return true,
+            Err(current) => previous = current,
+        }
+    }
+}
 
 #[derive(Clone)]
 struct AdaptiveThrottle {
@@ -476,6 +493,7 @@ async fn transfer_segmented(
     let part_existed = tokio::fs::metadata(&task.temp_path).await.is_ok();
     let mut part = OpenOptions::new()
         .create(true)
+        .truncate(false)
         .read(true)
         .write(true)
         .open(&task.temp_path)
@@ -561,6 +579,7 @@ async fn transfer_segmented(
     let worker_count = max_connections.clamp(1, 32).min(pending.len().max(1));
     let queue = Arc::new(AsyncMutex::new(pending));
     let first_error = Arc::new(StdMutex::new(None::<String>));
+    let progress_gate = Arc::new(AtomicU64::new(0));
     for _ in 0..worker_count {
         let (client, database, task, control, app, downloaded, throttle, request_headers) = (
             client.clone(),
@@ -574,6 +593,7 @@ async fn transfer_segmented(
         );
         let queue = queue.clone();
         let first_error = first_error.clone();
+        let progress_gate = progress_gate.clone();
         workers.push(tauri::async_runtime::spawn(async move {
             loop {
                 if control.cancellation.is_cancelled() {
@@ -594,6 +614,7 @@ async fn transfer_segmented(
                     request_headers.clone(),
                     throttle.clone(),
                     initial,
+                    progress_gate.clone(),
                 )
                 .await
                 {
@@ -738,6 +759,7 @@ async fn download_piece(
     request_headers: HeaderMap,
     throttle: AdaptiveThrottle,
     session_offset: i64,
+    progress_gate: Arc<AtomicU64>,
 ) -> Result<(), String> {
     let length = chunk.end_byte - chunk.start_byte + 1;
     for attempt in 0..MAX_CHUNK_ATTEMPTS {
@@ -816,9 +838,13 @@ async fn download_piece(
                 let slice = &data[..];
                 file.write_all(slice).await.map_err(|error| error.to_string())?; chunk.downloaded_bytes += slice.len() as i64; response_downloaded += slice.len() as i64;
                 control.throttle(slice.len()).await;
-                let aggregate = total_downloaded.fetch_add(slice.len() as i64, Ordering::SeqCst) + slice.len() as i64; let speed = (aggregate - session_offset).max(0) as f64 / started.elapsed().as_secs_f64().max(0.001);
-                let _ = app.emit("download-progress", DownloadProgress { id: task.id.clone(), downloaded: aggregate, total: task.file_size, speed, status: DownloadStatus::Downloading, error: None });
-                if last_save.elapsed() >= Duration::from_millis(500) { if let Ok(connection) = database.connect() { let _ = chunks::update_progress(&connection, &chunk.id, chunk.downloaded_bytes, "downloading"); } update_state(&database, &task.id, DownloadStatus::Downloading, aggregate, speed, speed); last_save = Instant::now(); }
+                let aggregate = total_downloaded.fetch_add(slice.len() as i64, Ordering::Relaxed) + slice.len() as i64;
+                let elapsed = started.elapsed();
+                if claim_interval(&progress_gate, elapsed, UI_UPDATE_INTERVAL) {
+                    let speed = (aggregate - session_offset).max(0) as f64 / elapsed.as_secs_f64().max(0.001);
+                    let _ = app.emit("download-progress", DownloadProgress { id: task.id.clone(), downloaded: aggregate, total: task.file_size, speed, status: DownloadStatus::Downloading, error: None });
+                }
+                if last_save.elapsed() >= PERSIST_INTERVAL { let speed = (aggregate - session_offset).max(0) as f64 / elapsed.as_secs_f64().max(0.001); if let Ok(connection) = database.connect() { let _ = chunks::update_progress(&connection, &chunk.id, chunk.downloaded_bytes, "downloading"); } update_state(&database, &task.id, DownloadStatus::Downloading, aggregate, speed, speed); last_save = Instant::now(); }
                 if chunk.downloaded_bytes >= length { break; }
             }
             file.flush().await.map_err(|error| error.to_string())?;
@@ -1007,6 +1033,7 @@ async fn transfer(
     let mut stream = response.bytes_stream();
     let mut downloaded = offset;
     let mut last_persist = Instant::now();
+    let mut last_ui_update = Instant::now();
     update_state(
         database,
         &task.id,
@@ -1029,7 +1056,7 @@ async fn transfer(
         downloaded += i64::try_from(bytes.len()).unwrap_or(0);
         let elapsed = started.elapsed().as_secs_f64().max(0.001);
         let speed = (downloaded - offset) as f64 / elapsed;
-        if last_persist.elapsed() >= Duration::from_millis(500) {
+        if last_persist.elapsed() >= PERSIST_INTERVAL {
             update_state(
                 database,
                 &task.id,
@@ -1040,17 +1067,20 @@ async fn transfer(
             );
             last_persist = Instant::now();
         }
-        let _ = app.emit(
-            "download-progress",
-            DownloadProgress {
-                id: task.id.clone(),
-                downloaded,
-                total: task.file_size,
-                speed,
-                status: DownloadStatus::Downloading,
-                error: None,
-            },
-        );
+        if last_ui_update.elapsed() >= UI_UPDATE_INTERVAL {
+            let _ = app.emit(
+                "download-progress",
+                DownloadProgress {
+                    id: task.id.clone(),
+                    downloaded,
+                    total: task.file_size,
+                    speed,
+                    status: DownloadStatus::Downloading,
+                    error: None,
+                },
+            );
+            last_ui_update = Instant::now();
+        }
     }
     update_state(
         database,
@@ -1154,9 +1184,9 @@ fn update_state(
     average: f64,
 ) {
     if let Ok(connection) = database.connect() {
-        let _ = downloads::update(
+        let _ = downloads::update_progress(
             &connection,
-            UpdateDownloadInput {
+            &UpdateDownloadInput {
                 id: id.to_owned(),
                 status,
                 total_downloaded: downloaded,
@@ -1220,7 +1250,7 @@ fn category_for_extension(extension: Option<&str>) -> &'static str {
         "mp4" | "mkv" | "mov" | "avi" | "webm" => "Vídeos",
         "mp3" | "wav" | "flac" | "ogg" => "Áudios",
         "pdf" | "docx" | "xlsx" | "pptx" | "txt" => "Documentos",
-        "zip" | "rar" | "7z" | "tar" | "gz" => "Compactados",
+        "zip" | "rar" | "7z" | "tar" | "gz" | "tgz" => "Compactados",
         "exe" | "msi" | "apk" | "bat" => "Aplicativos",
         "torrent" => "Torrents",
         _ => "Outros",
@@ -1291,5 +1321,30 @@ mod tests {
         assert_eq!(adaptive_chunk_count(2 * 1024 * 1024, 8), 2);
         let large = adaptive_chunk_count(10 * 1024 * 1024 * 1024, 8);
         assert!((32..=128).contains(&large));
+    }
+
+    #[test]
+    fn progress_gate_limits_updates_to_five_per_second() {
+        let gate = AtomicU64::new(0);
+        assert!(!claim_interval(
+            &gate,
+            Duration::from_millis(199),
+            UI_UPDATE_INTERVAL
+        ));
+        assert!(claim_interval(
+            &gate,
+            Duration::from_millis(200),
+            UI_UPDATE_INTERVAL
+        ));
+        assert!(!claim_interval(
+            &gate,
+            Duration::from_millis(399),
+            UI_UPDATE_INTERVAL
+        ));
+        assert!(claim_interval(
+            &gate,
+            Duration::from_millis(400),
+            UI_UPDATE_INTERVAL
+        ));
     }
 }

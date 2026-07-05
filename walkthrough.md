@@ -79,3 +79,14 @@ Ajustamos o comportamento de redimensionamento da tabela para aproveitar melhor 
 - **Compilação do Rust:** Executado `cargo check` com sucesso completo.
 - **Compilação da Extensão:** Executado `node build.mjs` com sucesso completo.
 - **Integração Git:** Commits registrados e enviados com sucesso para o branch `main`.
+
+### 13. Otimização de CPU e memória
+- Eventos de progresso deixaram de ser emitidos a cada fragmento recebido. Agora há no máximo uma atualização global a cada 200 ms por download.
+- A persistência de chunks ocorre a cada segundo por worker e a atualização da tarefa usa um `UPDATE` leve, sem reler a linha completa.
+- O SQLite passou a usar WAL e `synchronous=NORMAL`, reduzindo contenção entre conexões paralelas.
+- Essa correção elimina a fila crescente de eventos entre Rust, Tauri e React que elevava simultaneamente CPU e memória.
+
+### 14. Tempo decorrido e formatos compactados
+- Downloads concluídos mostram o tempo entre criação e conclusão na lista principal e na janela final.
+- Autoextração ampliada para ZIP, 7z, RAR, TAR, TAR.GZ/TGZ e GZ.
+- Todos os formatos passam por limites de entradas/tamanho e validação de caminhos; extrações parciais são removidas após falhas.
