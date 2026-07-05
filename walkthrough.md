@@ -22,14 +22,11 @@ Ajustamos o comportamento de redimensionamento da tabela para aproveitar melhor 
 - Centralizado o cabeçalho "Status" e as tags de status dentro da coluna (`.col-status`).
 - **Resultado:** As tags ("Pausado", "Concluído", "Cancelado") agora ficam perfeitamente centralizadas em sua área e ganharam um respiro visual excelente, eliminando a sensação de ficarem muito coladas ou encavaladas na barra de progresso.
 
-### 4. Toolbar Simplificada e Ações Exclusivas no Menu de Contexto
-- **Modificado:** [DownloadsPage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/DownloadsPage.tsx)
-- Removidos os botões de ação redundantes da barra de ferramentas superior. A toolbar agora conta apenas com:
-  1. **Novo** (Ícone `Plus`)
-  2. **Pausar** (Ícone `Pause`)
-  3. **Resumir** (Ícone `Play`)
-  4. **Cancelar** (Ícone `Ban`)
-- As ações de **Excluir download**, **Abrir pasta de destino**, **Abrir arquivo** e **Fornecer novo link** (quando pausado ou falho) ficam acessíveis de forma organizada clicando com o botão direito sobre os arquivos na lista (Menu de Contexto).
+### 4. Toolbar Simplificada e Ações Exclusivas no Menu de Contexto Nativo
+- **Modificados:** [DownloadsPage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/DownloadsPage.tsx), [context_menu.rs](file:///C:/Users/skell/Documents/Projeto/src-tauri/src/commands/context_menu.rs), [lib.rs](file:///C:/Users/skell/Documents/Projeto/src-tauri/src/lib.rs)
+- Removidos os botões de ação redundantes da barra de ferramentas superior.
+- **Menu de Contexto Nativo do OS:** Substituído o menu de contexto HTML por um menu nativo do sistema via API `tauri::menu`. Isso resolve em definitivo o problema de o menu ser cortado pelos limites da janela do webview, permitindo que ele ultrapasse a janela e apareça perfeitamente em relação ao clique do mouse.
+- As ações de **Excluir download**, **Abrir pasta de destino**, **Abrir arquivo** e **Fornecer novo link** (quando pausado ou falho) agora disparam chamadas nativas enviadas ao frontend.
 
 ### 5. Redução de Espaço Vertical e Ajustes de Janela
 - **Modificados:** [redesign.css](file:///C:/Users/skell/Documents/Projeto/src/styles/redesign.css) e [tauri.conf.json](file:///C:/Users/skell/Documents/Projeto/src-tauri/tauri.conf.json)
@@ -47,15 +44,17 @@ Ajustamos o comportamento de redimensionamento da tabela para aproveitar melhor 
 - A janela de **Progresso** exibe bytes recebidos, velocidade de rede, tempo estimado (ETA) e o estado real da tarefa (`verificando`, `baixando`, `montando` ou `extraindo`).
 - A janela de **Conclusão** exibe o destino final e atalhos rápidos para abrir o arquivo ou sua pasta.
 
-### 8. Refinamento Visual e Correção dos Botões Cortados na Conclusão
-- **Modificados:** [CompletePage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/CompletePage.tsx) e [download-windows.css](file:///C:/Users/skell/Documents/Projeto/src/styles/download-windows.css)
+### 8. Refinamento Visual, Ajuste de Altura e Fim do Espaço Vazio na Conclusão
+- **Modificados:** [CompletePage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/CompletePage.tsx), [transfer.rs](file:///C:/Users/skell/Documents/Projeto/src-tauri/src/commands/transfer.rs) e [download-windows.css](file:///C:/Users/skell/Documents/Projeto/src/styles/download-windows.css)
 - **Status Removido:** Removida a linha redundante de "Status Concluído", pois a própria janela e o ícone de check no cabeçalho já expressam essa informação.
-- **Redução de Espaços:** Criada a classe CSS `.complete-compact` no arquivo `download-windows.css` para aplicar a mesma redução de paddings, margens e tamanhos que havia na janela de confirmação/progresso. Os paddings de topo e base foram reduzidos, e os espaçamentos entre linhas diminuíram de `7px` para `4px`.
-- **Botões Ajustados:** Com o encolhimento do conteúdo e a diminuição da altura dos botões inferiores para `32px`, todos os elementos de ação ("Abrir arquivo", "Abrir pasta" e "Fechar") agora cabem com bastante folga na janela e não são cortados.
+- **Redução de Altura e Espaços:** Reduzida a altura padrão da janela de Conclusão no backend de `300px` para `195px`. Ajustado o CSS `.complete-compact .download-window-content` de `flex: 1` para `flex: 0 0 auto` para impedir o esticamento e remover o grande espaço vazio restante, deixando a janela perfeitamente ajustada.
+- **Botões Ajustados:** Com a diminuição da altura dos botões inferiores para `32px`, todos os elementos de ação ("Abrir arquivo", "Abrir pasta" e "Fechar") agora cabem com bastante folga na janela e não são cortados.
 
-### 9. Abertura do Menu de Contexto na Posição Exata do Clique do Mouse
-- **Modificado:** [DownloadsPage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/DownloadsPage.tsx)
-- **Melhoria:** O menu de contexto foi configurado para sempre abrir na posição exata das coordenadas de clique do mouse (`clientX` e `clientY`), sem qualquer ajuste de limites que pudesse deslocar o menu para cima de outros arquivos da lista. O menu agora flutua livremente sobre a tabela.
+### 9. Duplo Clique Inteligente na Lista de Downloads
+- **Modificado:** [DownloadsPage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/DownloadsPage.tsx) e [downloadService.ts](file:///C:/Users/skell/Documents/Projeto/src/services/downloadService.ts)
+- **Melhoria:** Ao dar duplo clique em um item da lista:
+  - Se o download estiver **concluído** (`completed`), abre diretamente a tela de conclusão de download (`CompletePage`).
+  - Para qualquer outro status, abre a janela de progresso/detalhes correspondente.
 
 ### 10. Descompressão Automática Segura (ZIP e 7z)
 - **Modificados:** `engine.rs`, `extraction.rs`, `runtime.rs` e `lib.rs`

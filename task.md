@@ -32,10 +32,19 @@ Abaixo estão todas as tarefas executadas nesta sessão:
   - `[x]` Implementar reordenação de colunas por arraste (Drag-and-Drop) com persistência em localStorage (v4)
   - `[x]` Mapear Nome como coluna flexível `1fr` e remapear Data para ser redimensionável
 
-- `[x]` **Janelas de Download Standalone (Codex)**
-  - `[x]` Refatorar a janela de confirmação (tamanho, destino, limite de velocidade, senha ZIP/7z)
-  - `[x]` Refatorar a janela de progresso (estado real, velocidade, ETA, bytes)
-  - `[x]` Refatorar a janela de conclusão (caminho final, atalhos de abrir arquivo/pasta)
+- `[x]` **Correção do Menu de Contexto Cortado (Tauri Native Menu)**
+  - `[x]` Remover menu HTML customizado sujeito a cortes do webview
+  - `[x]` Implementar menu de contexto nativo com a API de menus do Tauri (`tauri::menu` em Rust)
+  - `[x]` Escutar ações do menu no frontend para Pausar, Retomar, Novo Link, Limite, Cancelar, Excluir, Abrir pasta e Abrir arquivo
+
+- `[x]` **Ajuste de Altura e Remoção de Espaço Vazio na Tela de Conclusão**
+  - `[x]` Reduzir dimensões padrão da janela de conclusão de `300px` para `195px` em [transfer.rs](file:///C:/Users/skell/Documents/Projeto/src-tauri/src/commands/transfer.rs)
+  - `[x]` Ajustar flex e padding do conteúdo em [download-windows.css](file:///C:/Users/skell/Documents/Projeto/src/styles/download-windows.css) para que não estique
+  - `[x]` Corrigir altura dos botões inferiores para evitar cortes
+
+- `[x]` **Comportamento Inteligente no Duplo Clique**
+  - `[x]` Encaminhar o usuário para a tela de conclusão correta (`CompletePage`) quando o item estiver com status "completed"
+  - `[x]` Abrir a janela de progresso correspondente para os demais estados
 
 - `[x]` **Descompressão ZIP e 7z Automática (Codex)**
   - `[x]` Suporte a extração segura de arquivos ZIP/7z (inclusive protegidos por senha)
