@@ -1,6 +1,10 @@
 use crate::{
     browser_bridge::BrowserBridge,
-    database::{models::DownloadTask, repositories::downloads, Database},
+    database::{
+        models::{CreateDownloadInput, DownloadStatus, DownloadTask},
+        repositories::{downloads, statistics},
+        Database,
+    },
     download::{
         engine,
         runtime::{DownloadRuntime, TaskControl},
@@ -42,6 +46,34 @@ fn default_connections() -> usize {
 }
 fn default_parallel_downloads() -> usize {
     3
+}
+
+fn reject_duplicate(database: &Database, candidate: &CreateDownloadInput) -> Result<(), String> {
+    let connection = database.connect()?;
+    let duplicate = downloads::list(&connection)
+        .map_err(|error| format!("Falha ao verificar downloads existentes: {error}"))?
+        .into_iter()
+        .find(|task| {
+            let same_url = task.original_url == candidate.original_url
+                || task.current_url == candidate.original_url;
+            let same_file = task.file_name.eq_ignore_ascii_case(&candidate.file_name)
+                && task.file_size.is_some()
+                && task.file_size == candidate.file_size;
+            (same_url || same_file)
+                && !matches!(
+                    task.status,
+                    DownloadStatus::Failed | DownloadStatus::Cancelled
+                )
+        });
+    if let Some(task) = duplicate {
+        let state = if task.status == DownloadStatus::Completed {
+            "já foi baixado"
+        } else {
+            "já está em andamento ou pausado"
+        };
+        return Err(format!("{}: este arquivo {state}.", task.file_name));
+    }
+    Ok(())
 }
 
 #[derive(Serialize)]
@@ -330,6 +362,7 @@ pub async fn queue_download(
         input.resume_support,
     )
     .await?;
+    reject_duplicate(&database, &prepared.input)?;
     let connection = database.connect()?;
     let task = downloads::create(&connection, prepared.input)
         .map_err(|error| format!("Falha ao persistir o download: {error}"))?;
@@ -383,6 +416,7 @@ pub async fn start_download(
         input.resume_support,
     )
     .await?;
+    reject_duplicate(&database, &prepared.input)?;
     let connection = database.connect()?;
     let task = downloads::create(&connection, prepared.input)
         .map_err(|error| format!("Falha ao persistir o download: {error}"))?;
@@ -490,6 +524,7 @@ pub fn cancel_download(
     if task.status == crate::database::models::DownloadStatus::Completed {
         return Ok(false);
     }
+    let observed_downloaded = task.total_downloaded.max(0);
     if delete_files {
         let _ = std::fs::remove_file(&task.temp_path);
         if let Ok(plan) = crate::database::repositories::chunks::list(&connection, &task.id) {
@@ -513,6 +548,20 @@ pub fn cancel_download(
         },
     )
     .map_err(|error| format!("Falha ao cancelar o download: {error}"))?;
+    if observed_downloaded > 0 {
+        let mut connection = database.connect()?;
+        statistics::record_snapshot(
+            &mut connection,
+            &task.id,
+            &task.file_name,
+            observed_downloaded,
+            0,
+            observed_downloaded,
+            task.speed_average,
+            "cancelled",
+        )
+        .map_err(|error| format!("Falha ao registrar uso do download: {error}"))?;
+    }
     Ok(true)
 }
 

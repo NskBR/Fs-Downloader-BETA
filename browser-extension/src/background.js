@@ -330,6 +330,26 @@ chrome.contextMenus.onClicked.addListener(info => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "intercept-link") {
+    chrome.storage.local.get("captureEnabled", ({ captureEnabled = true }) => {
+      const handled = captureEnabled
+        && shouldTakeOver(message.url, message.filename);
+      if (!handled) {
+        sendResponse({ handled: false });
+        return;
+      }
+      void sendToApp({
+        url: message.url,
+        finalUrl: message.url,
+        filename: message.filename || null,
+        fileSize: -1,
+        mime: null,
+        referrer: message.referrer || null
+      }).then(() => sendResponse({ handled: true }))
+        .catch(() => sendResponse({ handled: false }));
+    });
+    return true;
+  }
   if (message?.type === "capture-toggled") {
     void syncBridge().finally(() => sendResponse({ ok: true }));
     return true;

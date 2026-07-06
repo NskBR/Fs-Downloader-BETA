@@ -1,8 +1,11 @@
 import {
   Ban,
   Clock3,
+  Copy,
   FolderOpen,
   Gauge,
+  Link2,
+  Minus,
   Pause,
   Play,
   Trash2,
@@ -43,6 +46,13 @@ const labels: Record<string, string> = {
   completed: "Concluído",
   failed: "Falhou",
   cancelled: "Cancelado",
+};
+const sourceDomain = (value: string) => {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return "origem desconhecida";
+  }
 };
 
 export function ProgressPage({ downloadId }: { downloadId: string }) {
@@ -139,9 +149,14 @@ export function ProgressPage({ downloadId }: { downloadId: string }) {
       <main className="download-window">
         <header className="download-window-title" data-tauri-drag-region>
           <span>Download em progresso</span>
-          <button onClick={() => void appWindow.close()}>
-            <X />
-          </button>
+          <div className="download-window-controls">
+            <button title="Minimizar" onClick={() => void appWindow.minimize()}>
+              <Minus />
+            </button>
+            <button title="Fechar janela" onClick={() => void appWindow.close()}>
+              <X />
+            </button>
+          </div>
         </header>
         <div className="window-loading">Carregando detalhes...</div>
       </main>
@@ -162,9 +177,14 @@ export function ProgressPage({ downloadId }: { downloadId: string }) {
           <Gauge />
           {labels[status] ?? "Download"}
         </span>
-        <button onClick={() => void appWindow.close()}>
-          <X />
-        </button>
+        <div className="download-window-controls">
+          <button title="Minimizar" onClick={() => void appWindow.minimize()}>
+            <Minus />
+          </button>
+          <button title="Fechar janela" onClick={() => void appWindow.close()}>
+            <X />
+          </button>
+        </div>
       </header>
       <section className="download-window-content">
         <div className="progress-file">
@@ -174,8 +194,20 @@ export function ProgressPage({ downloadId }: { downloadId: string }) {
             <div className="large-progress">
               <i style={{ width: `${progress}%` }} />
             </div>
-            <span>
+            <span className="progress-file-meta">
               {bytes(downloaded)} / {bytes(task.fileSize)}
+              <button
+                title="Copiar link do download"
+                onClick={() =>
+                  void navigator.clipboard.writeText(
+                    task.currentUrl || task.originalUrl,
+                  )
+                }
+              >
+                <Link2 />
+                {sourceDomain(task.originalUrl)}
+                <Copy />
+              </button>
             </span>
           </div>
           <b>{progress.toFixed(0)}%</b>

@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   Ban,
   CheckSquare,
+  Copy,
   ExternalLink,
   FolderOpen,
   Link2,
@@ -11,6 +12,7 @@ import {
   Search,
   Square,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   useCallback,
@@ -51,6 +53,13 @@ const labels: Record<string, string> = {
   completed: "Concluído",
   failed: "Falhou",
   cancelled: "Cancelado",
+};
+const sourceDomain = (value: string) => {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return "origem desconhecida";
+  }
 };
 const groups: Partial<Record<PageId, string[]>> = {
   documents: ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv"],
@@ -481,7 +490,19 @@ export function DownloadsPage({
           </div>
         </div>
       )}
-      {error && <div className="error-banner">{error}</div>}
+      {error && (
+        <div className="error-banner dismissible-banner" role="alert">
+          <span>{error}</span>
+          <button
+            type="button"
+            className="banner-close-button"
+            aria-label="Fechar aviso de erro"
+            onClick={() => setError(null)}
+          >
+            <X />
+          </button>
+        </div>
+      )}
       <div className="reference-table" style={tableGridStyle}>
         <div className="table-head" style={tableGridStyle}>
           <span />
@@ -616,6 +637,28 @@ export function DownloadsPage({
                               ? ` · Tempo: ${formatElapsed(elapsedSeconds(item.createdAt, item.completedAt))}`
                               : ""}
                           </small>
+                          <div className="name-footer-row">
+                            <span
+                              className="download-origin"
+                              title={item.originalUrl}
+                            >
+                              <Link2 />
+                              {sourceDomain(item.originalUrl)}
+                            </span>
+                            <span className="inline-row-actions">
+                              <button
+                                title="Copiar link do download"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void navigator.clipboard.writeText(
+                                    item.currentUrl || item.originalUrl,
+                                  );
+                                }}
+                              >
+                                <Copy />
+                              </button>
+                            </span>
+                          </div>
                         </div>
                       );
                     if (col === "date")

@@ -9,6 +9,7 @@ import {
   Music2,
   Settings,
   Video,
+  UserRound,
   X,
 } from "lucide-react";
 import { useEffect, useState, type PropsWithChildren } from "react";
@@ -139,6 +140,13 @@ export function AppShell({
             )}
           </nav>
           <div className="sidebar-actions">
+            <button
+              className={`sidebar-profile-btn ${activePage === "profile" ? "active" : ""}`}
+              onClick={() => navigate("profile")}
+            >
+              <UserRound />
+              <span>Meu Perfil</span>
+            </button>
             <div className="sidebar-footer-row">
               <button
                 className={`sidebar-footer-btn ${activePage === "settings" ? "active" : ""}`}

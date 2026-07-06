@@ -34,5 +34,8 @@ flate2 = "1"
 tar = "0.4"
 unrar-ng = "0.7.7"
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_System_Threading"] }
+
 [dev-dependencies]
 sevenz-rust2 = { version = "0.21.2", features = ["aes256", "compress"] }

@@ -75,6 +75,17 @@ npm run extension:build
 
 Consulte `browser-extension/README.md` para instalar os builds descompactados.
 
+## Atualização Beta 0.2.x
+
+- Estabilidade do motor de download com menor chance de `database is locked`, persistência SQLite menos agressiva e recuperação gradual de conexões após limitação do provedor.
+- Melhor suporte a múltiplos downloads simultâneos, pausas, retomadas e registro de falhas/cancelamentos sem duplicar estatísticas.
+- Extração automática serializada para reduzir impacto em downloads ativos, com contabilização de leitura e escrita em disco.
+- Página **Meu Perfil** com total geral baixado, volume concluído, falhado e cancelado, escrita/leitura estimada no SSD, velocidade média e resumo por tipo de arquivo.
+- Extensão Chromium atualizada para interceptar cliques de download mais cedo via content script, reduzindo registros cancelados no gerenciador nativo do navegador.
+- Interface recebeu melhorias compactas: domínio/link de origem, botão de copiar link, minimizar janela de progresso, botão de fechar em alertas de erro e ajustes de sidebar.
+
+Descrição sugerida para o GitHub: **SF Downloader é um gerenciador de downloads desktop em Tauri, React e Rust, com downloads segmentados, retomada, organização automática, extensão de navegador e estatísticas locais.**
+
 ## Rodada de estabilização e identidade visual
 
 - Deep links consumidos ficam marcados durante a sessão, impedindo que `F5` duplique downloads ativos.
@@ -104,4 +115,3 @@ Planejado para as próximas versões de atualização:
 3. **Agendador de Downloads:** Programar horários específicos para início e pausa automática de downloads.
 4. **Integração via Native Messaging:** Substituição do protocolo de deep links `sfdownloader://` por Native Messaging nativo no Chrome/Firefox, permitindo capturar links silenciosamente sem abrir abas temporárias.
 5. **Suporte a BitTorrent / SFTP:** Expandir a engine de downloads segmentados para suportar novos protocolos além do HTTP/HTTPS.
-

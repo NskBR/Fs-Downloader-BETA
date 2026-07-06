@@ -162,6 +162,7 @@ pub fn run() {
             commands::downloads::list_history,
             commands::downloads::remove_history_item,
             commands::downloads::clear_history,
+            commands::profile::profile_statistics,
             commands::downloads::reveal_in_folder,
             commands::downloads::open_file,
             commands::transfer::start_download,

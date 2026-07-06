@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { DownloadTask } from "../domain/download";
 import type { AppSettings } from "../domain/settings";
+import type { ProfileStatistics } from "../domain/profile";
 
 export interface DownloadPreview {
   url: string;
@@ -106,3 +107,5 @@ export const browserExtensionConnected = () =>
   invoke<boolean>("browser_extension_status");
 export const extractionStatus = (id: string) =>
   invoke<string | null>("extraction_status", { id });
+export const profileStatistics = () =>
+  invoke<ProfileStatistics>("profile_statistics");

@@ -67,3 +67,18 @@ Abaixo estão todas as tarefas executadas nesta sessão:
   - `[x]` Ativar WAL e sincronização normal no SQLite
   - `[x]` Exibir tempo decorrido na lista e na janela de conclusão
   - `[x]` Adicionar extração para RAR, TAR, TAR.GZ/TGZ e GZ, além de ZIP e 7z
+
+- `[x]` **Meu Perfil e estatísticas de armazenamento**
+  - `[x]` Total baixado em GB/TB e quantidade de downloads pelo histórico local
+  - `[x]` Resumo por tipo de arquivo e dia com maior volume
+  - `[x]` Bytes concluídos, bytes lidos na extração e bytes gravados no SSD
+  - `[x]` Histórico diário persistente sem contabilizar novamente retomadas
+  - `[x]` Separação de GB concluídos, falhados, cancelados e total geral
+
+- `[x]` **Rodada de estabilidade, extensão e UI compacta (Codex)**
+  - `[x]` Reduzir contenção no SQLite com timeout maior e persistência de chunks menos agressiva
+  - `[x]` Ajustar recuperação gradual de conexões após limitação do provedor
+  - `[x]` Serializar extração para não disputar todos os recursos com downloads ativos
+  - `[x]` Atualizar extensão Chromium para 0.2.4 com content script de interceptação antecipada
+  - `[x]` Adicionar domínio de origem e botão de copiar link na lista/janela de progresso
+  - `[x]` Adicionar botão de fechar no alerta vermelho de erro da aba Downloads

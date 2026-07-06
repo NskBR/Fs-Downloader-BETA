@@ -5,11 +5,53 @@ use std::{
     path::{Path, PathBuf},
     sync::{LazyLock, Mutex},
 };
+use tokio::sync::Semaphore;
 
 static REQUESTS: LazyLock<Mutex<HashMap<String, Option<String>>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static RESULTS: LazyLock<Mutex<HashMap<String, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
+static EXTRACTED_BYTES: LazyLock<Mutex<HashMap<String, u64>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+static EXTRACTION_PERMIT: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(1));
+
+#[cfg(windows)]
+struct BackgroundResourceGuard;
+
+#[cfg(windows)]
+impl BackgroundResourceGuard {
+    fn enter() -> Self {
+        use windows_sys::Win32::System::Threading::{
+            GetCurrentThread, SetThreadPriority, THREAD_MODE_BACKGROUND_BEGIN,
+        };
+        unsafe {
+            let _ = SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN);
+        }
+        Self
+    }
+}
+
+#[cfg(windows)]
+impl Drop for BackgroundResourceGuard {
+    fn drop(&mut self) {
+        use windows_sys::Win32::System::Threading::{
+            GetCurrentThread, SetThreadPriority, THREAD_MODE_BACKGROUND_END,
+        };
+        unsafe {
+            let _ = SetThreadPriority(GetCurrentThread(), THREAD_MODE_BACKGROUND_END);
+        }
+    }
+}
+
+#[cfg(not(windows))]
+struct BackgroundResourceGuard;
+
+#[cfg(not(windows))]
+impl BackgroundResourceGuard {
+    fn enter() -> Self {
+        Self
+    }
+}
 
 pub fn register(id: String, password: Option<String>) {
     if let Ok(mut requests) = REQUESTS.lock() {
@@ -33,7 +75,13 @@ pub fn extraction_status(id: String) -> Option<String> {
 }
 
 pub async fn extract_archive(path: String, password: Option<String>) -> Result<PathBuf, String> {
-    tauri::async_runtime::spawn_blocking(move || {
+    let _permit = EXTRACTION_PERMIT
+        .acquire()
+        .await
+        .map_err(|_| "A fila de extração foi encerrada.".to_string())?;
+    let archive_key = path.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let _background_resources = BackgroundResourceGuard::enter();
         let archive_path = Path::new(&path);
         match archive_path
             .extension()
@@ -60,7 +108,44 @@ pub async fn extract_archive(path: String, password: Option<String>) -> Result<P
         }
     })
     .await
-    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())?;
+    if let Ok(output) = &result {
+        let size = extracted_size(output.clone()).await;
+        if let Ok(mut values) = EXTRACTED_BYTES.lock() {
+            values.insert(archive_key, size);
+        }
+    }
+    result
+}
+
+pub fn take_extracted_size(archive_path: &str) -> u64 {
+    EXTRACTED_BYTES
+        .lock()
+        .ok()
+        .and_then(|mut values| values.remove(archive_path))
+        .unwrap_or(0)
+}
+
+pub async fn extracted_size(path: PathBuf) -> u64 {
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut total = 0_u64;
+        let mut pending = vec![path];
+        while let Some(current) = pending.pop() {
+            let Ok(metadata) = fs::metadata(&current) else {
+                continue;
+            };
+            if metadata.is_file() {
+                total = total.saturating_add(metadata.len());
+                continue;
+            }
+            if let Ok(entries) = fs::read_dir(current) {
+                pending.extend(entries.filter_map(Result::ok).map(|entry| entry.path()));
+            }
+        }
+        total
+    })
+    .await
+    .unwrap_or(0)
 }
 
 fn safe_archive_path(path: &Path) -> bool {

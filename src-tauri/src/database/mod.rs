@@ -38,7 +38,9 @@ impl Database {
         let connection = Connection::open(&self.path)
             .map_err(|error| format!("Falha ao abrir o banco local: {error}"))?;
         connection
-            .execute_batch("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;")
+            .execute_batch(
+                "PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 30000; PRAGMA wal_autocheckpoint = 1000;",
+            )
             .map_err(|error| format!("Falha ao configurar o banco: {error}"))?;
         Ok(connection)
     }

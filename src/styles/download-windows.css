@@ -27,7 +27,8 @@
 .download-window-title svg {
   width: 20px;
 }
-.download-window-title > button {
+.download-window-title > button,
+.download-window-controls > button {
   display: grid;
   width: 46px;
   height: 47px;
@@ -36,9 +37,18 @@
   color: #9aa5ae;
   background: transparent;
 }
-.download-window-title > button:hover {
+.download-window-title > button:hover,
+.download-window-controls > button:hover {
   color: #fff;
   background: #bc3e43;
+}
+.download-window-controls {
+  display: flex;
+  height: 100%;
+}
+.download-window-controls > button:first-child:hover {
+  color: #fff;
+  background: #26343d;
 }
 .download-window-title.success {
   color: #39d878;
@@ -375,6 +385,32 @@
 }
 .progress-compact .progress-file > div > span {
   margin-top: 4px;
+}
+.progress-file-meta {
+  display: flex !important;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+.progress-file-meta button {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  color: #63baf5;
+  background: transparent;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.progress-file-meta button svg {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
 }
 .progress-file > b {
   color: #3fa9ff;

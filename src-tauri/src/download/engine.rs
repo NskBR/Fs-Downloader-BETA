@@ -3,6 +3,7 @@ use crate::database::{
     repositories::{
         chunks, downloads,
         history::{self, CreateHistory},
+        statistics,
     },
     Database,
 };
@@ -23,6 +24,7 @@ use std::{
 const MAX_CHUNK_ATTEMPTS: usize = 8;
 const UI_UPDATE_INTERVAL: Duration = Duration::from_millis(200);
 const PERSIST_INTERVAL: Duration = Duration::from_secs(1);
+const CHUNK_PERSIST_INTERVAL: Duration = Duration::from_secs(2);
 
 fn claim_interval(gate: &AtomicU64, elapsed: Duration, interval: Duration) -> bool {
     let now = elapsed.as_millis().min(u64::MAX as u128) as u64;
@@ -43,7 +45,9 @@ fn claim_interval(gate: &AtomicU64, elapsed: Duration, interval: Duration) -> bo
 struct AdaptiveThrottle {
     permits: Arc<Semaphore>,
     concurrency: Arc<AtomicUsize>,
+    max_concurrency: usize,
     cooldown_until: Arc<StdMutex<Instant>>,
+    last_recovery: Arc<StdMutex<Instant>>,
     fallback_lock: Arc<AsyncMutex<()>>,
 }
 
@@ -53,7 +57,9 @@ impl AdaptiveThrottle {
         Self {
             permits: Arc::new(Semaphore::new(connections)),
             concurrency: Arc::new(AtomicUsize::new(connections)),
+            max_concurrency: connections,
             cooldown_until: Arc::new(StdMutex::new(Instant::now())),
+            last_recovery: Arc::new(StdMutex::new(Instant::now())),
             fallback_lock: Arc::new(AsyncMutex::new(())),
         }
     }
@@ -67,6 +73,20 @@ impl AdaptiveThrottle {
         if until > Instant::now() {
             tokio::time::sleep_until(tokio::time::Instant::from_std(until)).await;
         }
+        let current = self.concurrency.load(Ordering::SeqCst);
+        if current < self.max_concurrency {
+            if let Ok(mut last) = self.last_recovery.lock() {
+                if last.elapsed() >= Duration::from_secs(5)
+                    && self
+                        .concurrency
+                        .compare_exchange(current, current + 1, Ordering::SeqCst, Ordering::SeqCst)
+                        .is_ok()
+                {
+                    self.permits.add_permits(1);
+                    *last = Instant::now();
+                }
+            }
+        }
     }
 
     fn limit(&self, delay: Duration) {
@@ -78,6 +98,9 @@ impl AdaptiveThrottle {
         let removed = self.permits.forget_permits(current.saturating_sub(target));
         if removed > 0 {
             self.concurrency.fetch_sub(removed, Ordering::SeqCst);
+            if let Ok(mut last) = self.last_recovery.lock() {
+                *last = Instant::now();
+            }
         }
     }
 }
@@ -348,6 +371,14 @@ pub async fn run(
             .and_then(|connection| downloads::find(&connection, &task.id).ok().flatten())
             .map(|current| (current.total_downloaded, current.speed_average))
             .unwrap_or((0, 0.0));
+        downloaded = downloaded.max(
+            tokio::fs::metadata(&task.temp_path)
+                .await
+                .ok()
+                .and_then(|metadata| i64::try_from(metadata.len()).ok())
+                .unwrap_or(0),
+        );
+        let observed_downloaded = downloaded;
         if cancelled && control.should_delete_files() {
             cleanup_partial(&database, &task).await;
             downloaded = 0;
@@ -361,6 +392,15 @@ pub async fn run(
             average,
         );
         if !paused {
+            record_usage(
+                &database,
+                &task,
+                observed_downloaded,
+                0,
+                observed_downloaded,
+                average,
+                status.as_str(),
+            );
             record_history(
                 &database,
                 &task,
@@ -422,12 +462,22 @@ pub async fn run_segmented(
             .and_then(|connection| chunks::list(&connection, &task.id).ok())
             .map(|items| items.iter().map(|chunk| chunk.downloaded_bytes).sum())
             .unwrap_or(0);
+        let observed_downloaded = downloaded;
         if cancelled && control.should_delete_files() {
             cleanup_partial(&database, &task).await;
             downloaded = 0;
         }
         update_state(&database, &task.id, status.clone(), downloaded, 0.0, 0.0);
         if !paused {
+            record_usage(
+                &database,
+                &task,
+                observed_downloaded,
+                0,
+                observed_downloaded,
+                0.0,
+                status.as_str(),
+            );
             record_history(&database, &task, status.as_str(), started.elapsed(), 0.0);
         }
         let _ = app.emit(
@@ -580,6 +630,7 @@ async fn transfer_segmented(
     let queue = Arc::new(AsyncMutex::new(pending));
     let first_error = Arc::new(StdMutex::new(None::<String>));
     let progress_gate = Arc::new(AtomicU64::new(0));
+    let persist_gate = Arc::new(AtomicU64::new(0));
     for _ in 0..worker_count {
         let (client, database, task, control, app, downloaded, throttle, request_headers) = (
             client.clone(),
@@ -594,6 +645,7 @@ async fn transfer_segmented(
         let queue = queue.clone();
         let first_error = first_error.clone();
         let progress_gate = progress_gate.clone();
+        let persist_gate = persist_gate.clone();
         workers.push(tauri::async_runtime::spawn(async move {
             loop {
                 if control.cancellation.is_cancelled() {
@@ -615,6 +667,7 @@ async fn transfer_segmented(
                     throttle.clone(),
                     initial,
                     progress_gate.clone(),
+                    persist_gate.clone(),
                 )
                 .await
                 {
@@ -709,7 +762,7 @@ async fn transfer_segmented(
     tokio::fs::rename(&task.temp_path, &task.final_path)
         .await
         .map_err(|error| error.to_string())?;
-    run_auto_extraction(app, database, task).await;
+    let (disk_read, extracted_written) = run_auto_extraction(app, database, task).await;
     for chunk in &plan {
         let _ = tokio::fs::remove_file(chunk_path(&task.temp_path, chunk.index)).await;
     }
@@ -726,6 +779,15 @@ async fn transfer_segmented(
         total,
         0.0,
         speed,
+    );
+    record_usage(
+        database,
+        task,
+        total,
+        disk_read,
+        total.saturating_add(extracted_written),
+        speed,
+        "completed",
     );
     record_history(database, task, "completed", elapsed, speed);
     let _ = app.emit(
@@ -760,6 +822,7 @@ async fn download_piece(
     throttle: AdaptiveThrottle,
     session_offset: i64,
     progress_gate: Arc<AtomicU64>,
+    persist_gate: Arc<AtomicU64>,
 ) -> Result<(), String> {
     let length = chunk.end_byte - chunk.start_byte + 1;
     for attempt in 0..MAX_CHUNK_ATTEMPTS {
@@ -844,7 +907,31 @@ async fn download_piece(
                     let speed = (aggregate - session_offset).max(0) as f64 / elapsed.as_secs_f64().max(0.001);
                     let _ = app.emit("download-progress", DownloadProgress { id: task.id.clone(), downloaded: aggregate, total: task.file_size, speed, status: DownloadStatus::Downloading, error: None });
                 }
-                if last_save.elapsed() >= PERSIST_INTERVAL { let speed = (aggregate - session_offset).max(0) as f64 / elapsed.as_secs_f64().max(0.001); if let Ok(connection) = database.connect() { let _ = chunks::update_progress(&connection, &chunk.id, chunk.downloaded_bytes, "downloading"); } update_state(&database, &task.id, DownloadStatus::Downloading, aggregate, speed, speed); last_save = Instant::now(); }
+                if last_save.elapsed() >= CHUNK_PERSIST_INTERVAL {
+                    let speed = (aggregate - session_offset).max(0) as f64
+                        / elapsed.as_secs_f64().max(0.001);
+                    if let Ok(connection) = database.connect() {
+                        let _ = chunks::update_progress(
+                            &connection,
+                            &chunk.id,
+                            chunk.downloaded_bytes,
+                            "downloading",
+                        );
+                        if claim_interval(&persist_gate, elapsed, PERSIST_INTERVAL) {
+                            let _ = downloads::update_progress(
+                                &connection,
+                                &UpdateDownloadInput {
+                                    id: task.id.clone(),
+                                    status: DownloadStatus::Downloading,
+                                    total_downloaded: aggregate,
+                                    speed_current: speed,
+                                    speed_average: speed,
+                                },
+                            );
+                        }
+                    }
+                    last_save = Instant::now();
+                }
                 if chunk.downloaded_bytes >= length { break; }
             }
             file.flush().await.map_err(|error| error.to_string())?;
@@ -854,6 +941,17 @@ async fn download_piece(
             Ok(())
         }.await;
         drop(permit);
+        if control.cancellation.is_cancelled() {
+            if let Ok(connection) = database.connect() {
+                let _ = chunks::update_progress(
+                    &connection,
+                    &chunk.id,
+                    chunk.downloaded_bytes,
+                    "pending",
+                );
+            }
+            return result;
+        }
         if result.is_ok() {
             return result;
         }
@@ -1108,7 +1206,7 @@ async fn transfer(
     tokio::fs::rename(&task.temp_path, &task.final_path)
         .await
         .map_err(|error| format!("Falha ao mover o arquivo concluído: {error}"))?;
-    run_auto_extraction(app, database, task).await;
+    let (disk_read, extracted_written) = run_auto_extraction(app, database, task).await;
     // Attempt to remove the temporary .sf-temp folder if it's empty
     if let Some(temp_folder) = Path::new(&task.temp_path).parent() {
         let _ = tokio::fs::remove_dir(temp_folder).await;
@@ -1122,6 +1220,15 @@ async fn transfer(
         downloaded,
         0.0,
         average,
+    );
+    record_usage(
+        database,
+        task,
+        downloaded,
+        disk_read,
+        downloaded.saturating_add(extracted_written),
+        average,
+        "completed",
     );
     record_history(database, task, "completed", elapsed, average);
     let _ = app.emit(
@@ -1143,9 +1250,13 @@ async fn transfer(
     Ok(())
 }
 
-async fn run_auto_extraction(app: &AppHandle, database: &Database, task: &DownloadTask) {
+async fn run_auto_extraction(
+    app: &AppHandle,
+    database: &Database,
+    task: &DownloadTask,
+) -> (i64, i64) {
     let Some(password) = crate::download::extraction::take(&task.id) else {
-        return;
+        return (0, 0);
     };
     update_state(
         database,
@@ -1173,6 +1284,39 @@ async fn run_auto_extraction(app: &AppHandle, database: &Database, task: &Downlo
             Err(error) => format!("Erro na extração: {error}"),
         };
     crate::download::extraction::save_result(&task.id, result);
+    let disk_read = tokio::fs::metadata(&task.final_path)
+        .await
+        .ok()
+        .and_then(|metadata| i64::try_from(metadata.len()).ok())
+        .unwrap_or(0);
+    let extracted_written = i64::try_from(crate::download::extraction::take_extracted_size(
+        &task.final_path,
+    ))
+    .unwrap_or(i64::MAX);
+    (disk_read, extracted_written)
+}
+
+fn record_usage(
+    database: &Database,
+    task: &DownloadTask,
+    network_bytes: i64,
+    disk_read_bytes: i64,
+    disk_written_bytes: i64,
+    average_speed: f64,
+    status: &str,
+) {
+    if let Ok(mut connection) = database.connect() {
+        let _ = statistics::record_snapshot(
+            &mut connection,
+            &task.id,
+            &task.file_name,
+            network_bytes,
+            disk_read_bytes,
+            disk_written_bytes,
+            average_speed,
+            status,
+        );
+    }
 }
 
 fn update_state(
@@ -1346,5 +1490,15 @@ mod tests {
             Duration::from_millis(400),
             UI_UPDATE_INTERVAL
         ));
+    }
+
+    #[tokio::test]
+    async fn adaptive_throttle_recovers_after_provider_cooldown() {
+        let throttle = AdaptiveThrottle::new(4);
+        throttle.limit(Duration::ZERO);
+        assert_eq!(throttle.concurrency.load(Ordering::SeqCst), 2);
+        *throttle.last_recovery.lock().unwrap() = Instant::now() - Duration::from_secs(6);
+        throttle.wait().await;
+        assert_eq!(throttle.concurrency.load(Ordering::SeqCst), 3);
     }
 }
