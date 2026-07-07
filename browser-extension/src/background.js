@@ -23,6 +23,14 @@ function applyExtensionFilters(fileExts, disabledExtensions = []) {
   return (fileExts || []).map(normalizeExtension).filter(ext => ext && !blocked.has(ext));
 }
 
+function saveBridgeToStorage() {
+  chrome.storage.local.set({
+    connected: bridge.connected,
+    fileExts: bridge.fileExts || [],
+    blockedHosts: bridge.blockedHosts || []
+  });
+}
+
 async function syncBridge() {
   const { captureEnabled = captureEnabledState, disabledExtensions = disabledExtensionsState } = await storageGet(["captureEnabled", "disabledExtensions"]);
   captureEnabledState = captureEnabled;
@@ -32,6 +40,7 @@ async function syncBridge() {
       fetch(`${BRIDGE}/disconnect`, { method: "POST" }).catch(() => {});
     }
     bridge.connected = false;
+    saveBridgeToStorage();
     return;
   }
 
@@ -45,8 +54,10 @@ async function syncBridge() {
       allFileExts: (data.fileExts || []).map(normalizeExtension).filter(Boolean),
       fileExts: applyExtensionFilters(data.fileExts, disabledExtensionsState)
     };
+    saveBridgeToStorage();
   } catch {
     bridge.connected = false;
+    saveBridgeToStorage();
   }
 }
 
@@ -388,6 +399,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "extension-filters-updated") {
     disabledExtensionsState = message.disabledExtensions || [];
     bridge.fileExts = applyExtensionFilters(bridge.allFileExts || bridge.fileExts, disabledExtensionsState);
+    saveBridgeToStorage();
     sendResponse({ ok: true });
     return true;
   }
