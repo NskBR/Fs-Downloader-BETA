@@ -31,34 +31,42 @@ function saveBridgeToStorage() {
   });
 }
 
-async function syncBridge() {
-  const { captureEnabled = captureEnabledState, disabledExtensions = disabledExtensionsState } = await storageGet(["captureEnabled", "disabledExtensions"]);
-  captureEnabledState = captureEnabled;
-  disabledExtensionsState = disabledExtensions || [];
-  if (!captureEnabledState) {
-    if (bridge.connected) {
-      fetch(`${BRIDGE}/disconnect`, { method: "POST" }).catch(() => {});
-    }
-    bridge.connected = false;
-    saveBridgeToStorage();
-    return;
-  }
+let syncPromise = null;
 
-  try {
-    const response = await fetch(`${BRIDGE}/sync`, { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    bridge = {
-      connected: true,
-      ...data,
-      allFileExts: (data.fileExts || []).map(normalizeExtension).filter(Boolean),
-      fileExts: applyExtensionFilters(data.fileExts, disabledExtensionsState)
-    };
-    saveBridgeToStorage();
-  } catch {
-    bridge.connected = false;
-    saveBridgeToStorage();
-  }
+function syncBridge() {
+  if (syncPromise) return syncPromise;
+  syncPromise = (async () => {
+    const { captureEnabled = captureEnabledState, disabledExtensions = disabledExtensionsState } = await storageGet(["captureEnabled", "disabledExtensions"]);
+    captureEnabledState = captureEnabled;
+    disabledExtensionsState = disabledExtensions || [];
+    if (!captureEnabledState) {
+      if (bridge.connected) {
+        try { await fetch(`${BRIDGE}/disconnect`, { method: "POST" }); } catch {}
+      }
+      bridge.connected = false;
+      saveBridgeToStorage();
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BRIDGE}/sync`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      bridge = {
+        connected: true,
+        ...data,
+        allFileExts: (data.fileExts || []).map(normalizeExtension).filter(Boolean),
+        fileExts: applyExtensionFilters(data.fileExts, disabledExtensionsState)
+      };
+      saveBridgeToStorage();
+    } catch {
+      bridge.connected = false;
+      saveBridgeToStorage();
+    }
+  })().finally(() => {
+    syncPromise = null;
+  });
+  return syncPromise;
 }
 
 function launchProtocol(url) {
@@ -209,12 +217,25 @@ function eraseDownload(id) {
   });
 }
 
-function onDeterminingFilename(download) {
+function onDeterminingFilename(download, suggest) {
   const url = download.finalUrl || download.url;
-  if (!captureEnabledState || intercepted.has(download.id) || !shouldTakeOver(url, download.filename)) return;
-  intercepted.add(download.id);
-  eraseDownload(download.id);
-  void sendToApp(download).finally(() => setTimeout(() => intercepted.delete(download.id), 5000));
+  syncBridge().then(() => {
+    if (!captureEnabledState || intercepted.has(download.id) || !shouldTakeOver(url, download.filename)) {
+      suggest();
+      return;
+    }
+    intercepted.add(download.id);
+    eraseDownload(download.id);
+    sendToApp(download)
+      .catch(() => {})
+      .finally(() => {
+        setTimeout(() => intercepted.delete(download.id), 5000);
+        suggest();
+      });
+  }).catch(() => {
+    suggest();
+  });
+  return true;
 }
 
 try {
@@ -348,10 +369,12 @@ if (determiningFilename) {
 } else if (chrome.downloads && chrome.downloads.onCreated) {
   chrome.downloads.onCreated.addListener(download => {
     const url = download.finalUrl || download.url;
-    if (!captureEnabledState || intercepted.has(download.id) || !shouldTakeOver(url, download.filename)) return;
-    intercepted.add(download.id);
-    eraseDownload(download.id);
-    void sendToApp(download).finally(() => setTimeout(() => intercepted.delete(download.id), 5000));
+    syncBridge().then(() => {
+      if (!captureEnabledState || intercepted.has(download.id) || !shouldTakeOver(url, download.filename)) return;
+      intercepted.add(download.id);
+      eraseDownload(download.id);
+      void sendToApp(download).finally(() => setTimeout(() => intercepted.delete(download.id), 5000));
+    }).catch(() => {});
   });
 }
 
@@ -375,20 +398,24 @@ chrome.contextMenus.onClicked.addListener(info => {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "intercept-link") {
-    const handled = captureEnabledState && shouldTakeOver(message.url, message.filename);
-    if (!handled) {
+    syncBridge().then(() => {
+      const handled = captureEnabledState && shouldTakeOver(message.url, message.filename);
+      if (!handled) {
+        sendResponse({ handled: false });
+        return;
+      }
+      sendToApp({
+        url: message.url,
+        finalUrl: message.url,
+        filename: message.filename || null,
+        fileSize: -1,
+        mime: null,
+        referrer: message.referrer || null
+      }).then(() => sendResponse({ handled: true }))
+        .catch(() => sendResponse({ handled: false }));
+    }).catch(() => {
       sendResponse({ handled: false });
-      return false;
-    }
-    void sendToApp({
-      url: message.url,
-      finalUrl: message.url,
-      filename: message.filename || null,
-      fileSize: -1,
-      mime: null,
-      referrer: message.referrer || null
-    }).then(() => sendResponse({ handled: true }))
-      .catch(() => sendResponse({ handled: false }));
+    });
     return true;
   }
   if (message?.type === "capture-toggled") {
