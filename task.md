@@ -82,3 +82,18 @@ Abaixo estão todas as tarefas executadas nesta sessão:
   - `[x]` Atualizar extensão Chromium para 0.2.4 com content script de interceptação antecipada
   - `[x]` Adicionar domínio de origem e botão de copiar link na lista/janela de progresso
   - `[x]` Adicionar botão de fechar no alerta vermelho de erro da aba Downloads
+
+- `[x]` **Correções de extração, tray e extensão 0.2.5 (Codex)**
+  - `[x]` Extrair em pasta temporária `.sf-extracting-*` e publicar a pasta final apenas após sucesso
+  - `[x]` Limpar pasta temporária com retries quando a extração falha
+  - `[x]` Alterar padrão para iniciar o app normalmente, mantendo opção persistente de iniciar em tray
+  - `[x]` Manter comportamento de esconder na bandeja ao apertar X
+  - `[x]` Adicionar filtros por extensão no popup da extensão
+  - `[x]` Documentar viabilidade de redesign total em fase futura
+
+- `[x]` **Extensão Chromium estilo XDM e ícones por formato 0.2.6 (Codex)**
+  - `[x]` Comparar lógica da extensão Chromium do Xtreme Download Manager
+  - `[x]` Remover consulta ao storage no caminho crítico de `downloads.onDeterminingFilename`
+  - `[x]` Manter estado de captura/filtros em memória para cancelamento imediato
+  - `[x]` Atualizar pacotes Chromium/Firefox para 0.2.6
+  - `[x]` Separar ícones e cores por formato: ZIP, RAR, 7Z, TAR, GZ, documentos, mídia e executáveis

@@ -33,7 +33,7 @@ export const defaultSettings: AppSettings = {
   speedLimitDownloadMbps: 0,
   theme: "midnight",
   uiScale: 1.1,
-  startInTrayMode: true,
+  startInTrayMode: false,
   language: "pt-BR",
   customCategories: [],
 };

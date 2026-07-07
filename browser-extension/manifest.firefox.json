@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SF Downloader Integration",
-  "version": "0.2.3",
+  "version": "0.2.6",
   "description": "Integra downloads do Firefox ao SF Downloader.",
   "permissions": [
     "activeTab",
@@ -22,6 +22,18 @@
       "background.js"
     ]
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
   "action": {
     "default_title": "SF Downloader",
     "default_popup": "popup.html",

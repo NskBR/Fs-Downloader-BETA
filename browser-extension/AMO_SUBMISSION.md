@@ -1,11 +1,14 @@
-# SF Downloader Integration 0.2.3 — notas para revisão AMO
+# SF Downloader Integration 0.2.6 — notas para revisão AMO
 
-## Alterações da versão 0.2.3
+## Alterações da versão 0.2.6
 
 - Corrige a perda de downloads legítimos repetidos da mesma URL.
 - Reconhece nomes UTF-8 enviados pelo cabeçalho `Content-Disposition: filename*=`.
 - Alinha os tipos de arquivo monitorados às categorias suportadas pelo aplicativo.
 - Mantém o estado de conexão sincronizado quando a captura é ativada ou desativada.
+- Adiciona filtros por extensão no popup para permitir que tipos como `.TXT`, `.MP4` ou `.MP3` continuem sendo tratados pelo navegador.
+- Adiciona content script para capturar cliques comuns antes do gerenciador nativo criar o item de download.
+- Remove consulta assíncrona ao storage no caminho crítico de interceptação, reduzindo a chance do Chromium abrir a janela nativa de salvar antes do app.
 
 ## Finalidade
 
@@ -29,7 +32,8 @@ As declarações `browsingActivity`, `websiteContent` e `websiteActivity` existe
 3. Abra o popup e confirme que o status informa conexão com o aplicativo.
 4. Inicie o download de um arquivo HTTP/HTTPS.
 5. Confirme que o download nativo é removido e a janela de confirmação do SF Downloader é aberta.
-6. Desative o monitoramento no popup e confirme que downloads voltam a ser tratados pelo Firefox.
+6. Desative um tipo de arquivo no popup, por exemplo `TXT`, e confirme que ele volta a ser tratado pelo Firefox.
+7. Desative o monitoramento no popup e confirme que downloads voltam a ser tratados pelo Firefox.
 
 ## Build reproduzível
 

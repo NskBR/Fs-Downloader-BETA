@@ -82,6 +82,11 @@ Consulte `browser-extension/README.md` para instalar os builds descompactados.
 - Extração automática serializada para reduzir impacto em downloads ativos, com contabilização de leitura e escrita em disco.
 - Página **Meu Perfil** com total geral baixado, volume concluído, falhado e cancelado, escrita/leitura estimada no SSD, velocidade média e resumo por tipo de arquivo.
 - Extensão Chromium atualizada para interceptar cliques de download mais cedo via content script, reduzindo registros cancelados no gerenciador nativo do navegador.
+- Popup da extensão com filtros por extensão para permitir que tipos como `.TXT`, `.MP4` ou `.MP3` continuem sendo baixados pelo navegador.
+- Extensão Chromium 0.2.6 ajustada no estilo XDM: estado em memória e cancelamento imediato em `downloads.onDeterminingFilename`, sem consultar storage no caminho crítico.
+- Extração passa a usar pasta temporária `.sf-extracting-*` e só publica a pasta final quando termina com sucesso, evitando restos travados após falhas.
+- Tray revisado: o padrão é iniciar com janela visível, a opção **Inicializar em tray mode** fica persistente e o botão X envia a janela para a bandeja.
+- Ícones de formato redesenhados por tipo de arquivo, com cores diferentes para ZIP, RAR, 7Z, TAR/GZ, vídeos, áudios, documentos, imagens e executáveis.
 - Interface recebeu melhorias compactas: domínio/link de origem, botão de copiar link, minimizar janela de progresso, botão de fechar em alertas de erro e ajustes de sidebar.
 
 Descrição sugerida para o GitHub: **SF Downloader é um gerenciador de downloads desktop em Tauri, React e Rust, com downloads segmentados, retomada, organização automática, extensão de navegador e estatísticas locais.**

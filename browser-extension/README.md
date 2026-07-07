@@ -1,6 +1,6 @@
 # SF Downloader Integration
 
-Versão atual: **0.2.4**.
+Versão atual: **0.2.6**.
 
 Integração Manifest V3 para Chromium (Chrome, Edge, Brave e Opera) e Firefox.
 
@@ -8,6 +8,8 @@ Integração Manifest V3 para Chromium (Chrome, Edge, Brave e Opera) e Firefox.
 
 - Sincroniza com o aplicativo em `http://127.0.0.1:17831`.
 - Intercepta cliques de download antecipadamente com content script e usa `downloads.onDeterminingFilename` como fallback.
+- Permite ativar/desativar a captura por extensão no popup, por exemplo deixar `.TXT`, `.MP4` ou `.MP3` com o navegador.
+- No Chromium, o caminho crítico de captura segue o modelo do XDM: estado em memória e cancelamento imediato em `downloads.onDeterminingFilename`, sem consultar storage antes de cancelar.
 - Cancela e remove o registro nativo do navegador antes de encaminhar ao app.
 - Envia URL final, nome, tamanho, MIME, referer e headers necessários.
 - Cookies e headers ficam somente na memória do núcleo Rust; não são gravados em SQLite ou `localStorage`.
