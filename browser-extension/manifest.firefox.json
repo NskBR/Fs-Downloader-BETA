@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SF Downloader Integration",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Integra downloads do Firefox ao SF Downloader.",
   "permissions": [
     "activeTab",
@@ -38,13 +38,13 @@
     "default_title": "SF Downloader",
     "default_popup": "popup.html",
     "default_icon": {
-      "32": "icons/icon-32.png",
-      "128": "icons/icon-128.png"
+      "32": "icons/sf-small.png",
+      "128": "icons/sf-large.png"
     }
   },
   "icons": {
-    "32": "icons/icon-32.png",
-    "128": "icons/icon-128.png"
+    "32": "icons/sf-small.png",
+    "128": "icons/sf-large.png"
   },
   "browser_specific_settings": {
     "gecko": {

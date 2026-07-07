@@ -97,3 +97,8 @@ Abaixo estão todas as tarefas executadas nesta sessão:
   - `[x]` Manter estado de captura/filtros em memória para cancelamento imediato
   - `[x]` Atualizar pacotes Chromium/Firefox para 0.2.6
   - `[x]` Separar ícones e cores por formato: ZIP, RAR, 7Z, TAR, GZ, documentos, mídia e executáveis
+
+- `[x]` **Correção AMO extensão 0.2.7 (Codex)**
+  - `[x]` Remover nomes de ícone com hífen dentro do pacote da extensão
+  - `[x]` Atualizar manifests e popup para `icons/icon32.png` e `icons/icon128.png`
+  - `[x]` Gerar novo pacote Firefox para reenvio à validação da Mozilla

@@ -1,6 +1,6 @@
-# SF Downloader Integration 0.2.6 — notas para revisão AMO
+# SF Downloader Integration 0.2.7 — notas para revisão AMO
 
-## Alterações da versão 0.2.6
+## Alterações da versão 0.2.7
 
 - Corrige a perda de downloads legítimos repetidos da mesma URL.
 - Reconhece nomes UTF-8 enviados pelo cabeçalho `Content-Disposition: filename*=`.
@@ -9,6 +9,7 @@
 - Adiciona filtros por extensão no popup para permitir que tipos como `.TXT`, `.MP4` ou `.MP3` continuem sendo tratados pelo navegador.
 - Adiciona content script para capturar cliques comuns antes do gerenciador nativo criar o item de download.
 - Remove consulta assíncrona ao storage no caminho crítico de interceptação, reduzindo a chance do Chromium abrir a janela nativa de salvar antes do app.
+- Renomeia ícones empacotados para `sf-small.png` e `sf-large.png`, evitando a rejeição da AMO por nomes de arquivo como `icons/icon-128.png` ou `icons/icon128.png`.
 
 ## Finalidade
 

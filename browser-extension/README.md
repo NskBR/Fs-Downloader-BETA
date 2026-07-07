@@ -1,6 +1,6 @@
 # SF Downloader Integration
 
-Versão atual: **0.2.6**.
+Versão atual: **0.2.7**.
 
 Integração Manifest V3 para Chromium (Chrome, Edge, Brave e Opera) e Firefox.
 
