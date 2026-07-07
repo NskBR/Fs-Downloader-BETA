@@ -72,7 +72,7 @@ export function BrowserIntegrationPage() {
   };
 
   return (
-    <div className="download-window complete-compact xdm-window">
+    <div className="xdm-window">
       {/* Titlebar Arrastável */}
       <header className="xdm-titlebar" data-tauri-drag-region>
         <div className="xdm-titlebar-title" data-tauri-drag-region>
@@ -86,7 +86,7 @@ export function BrowserIntegrationPage() {
       </header>
 
       {/* Conteúdo Principal */}
-      <main className="download-window-content browser-integration-layout">
+      <main className="browser-integration-layout">
         
         {/* Menu Lateral de Navegadores */}
         <aside className="browser-sidebar">
