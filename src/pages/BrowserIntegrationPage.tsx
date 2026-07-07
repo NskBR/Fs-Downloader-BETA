@@ -74,13 +74,15 @@ export function BrowserIntegrationPage() {
   return (
     <div className="download-window complete-compact xdm-window">
       {/* Titlebar Arrastável */}
-      <header className="window-titlebar" data-tauri-drag-region>
-        <div className="window-title" data-tauri-drag-region>
+      <header className="xdm-titlebar" data-tauri-drag-region>
+        <div className="xdm-titlebar-title" data-tauri-drag-region>
           Integração de Navegadores
         </div>
-        <button className="window-close-btn" onClick={handleClose} title="Fechar">
-          <X size={14} />
-        </button>
+        <div className="xdm-titlebar-actions">
+          <button className="xdm-titlebar-btn close" onClick={handleClose} title="Fechar">
+            <X size={14} />
+          </button>
+        </div>
       </header>
 
       {/* Conteúdo Principal */}
