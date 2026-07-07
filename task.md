@@ -102,3 +102,10 @@ Abaixo estão todas as tarefas executadas nesta sessão:
   - `[x]` Remover nomes de ícone com hífen dentro do pacote da extensão
   - `[x]` Atualizar manifests e popup para `icons/icon32.png` e `icons/icon128.png`
   - `[x]` Gerar novo pacote Firefox para reenvio à validação da Mozilla
+
+- `[x]` **Janela de Integração de Navegadores estilo XDM 0.2.8**
+  - `[x]` Criar janela separada e borderless `browser-integration` acionada a partir de "Configurações"
+  - `[x]` Implementar painel com guias interativas para Chrome, Edge, Firefox, Opera, Brave e Vivaldi
+  - `[x]` Copiar assets da extensão (incluindo o `.xpi` assinado do Firefox) para a pasta AppData do usuário
+  - `[x]` Adicionar botões nativos para abrir a pasta local e copiar caminhos/links
+  - `[x]` Configurar rota Axum `/extension.xpi` com MIME `application/x-xpinstall` para instalação direta no Firefox

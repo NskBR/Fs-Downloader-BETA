@@ -7,6 +7,7 @@ import { App } from "./app/App";
 import { ConfirmationPage } from "./pages/ConfirmationPage";
 import { ProgressPage } from "./pages/ProgressPage";
 import { CompletePage } from "./pages/CompletePage";
+import { BrowserIntegrationPage } from "./pages/BrowserIntegrationPage";
 import { loadSettings } from "./services/settingsStorage";
 import "./styles/global.css";
 import "./styles/scroll-fix.css";
@@ -24,6 +25,7 @@ const label = getCurrentWindow().label;
 const isConfirmationWindow = label === "download-confirm";
 const isProgressWindow = label.startsWith("download-progress-");
 const isCompleteWindow = label.startsWith("download-complete-");
+const isBrowserIntegrationWindow = label === "browser-integration";
 
 const initialSettings = loadSettings();
 void getCurrentWebview().setZoom(initialSettings.uiScale).catch(console.error);
@@ -37,6 +39,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     {isConfirmationWindow ? <ConfirmationPage />
       : isProgressWindow ? <ProgressPage downloadId={label.substring("download-progress-".length)} />
       : isCompleteWindow ? <CompletePage downloadId={label.substring("download-complete-".length)} />
+      : isBrowserIntegrationWindow ? <BrowserIntegrationPage />
       : <App />}
   </React.StrictMode>,
 );

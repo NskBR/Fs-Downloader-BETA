@@ -284,3 +284,231 @@
   border-color: #d9ad55;
   box-shadow: 0 0 0 2px rgba(217,173,85,.12);
 }
+
+/* Browser Integration Window Styles */
+.browser-integration-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  height: calc(100vh - 28px);
+}
+
+.browser-sidebar {
+  width: 200px;
+  background-color: #15181e;
+  border-right: 1px solid #252a35;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.browser-menu-item {
+  background: transparent;
+  border: none;
+  color: #a0a6b2;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  transition: all 0.15s ease;
+  border-left: 3px solid transparent;
+}
+
+.browser-menu-item:hover {
+  background-color: #1b1f27;
+  color: #ffffff;
+}
+
+.browser-menu-item.active {
+  background-color: #252a35;
+  color: #ffffff;
+  border-left-color: #d08770;
+}
+
+.browser-instructions {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.browser-instructions h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.browser-instructions .subtitle {
+  font-size: 12px;
+  color: #818896;
+  margin: 0;
+}
+
+.browser-instructions .divider {
+  border: 0;
+  border-top: 1px solid #252a35;
+  margin: 0;
+}
+
+.steps-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+
+.steps-list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+  color: #d8dee9;
+}
+
+.steps-list li {
+  line-height: 1.5;
+}
+
+.link-box {
+  background-color: #15181e;
+  border: 1px solid #2e3440;
+  padding: 6px 12px;
+  border-radius: 4px;
+  margin-top: 6px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #d08770;
+  word-break: break-all;
+  user-select: all;
+}
+
+.action-row {
+  background-color: #252a35;
+  border: 1px solid #2e3440;
+  border-radius: 6px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+  box-sizing: border-box;
+}
+
+.path-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #818896;
+}
+
+.path-info code {
+  background-color: #15181e;
+  padding: 6px 10px;
+  border-radius: 4px;
+  color: #e3e6ec;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  font-family: monospace;
+  font-size: 11px;
+  border: 1px solid #2e3440;
+}
+
+.btn-group-row {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  background-color: #1a1d24;
+  border: 1px solid #2e3440;
+  color: #e3e6ec;
+  padding: 8px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.action-btn:hover {
+  background-color: #2e3440;
+  border-color: #4c566a;
+  color: #ffffff;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.help-box {
+  display: flex;
+  gap: 10px;
+  background-color: #2e3440;
+  border: 1px solid #3b4252;
+  color: #cdd3de;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+.help-box svg {
+  color: #d08770;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid #252a35;
+  padding-top: 12px;
+  margin-top: auto;
+}
+
+.close-action-btn {
+  background-color: #d08770;
+  border: 1px solid #d08770;
+  color: #1a1d24;
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.close-action-btn:hover {
+  background-color: #e5987e;
+  border-color: #e5987e;
+}
+
+/* Browser Specific Icon Colors */
+.browser-icon-clr.chrome { color: #ea4335; }
+.browser-icon-clr.firefox { color: #ff7139; }
+.browser-icon-clr.edge { color: #0078d7; }
+.browser-icon-clr.opera { color: #ff1b2d; }
+.browser-icon-clr.brave { color: #fb542b; }
+.browser-icon-clr.vivaldi { color: #ef3939; }
+

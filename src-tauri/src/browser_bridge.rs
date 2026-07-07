@@ -16,7 +16,7 @@ use std::{
     },
     time::{SystemTime, UNIX_EPOCH},
 };
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use uuid::Uuid;
 
 pub const BRIDGE_PORT: u16 = 17_831;
@@ -160,6 +160,7 @@ pub fn start(app: AppHandle, bridge: BrowserBridge) {
             .route("/sync", get(sync).options(handle_options))
             .route("/download", post(download).options(handle_options))
             .route("/disconnect", post(disconnect).options(handle_options))
+            .route("/extension.xpi", get(get_extension_xpi).options(handle_options))
             .with_state(state);
         let address = format!("127.0.0.1:{BRIDGE_PORT}");
         match tokio::net::TcpListener::bind(&address).await {
@@ -285,4 +286,25 @@ async fn download(State(state): State<BridgeState>, body: Bytes) -> impl IntoRes
         return (cors_headers, StatusCode::INTERNAL_SERVER_ERROR);
     }
     (cors_headers, StatusCode::ACCEPTED)
+}
+
+async fn get_extension_xpi(State(state): State<BridgeState>) -> impl IntoResponse {
+    let mut headers = HeaderMap::new();
+    headers.insert("access-control-allow-origin", HeaderValue::from_static("*"));
+    headers.insert("content-type", HeaderValue::from_static("application/x-xpinstall"));
+    headers.insert("content-disposition", HeaderValue::from_static("attachment; filename=\"sf_downloader_integration.xpi\""));
+
+    let data = match state.app.path().app_data_dir() {
+        Ok(app_data) => {
+            let xpi_path = app_data.join("extension").join("firefox").join("integration.xpi");
+            std::fs::read(xpi_path).unwrap_or_else(|_| {
+                include_bytes!("../../browser-extension/release/7c2944a3066543438b23-0.2.7.xpi").to_vec()
+            })
+        }
+        Err(_) => {
+            include_bytes!("../../browser-extension/release/7c2944a3066543438b23-0.2.7.xpi").to_vec()
+        }
+    };
+    
+    (headers, data)
 }

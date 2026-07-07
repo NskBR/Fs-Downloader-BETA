@@ -1,5 +1,6 @@
-import { Check, Plus, Save, Tags, Trash2 } from "lucide-react";
+import { Check, Plus, Save, Tags, Trash2, Globe } from "lucide-react";
 import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import type { AppLanguage, AppSettings } from "../domain/settings";
 import { downloadCategories } from "../domain/categories";
 import {
@@ -23,6 +24,9 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
     [categoryExtensions, setCategoryExtensions] = useState("");
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
+  const openBrowserIntegration = () => {
+    void invoke("open_browser_integration_window").catch(console.error);
+  };
   const selectFolder = async () => {
     setError(null);
     try {
@@ -209,6 +213,20 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
               ))
             )}
           </div>
+        </div>
+
+        <div className="setting-section">
+          <h2>Integração</h2>
+        </div>
+        <div className="setting-item">
+          <label>Extensão de Navegador</label>
+          <span className="description">
+            Instale a extensão do SF Downloader para capturar e gerenciar downloads diretamente nos navegadores Chromium (Chrome, Edge, Opera, Brave, Vivaldi) e Firefox.
+          </span>
+          <button className="flat-link-btn" onClick={openBrowserIntegration} style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px" }}>
+            <Globe size={13} />
+            Configurar Integração de Navegadores
+          </button>
         </div>
       </div>
     </section>

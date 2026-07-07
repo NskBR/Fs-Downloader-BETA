@@ -832,6 +832,114 @@ pub async fn update_speed_limit(
     Ok(())
 }
 
+#[tauri::command]
+pub async fn open_browser_integration_window(app: AppHandle) -> Result<(), String> {
+    let label = "browser-integration";
+    if let Some(window) = app.get_webview_window(label) {
+        window.set_focus().map_err(|error| error.to_string())?;
+        return Ok(());
+    }
+
+    {
+        let mut creating = CREATING_WINDOWS.lock().map_err(|error| error.to_string())?;
+        if creating.contains(label) {
+            return Ok(());
+        }
+        creating.insert(label.to_string());
+    }
+
+    #[cfg(debug_assertions)]
+    let url = app
+        .config()
+        .build
+        .dev_url
+        .clone()
+        .map(WebviewUrl::External)
+        .unwrap_or_else(|| WebviewUrl::App("index.html".into()));
+    #[cfg(not(debug_assertions))]
+    let url = WebviewUrl::App("index.html".into());
+
+    let build_result = WebviewWindowBuilder::new(&app, label, url)
+        .title("Integração do Navegador")
+        .inner_size(680.0, 480.0)
+        .min_inner_size(680.0, 480.0)
+        .resizable(false)
+        .decorations(false)
+        .visible(false)
+        .background_color(tauri::webview::Color(26, 29, 36, 255))
+        .center()
+        .build();
+
+    {
+        if let Ok(mut creating) = CREATING_WINDOWS.lock() {
+            creating.remove(label);
+        }
+    }
+
+    build_result.map_err(|error| format!("Falha ao abrir integração: {error}"))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, String> {
+    let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let ext_dir = app_data.join("extension").join(&browser);
+    
+    std::fs::create_dir_all(&ext_dir).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(ext_dir.join("icons")).map_err(|e| e.to_string())?;
+
+    if browser == "chromium" {
+        std::fs::write(ext_dir.join("manifest.json"), include_bytes!("../../../browser-extension/dist/chromium/manifest.json")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("background.js"), include_bytes!("../../../browser-extension/dist/chromium/background.js")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("content.js"), include_bytes!("../../../browser-extension/dist/chromium/content.js")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("popup.html"), include_bytes!("../../../browser-extension/dist/chromium/popup.html")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("popup.css"), include_bytes!("../../../browser-extension/dist/chromium/popup.css")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("popup.js"), include_bytes!("../../../browser-extension/dist/chromium/popup.js")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("icons/sf-small.png"), include_bytes!("../../../browser-extension/dist/chromium/icons/sf-small.png")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("icons/sf-large.png"), include_bytes!("../../../browser-extension/dist/chromium/icons/sf-large.png")).map_err(|e| e.to_string())?;
+    } else if browser == "firefox" {
+        std::fs::write(ext_dir.join("manifest.json"), include_bytes!("../../../browser-extension/dist/firefox/manifest.json")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("background.js"), include_bytes!("../../../browser-extension/dist/firefox/background.js")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("content.js"), include_bytes!("../../../browser-extension/dist/firefox/content.js")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("popup.html"), include_bytes!("../../../browser-extension/dist/firefox/popup.html")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("popup.css"), include_bytes!("../../../browser-extension/dist/firefox/popup.css")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("popup.js"), include_bytes!("../../../browser-extension/dist/firefox/popup.js")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("icons/sf-small.png"), include_bytes!("../../../browser-extension/dist/firefox/icons/sf-small.png")).map_err(|e| e.to_string())?;
+        std::fs::write(ext_dir.join("icons/sf-large.png"), include_bytes!("../../../browser-extension/dist/firefox/icons/sf-large.png")).map_err(|e| e.to_string())?;
+        
+        // Copia também o arquivo XPI assinado para instalação direta ou manual
+        std::fs::write(ext_dir.join("integration.xpi"), include_bytes!("../../../browser-extension/release/7c2944a3066543438b23-0.2.7.xpi")).map_err(|e| e.to_string())?;
+    }
+
+    Ok(ext_dir.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn open_folder(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::content_range_total;
