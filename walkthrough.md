@@ -96,3 +96,5 @@ Ajustamos o comportamento de redimensionamento da tabela para aproveitar melhor 
 - A janela apresenta instruções e atalhos individuais para Google Chrome, Firefox, Edge, Opera, Brave e Vivaldi.
 - O backend copia os builds da extensão e o arquivo `.xpi` assinado do Firefox de forma transparente para a pasta AppData local do usuário, expondo botões nativos para abrir a pasta no Windows Explorer ou copiar os caminhos de destino.
 - Servimos a extensão Firefox localmente em `http://127.0.0.1:17831/extension.xpi` com o MIME type `application/x-xpinstall`, permitindo que o Firefox abra o instalador nativo diretamente por clique.
+- **Arrastar e Soltar Nativo**: Implementamos o suporte nativo a arrastar o ícone de quebra-cabeça diretamente para a página de extensões nos navegadores Chromium (usando a crate Rust `drag`), o que ativa a importação automática da extensão descompactada para dentro do navegador de forma idêntica ao XDM!
+

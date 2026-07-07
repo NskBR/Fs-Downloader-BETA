@@ -940,6 +940,38 @@ pub fn open_folder(path: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+pub fn start_drag_folder(window: tauri::WebviewWindow, path: String) -> Result<(), String> {
+    let folder_path = std::path::PathBuf::from(path);
+    if !folder_path.exists() {
+        return Err("Diretório da extensão não encontrado".into());
+    }
+
+    let drag_item = drag::DragItem::Files(vec![folder_path.clone()]);
+    
+    // Icon de preview da extensão
+    let app_data = window.path().app_data_dir().map_err(|e| e.to_string())?;
+    let icon_path = app_data.join("extension").join("chromium").join("icons").join("sf-small.png");
+    
+    let preview_icon = if icon_path.exists() {
+        drag::Image::File(icon_path)
+    } else {
+        drag::Image::File(std::path::PathBuf::new())
+    };
+
+    drag::start_drag(
+        &window,
+        drag_item,
+        preview_icon,
+        |result, _cursor| {
+            println!("Drag terminado: {:?}", result);
+        },
+        drag::Options::default(),
+    ).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::content_range_total;

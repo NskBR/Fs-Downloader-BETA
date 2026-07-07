@@ -109,3 +109,5 @@ Abaixo estão todas as tarefas executadas nesta sessão:
   - `[x]` Copiar assets da extensão (incluindo o `.xpi` assinado do Firefox) para a pasta AppData do usuário
   - `[x]` Adicionar botões nativos para abrir a pasta local e copiar caminhos/links
   - `[x]` Configurar rota Axum `/extension.xpi` com MIME `application/x-xpinstall` para instalação direta no Firefox
+  - `[x]` Implementar suporte a arrastar-e-soltar nativo do ícone de quebra-cabeça para instalar nos navegadores Chromium (usando a crate `drag`)
+

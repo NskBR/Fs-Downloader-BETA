@@ -8,8 +8,8 @@ import {
   Check, 
   X, 
   HelpCircle,
-  ExternalLink,
-  Download
+  Download,
+  Puzzle
 } from "lucide-react";
 
 interface BrowserOption {
@@ -36,7 +36,6 @@ export function BrowserIntegrationPage() {
   const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
-    // Busca o caminho físico da extensão para o navegador selecionado
     const targetBrowser = selectedBrowser.type === "chromium" ? "chromium" : "firefox";
     invoke<string>("get_extension_dir", { browser: targetBrowser })
       .then(setFolderPath)
@@ -58,6 +57,13 @@ export function BrowserIntegrationPage() {
   const handleOpenFolder = () => {
     if (folderPath) {
       void invoke("open_folder", { path: folderPath }).catch(console.error);
+    }
+  };
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (folderPath) {
+      void invoke("start_drag_folder", { path: folderPath }).catch(console.error);
     }
   };
 
@@ -111,37 +117,57 @@ export function BrowserIntegrationPage() {
           <hr className="divider" />
 
           {selectedBrowser.type === "chromium" ? (
-            <div className="steps-container">
-              <ol className="steps-list">
-                <li>
-                  Abra a página de extensões copiando e acessando o link abaixo:
-                  <div className="link-box">
-                    <code>{selectedBrowser.extensionUrl}</code>
-                  </div>
-                </li>
-                <li>
-                  No topo direito, ative a opção <strong>"Modo do desenvolvedor"</strong> (Developer Mode).
-                </li>
-                <li>
-                  Clique em <strong>"Carregar descompactada"</strong> (Load unpacked) e selecione a pasta da extensão, ou simplesmente abra o Windows Explorer e arraste a pasta para dentro do navegador.
-                </li>
-              </ol>
+            <div className="split-integration-container">
+              {/* Coluna Esquerda: Passos */}
+              <div className="instructions-col">
+                <ol className="steps-list">
+                  <li>
+                    Abra a página de extensões copiando e acessando o link abaixo:
+                    <div className="link-box">
+                      <code>{selectedBrowser.extensionUrl}</code>
+                    </div>
+                  </li>
+                  <li>
+                    No topo direito, ative a opção <strong>"Modo do desenvolvedor"</strong> (Developer Mode).
+                  </li>
+                  <li>
+                    Arraste o ícone de quebra-cabeça da direita para a página de extensões do seu navegador.
+                  </li>
+                </ol>
+              </div>
 
-              <div className="action-row">
-                <div className="path-info">
-                  <span>Pasta da Extensão:</span>
-                  <code title={folderPath}>{folderPath || "Carregando..."}</code>
+              {/* Coluna Direita: Drag Box & Fallback */}
+              <div className="drag-col">
+                <div className="drag-icon-box-title">
+                  Arraste o ícone para instalar a extensão
                 </div>
                 
-                <div className="btn-group-row">
-                  <button className="action-btn" onClick={handleCopyPath} disabled={!folderPath}>
+                <div 
+                  className="drag-puzzle-box"
+                  onMouseDown={handleDragStart}
+                  title="Clique e arraste este ícone para a página de extensões do Chrome"
+                >
+                  <Puzzle size={56} className="puzzle-icon" />
+                  <span className="drag-label">ARRASte-ME</span>
+                </div>
+
+                <div className="fallback-section-title">
+                  Ou clique em "Carregar descompactada" e aponte para:
+                </div>
+                
+                <div className="fallback-path-row">
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={folderPath} 
+                    className="path-input"
+                    title={folderPath}
+                  />
+                  <button className="path-action-btn" onClick={handleCopyPath} title="Copiar Caminho">
                     {copiedPath ? <Check size={14} /> : <Copy size={14} />}
-                    <span>{copiedPath ? "Copiado!" : "Copiar Caminho"}</span>
                   </button>
-                  
-                  <button className="action-btn" onClick={handleOpenFolder} disabled={!folderPath}>
+                  <button className="path-action-btn" onClick={handleOpenFolder} title="Abrir Pasta">
                     <FolderOpen size={14} />
-                    <span>Abrir Pasta</span>
                   </button>
                 </div>
               </div>

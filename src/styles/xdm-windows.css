@@ -504,6 +504,139 @@
   border-color: #e5987e;
 }
 
+/* Split Layout & Puzzle Drag Box */
+.split-integration-container {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  box-sizing: border-box;
+}
+
+.instructions-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.drag-col {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #15181e;
+  border: 1px solid #2e3440;
+  border-radius: 6px;
+  padding: 16px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  height: fit-content;
+}
+
+.drag-icon-box-title {
+  font-size: 11px;
+  color: #818896;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.drag-puzzle-box {
+  width: 130px;
+  height: 130px;
+  border: 2px dashed #d08770;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  user-select: none;
+  transition: all 0.2s ease;
+  background-color: #1a1d24;
+}
+
+.drag-puzzle-box:hover {
+  border-color: #e5987e;
+  background-color: #20242f;
+}
+
+.drag-puzzle-box:active {
+  cursor: grabbing;
+  border-color: #d08770;
+  background-color: #171a22;
+}
+
+.drag-puzzle-box .puzzle-icon {
+  color: #d08770;
+  margin-bottom: 8px;
+  transition: transform 0.2s ease;
+}
+
+.drag-puzzle-box:hover .puzzle-icon {
+  transform: scale(1.1);
+}
+
+.drag-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #d08770;
+  text-transform: uppercase;
+}
+
+.fallback-section-title {
+  font-size: 10px;
+  color: #818896;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  width: 100%;
+  text-align: left;
+}
+
+.fallback-path-row {
+  display: flex;
+  width: 100%;
+  gap: 6px;
+}
+
+.path-input {
+  flex: 1;
+  min-width: 0;
+  background-color: #1a1d24;
+  border: 1px solid #2e3440;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #e3e6ec;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.path-action-btn {
+  background-color: #1a1d24;
+  border: 1px solid #2e3440;
+  color: #a0a6b2;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.path-action-btn:hover {
+  background-color: #2e3440;
+  border-color: #4c566a;
+  color: #ffffff;
+}
+
 /* Browser Specific Icon Colors */
 .browser-icon-clr.chrome { color: #ea4335; }
 .browser-icon-clr.firefox { color: #ff7139; }
