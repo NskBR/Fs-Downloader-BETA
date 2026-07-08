@@ -1,10 +1,23 @@
-import { Minus, Square, X } from "lucide-react";
+import { Minus, Square, X, Puzzle } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
+import { useEffect, useState } from "react";
 import logo from "../../assets/sf-logo.png";
 
 const appWindow = getCurrentWindow();
 
 export function TitleBar() {
+  const [extensionConnected, setExtensionConnected] = useState<boolean | null>(null);
+  useEffect(() => {
+    const updateStatus = () => {
+      invoke<boolean>("browser_extension_status")
+        .then(setExtensionConnected)
+        .catch(() => setExtensionConnected(false));
+    };
+    updateStatus();
+    const timer = setInterval(updateStatus, 3000);
+    return () => clearInterval(timer);
+  }, []);
   return (
     <header
       className="titlebar"
@@ -18,6 +31,19 @@ export function TitleBar() {
         <strong>SF Downloader</strong>
       </div>
       <div className="titlebar-side titlebar-actions" data-tauri-drag-region>
+        <div className="nodrag titlebar-integration">
+          <button
+            className="titlebar-theme-btn"
+            onClick={() => void invoke("open_browser_integration_window").catch(console.error)}
+            title={`Integração de Navegadores — ${extensionConnected ? "conectada" : "desconectada"}`}
+          >
+            <Puzzle size={16} />
+            <span
+              className={`sidebar-status-dot ${extensionConnected ? "connected" : "disconnected"}`}
+              aria-hidden="true"
+            />
+          </button>
+        </div>
         <div className="window-controls nodrag">
           <button
             aria-label="Minimizar"

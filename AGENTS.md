@@ -18,7 +18,8 @@ Gerenciador de downloads desktop (Tauri 2 + React 18 + TypeScript + Rust).
 | Label | Página | Arquivo |
 |-------|--------|---------|
 | `main` | App principal (sidebar + telas) | `src/app/App.tsx` |
-| `download-confirm` | Confirmação de novo download | `src/pages/ConfirmationPage.tsx` |
+| `main` | App principal (sidebar + telas) | `src/app/App.tsx` |
+| `download-confirm-{token}` | Confirmação de novo download | `src/pages/ConfirmationPage.tsx` |
 | `download-progress-{id}` | Janela "Download em andamento" | `src/pages/ProgressPage.tsx` |
 | `download-complete-{id}` | Janela de concluído | `src/pages/CompletePage.tsx` |
 | `browser-integration` | Popup de integração | `src/pages/BrowserIntegrationPage.tsx` |
@@ -35,6 +36,7 @@ Gerenciador de downloads desktop (Tauri 2 + React 18 + TypeScript + Rust).
 - `DownloadTask` já traz `speedAverage`, `supportsRange`, `etag`, etc. A `ProgressPage` atual usa só uma fração — aproveite esses campos em vez de criar estado novo.
 - Abrir link externo: comando `open_url` em `src-tauri/src/commands/transfer.rs` (valida http/https, usa `cmd /c start`/`open`/`xdg-open`). Exponha via `services/downloadService.ts` (`openUrl`) — **não** use `window.open` (bloqueado no webview Tauri).
 - Deep link: protocolo `sfdownloader://download?url=<https-url>` (registrado em `tauri.conf.json` → `plugins.deep-link`). Tratado em `src/App.tsx`.
+- Links consumidos são marcados na sessão para impedir que `F5` duplique downloads ativos. Ao testar deep links, recarregar a janela não deve criar tarefa duplicada.
 
 ## Design system / tema
 

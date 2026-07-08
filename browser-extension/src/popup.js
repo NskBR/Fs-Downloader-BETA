@@ -40,6 +40,18 @@ const CAPTURED_TYPES = [
   ".BIN",
 ];
 
+// Espelho de DEFAULT_DISABLED_EXTENSIONS (background.js): tipos que vêm
+// desativados de fábrica. Usado apenas para pré-popular o storage na primeira
+// abertura do popup, antes do background definir o default.
+const DEFAULT_DISABLED_EXTENSIONS = [
+  ".JPG",
+  ".JPEG",
+  ".PNG",
+  ".WEBP",
+  ".GIF",
+  ".TXT",
+];
+
 const version = chrome.runtime.getManifest().version;
 const versionSpan = document.querySelector("header div span");
 if (versionSpan) {
@@ -112,10 +124,16 @@ function checkConnection() {
   });
 }
 
-storageGet({ captureEnabled: false, disabledExtensions: [] }).then(
-  ({ captureEnabled = false, disabledExtensions = [] }) => {
+storageGet({ captureEnabled: false, disabledExtensions: null }).then(
+  ({ captureEnabled = false, disabledExtensions }) => {
+    const disabled = Array.isArray(disabledExtensions)
+      ? disabledExtensions
+      : [...DEFAULT_DISABLED_EXTENSIONS];
+    if (!Array.isArray(disabledExtensions)) {
+      storageSet({ disabledExtensions: disabled });
+    }
     renderCapture(captureEnabled);
-    renderFileTypes(disabledExtensions);
+    renderFileTypes(disabled);
   },
 );
 

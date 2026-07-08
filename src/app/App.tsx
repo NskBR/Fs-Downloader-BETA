@@ -4,6 +4,7 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { listen } from "@tauri-apps/api/event";
 import { AppShell } from "../components/layout/AppShell";
 import { SettingsPage } from "../pages/SettingsPage";
+import { MetricsPage } from "../pages/MetricsPage";
 import { DownloadsPage } from "../pages/DownloadsPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { useSettings } from "../hooks/useSettings";
@@ -30,6 +31,7 @@ export function App() {
   useEffect(()=>{let dispose:(()=>void)|undefined;void listen<BrowserDownloadRequest>("browser-download-request",async({payload})=>{const extension=payload.fileName?.split(".").pop()?.toLowerCase()||null;const token=crypto.randomUUID();localStorage.setItem(`sf-downloader.confirmation-${token}`,JSON.stringify({url:payload.url,destination:settings.rootDownloadFolder,requestId:payload.requestId,preview:{url:payload.url,fileName:payload.fileName||"download",fileSize:payload.fileSize,mimeType:payload.mimeType,extension}}));navigate("active");await downloadService.openDownloadConfirmation(token)}).then(unlisten=>{dispose=unlisten});return()=>dispose?.()},[settings.rootDownloadFolder]);
   const content = activePage === "settings" ? <SettingsPage settings={settings} onSave={persist} saved={saved} onBack={()=>navigate(previousPage.current)} />
     : activePage === "profile" ? <ProfilePage />
+    : activePage === "metrics" ? <MetricsPage />
     : <DownloadsPage settings={settings} filter={categoryPages.includes(activePage)?activePage:"active"} />;
   return <AppShell activePage={activePage} onNavigate={navigate}>{content}</AppShell>;
 }

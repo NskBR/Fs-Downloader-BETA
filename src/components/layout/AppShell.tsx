@@ -13,6 +13,7 @@ import {
   Puzzle,
   Info,
   MoreHorizontal,
+  BarChart3,
 } from "lucide-react";
 import { useEffect, useState, type PropsWithChildren } from "react";
 import type { PageId } from "../../app/navigation";
@@ -44,7 +45,6 @@ export function AppShell({
   const [helpOpen, setHelpOpen] = useState(false);
   const [typesOpen, setTypesOpen] = useState(true);
   const [downloads, setDownloads] = useState<DownloadTask[]>([]);
-  const [extensionConnected, setExtensionConnected] = useState<boolean | null>(null);
 
   useEffect(() => {
     const update = () => {
@@ -54,17 +54,6 @@ export function AppShell({
     };
     update();
     const timer = setInterval(update, 2000);
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    const updateStatus = () => {
-      downloadService.browserExtensionConnected()
-        .then(setExtensionConnected)
-        .catch(() => setExtensionConnected(false));
-    };
-    updateStatus();
-    const timer = setInterval(updateStatus, 3000);
     return () => clearInterval(timer);
   }, []);
 
@@ -130,7 +119,7 @@ export function AppShell({
             >
               <div>
                 <Download />
-                <span>Todos os downloads</span>
+                <span>Download</span>
               </div>
               <span className="counter-badge">{allCount}</span>
             </button>
@@ -172,21 +161,15 @@ export function AppShell({
               >
                 <Settings size={18} />
               </button>
-              
+
               <button
-                className={`sidebar-footer-btn ${extensionConnected ? "is-connected" : ""}`}
-                onClick={() => {
-                  void invoke("open_browser_integration_window").catch(console.error);
-                }}
-                title={`Integração de Navegadores — ${extensionConnected ? "conectada" : "desconectada"}`}
+                className={`sidebar-footer-btn ${activePage === "metrics" ? "active" : ""}`}
+                onClick={() => navigate("metrics")}
+                title="Métricas"
               >
-                <Puzzle size={18} />
-                <span
-                  className={`sidebar-status-dot ${extensionConnected ? "connected" : "disconnected"}`}
-                  aria-hidden="true"
-                />
+                <BarChart3 size={18} />
               </button>
-              
+
               <button
                 className="sidebar-footer-btn"
                 onClick={() => setHelpOpen(true)}
@@ -234,7 +217,7 @@ export function AppShell({
             </ul>
 
             <div className="help-meta">
-              <div className="help-meta-row"><span>Versão</span><b>0.2.1</b></div>
+              <div className="help-meta-row"><span>Versão</span><b>0.2.2</b></div>
               <div className="help-meta-row"><span>Tecnologia</span><b>Tauri · React · Rust</b></div>
               <div className="help-meta-row"><span>Licença</span><b>Uso pessoal</b></div>
             </div>
@@ -242,7 +225,7 @@ export function AppShell({
             <footer>
               <button
                 className="help-link"
-                onClick={() => openExternal("https://github.com/anomalyco/opencode")}
+                onClick={() => openExternal("https://github.com/NskBR/Fs-Downloader-BETA")}
               >
                 Repositório no GitHub
               </button>

@@ -13,6 +13,7 @@ export interface CustomCategory {
 export interface AppSettings {
   rootDownloadFolder: string;
   autoOrganizeEnabled: boolean;
+  deleteArchiveAfterExtract: boolean;
   defaultSpeedValue: number;
   defaultSpeedUnit: SpeedUnit;
   maxConnectionsPerDownload: number;
@@ -21,6 +22,7 @@ export interface AppSettings {
   theme: AppTheme;
   uiScale: number;
   startInTrayMode: boolean;
+  launchOnStartup: boolean;
   language: AppLanguage;
   accentColor: AccentColor;
   appColor: AppColor;
@@ -30,6 +32,7 @@ export interface AppSettings {
 export const defaultSettings: AppSettings = {
   rootDownloadFolder: "",
   autoOrganizeEnabled: true,
+  deleteArchiveAfterExtract: false,
   defaultSpeedValue: 100,
   defaultSpeedUnit: "Mbps",
   maxConnectionsPerDownload: 8,
@@ -38,6 +41,7 @@ export const defaultSettings: AppSettings = {
   theme: "midnight",
   uiScale: 1.1,
   startInTrayMode: false,
+  launchOnStartup: false,
   language: "pt-BR",
   accentColor: "ember",
   appColor: "slate",

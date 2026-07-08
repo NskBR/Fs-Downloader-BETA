@@ -3,7 +3,7 @@ use crate::database::{
     repositories::{
         chunks, downloads,
         history::{self, CreateHistory},
-        statistics,
+        metrics, statistics,
     },
     Database,
 };
@@ -138,6 +138,7 @@ pub async fn prepare_with_headers(
     max_parallel_downloads: usize,
     speed_limit_download: u64,
     resume_support: bool,
+    delete_archive_after_extract: bool,
 ) -> Result<PreparedDownload, String> {
     let parsed = Url::parse(url).map_err(|_| "A URL informada é inválida.".to_string())?;
     if !matches!(parsed.scheme(), "http" | "https") {
@@ -264,6 +265,7 @@ pub async fn prepare_with_headers(
             speed_limit_download: speed_limit_download.min(i64::MAX as u64) as i64,
             etag,
             last_modified,
+            delete_archive_after_extract,
         },
         response,
     })
@@ -401,6 +403,7 @@ pub async fn run(
                 average,
                 status.as_str(),
             );
+            record_metrics(&database, observed_downloaded, observed_downloaded, 0, status.as_str(), started.elapsed().as_millis() as i64);
             record_history(
                 &database,
                 &task,
@@ -478,6 +481,7 @@ pub async fn run_segmented(
                 0.0,
                 status.as_str(),
             );
+            record_metrics(&database, observed_downloaded, observed_downloaded, 0, status.as_str(), started.elapsed().as_millis() as i64);
             record_history(&database, &task, status.as_str(), started.elapsed(), 0.0);
         }
         let _ = app.emit(
@@ -762,7 +766,8 @@ async fn transfer_segmented(
     tokio::fs::rename(&task.temp_path, &task.final_path)
         .await
         .map_err(|error| error.to_string())?;
-    let (disk_read, extracted_written) = run_auto_extraction(app, database, task).await;
+    let (disk_read, extracted_written) =
+        run_auto_extraction(app, database, task, task.delete_archive_after_extract).await;
     for chunk in &plan {
         let _ = tokio::fs::remove_file(chunk_path(&task.temp_path, chunk.index)).await;
     }
@@ -789,6 +794,7 @@ async fn transfer_segmented(
         speed,
         "completed",
     );
+    record_metrics(database, total, total.saturating_add(extracted_written), extracted_written, "completed", elapsed.as_millis() as i64);
     record_history(database, task, "completed", elapsed, speed);
     let _ = app.emit(
         "download-progress",
@@ -1206,7 +1212,8 @@ async fn transfer(
     tokio::fs::rename(&task.temp_path, &task.final_path)
         .await
         .map_err(|error| format!("Falha ao mover o arquivo concluído: {error}"))?;
-    let (disk_read, extracted_written) = run_auto_extraction(app, database, task).await;
+    let (disk_read, extracted_written) =
+        run_auto_extraction(app, database, task, task.delete_archive_after_extract).await;
     // Attempt to remove the temporary .sf-temp folder if it's empty
     if let Some(temp_folder) = Path::new(&task.temp_path).parent() {
         let _ = tokio::fs::remove_dir(temp_folder).await;
@@ -1230,6 +1237,7 @@ async fn transfer(
         average,
         "completed",
     );
+    record_metrics(database, downloaded, downloaded.saturating_add(extracted_written), extracted_written, "completed", elapsed.as_millis() as i64);
     record_history(database, task, "completed", elapsed, average);
     let _ = app.emit(
         "download-progress",
@@ -1254,6 +1262,7 @@ async fn run_auto_extraction(
     app: &AppHandle,
     database: &Database,
     task: &DownloadTask,
+    delete_archive: bool,
 ) -> (i64, i64) {
     let Some(password) = crate::download::extraction::take(&task.id) else {
         return (0, 0);
@@ -1277,12 +1286,17 @@ async fn run_auto_extraction(
             error: None,
         },
     );
-    let result =
-        match crate::download::extraction::extract_archive(task.final_path.clone(), password).await
-        {
-            Ok(path) => format!("Extração concluída em {}", path.display()),
-            Err(error) => format!("Erro na extração: {error}"),
-        };
+    let extraction_result =
+        crate::download::extraction::extract_archive(task.final_path.clone(), password).await;
+    let result = match &extraction_result {
+        Ok(path) => {
+            if delete_archive {
+                let _ = tokio::fs::remove_file(&task.final_path).await;
+            }
+            format!("Extração concluída em {}", path.display())
+        }
+        Err(error) => format!("Erro na extração: {error}"),
+    };
     crate::download::extraction::save_result(&task.id, result);
     let disk_read = tokio::fs::metadata(&task.final_path)
         .await
@@ -1337,6 +1351,26 @@ fn update_state(
                 speed_current: current,
                 speed_average: average,
             },
+        );
+    }
+}
+
+fn record_metrics(
+    database: &Database,
+    network_bytes: i64,
+    disk_written_bytes: i64,
+    extracted_bytes: i64,
+    status: &str,
+    duration_ms: i64,
+) {
+    if let Ok(connection) = database.connect() {
+        let _ = metrics::record(
+            &connection,
+            network_bytes,
+            disk_written_bytes,
+            extracted_bytes,
+            status,
+            duration_ms,
         );
     }
 }

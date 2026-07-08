@@ -12,7 +12,7 @@ use crate::{
 };
 use reqwest::{header, Url};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tokio::io::AsyncReadExt;
 
@@ -34,6 +34,8 @@ pub struct StartDownloadInput {
     pub resume_support: bool,
     #[serde(default)]
     pub auto_extract: bool,
+    #[serde(default)]
+    pub delete_archive_after_extract: bool,
     pub archive_password: Option<String>,
     #[serde(default)]
     pub force: bool,
@@ -357,6 +359,7 @@ pub async fn queue_download(
         input.max_parallel_downloads,
         input.speed_limit_download,
         input.resume_support,
+        input.delete_archive_after_extract,
     )
     .await?;
     if !input.force {
@@ -413,6 +416,7 @@ pub async fn start_download(
         input.max_parallel_downloads,
         input.speed_limit_download,
         input.resume_support,
+        input.delete_archive_after_extract,
     )
     .await?;
     if !input.force {
@@ -562,6 +566,14 @@ pub fn cancel_download(
             "cancelled",
         )
         .map_err(|error| format!("Falha ao registrar uso do download: {error}"))?;
+        let _ = crate::database::repositories::metrics::record(
+            &connection,
+            observed_downloaded,
+            observed_downloaded,
+            0,
+            "cancelled",
+            0,
+        );
     }
     Ok(true)
 }
@@ -908,8 +920,21 @@ pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, Stri
         std::fs::write(ext_dir.join("icons/sf-small.png"), include_bytes!("../../../browser-extension/dist/firefox/icons/sf-small.png")).map_err(|e| e.to_string())?;
         std::fs::write(ext_dir.join("icons/sf-large.png"), include_bytes!("../../../browser-extension/dist/firefox/icons/sf-large.png")).map_err(|e| e.to_string())?;
         
-        // Copia também o arquivo XPI assinado para instalação direta ou manual
-        std::fs::write(ext_dir.join("integration.xpi"), include_bytes!("../../../browser-extension/release/7c2944a3066543438b23-0.2.7.xpi")).map_err(|e| e.to_string())?;
+        // Copia o arquivo XPI para instalação direta ou manual. Prioriza o XPI
+        // mais recente em browser-extension/release/ (basta jogar o novo .xpi lá
+        // e removê-lo antigo); se não houver, usa o XPI embutido no binário.
+        let release_dir = app
+            .path()
+            .app_data_dir()
+            .map_err(|e| e.to_string())?
+            .join("..")
+            .join("..")
+            .join("browser-extension")
+            .join("release");
+        let xpi_bytes = find_latest_xpi(&release_dir)
+            .and_then(|path| std::fs::read(&path).ok())
+            .unwrap_or_else(|| include_bytes!("../../../browser-extension/release/firefox-extension.xpi").to_vec());
+        std::fs::write(ext_dir.join("integration.xpi"), xpi_bytes).map_err(|e| e.to_string())?;
     }
 
     Ok(ext_dir.to_string_lossy().to_string())
@@ -1013,4 +1038,14 @@ mod tests {
         assert_eq!(content_range_total("bytes 0-0/104857600"), Some(104857600));
         assert_eq!(content_range_total("bytes */*"), None);
     }
+}
+
+// Retorna o primeiro arquivo .xpi encontrado na pasta. A pasta release/ deve
+// conter apenas o XPI da versão atual, então não há necessidade de comparar
+// versões por nome de arquivo.
+pub(crate) fn find_latest_xpi(dir: &Path) -> Option<PathBuf> {
+    let entries = std::fs::read_dir(dir).ok()?;
+    entries.flatten().map(|entry| entry.path()).find(|path| {
+        path.extension().and_then(|ext| ext.to_str()) == Some("xpi")
+    })
 }

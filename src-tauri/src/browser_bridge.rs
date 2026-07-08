@@ -294,17 +294,29 @@ async fn get_extension_xpi(State(state): State<BridgeState>) -> impl IntoRespons
     headers.insert("content-type", HeaderValue::from_static("application/x-xpinstall"));
     headers.insert("content-disposition", HeaderValue::from_static("attachment; filename=\"sf_downloader_integration.xpi\""));
 
+    // XPI embutido no binário (sempre disponível na build de release). Para
+    // atualizar, basta substituir browser-extension/release/firefox-extension.xpi
+    // antes de compilar o app. Em desenvolvimento, o disco tem prioridade.
+    let embedded = include_bytes!("../../browser-extension/release/firefox-extension.xpi");
+
     let data = match state.app.path().app_data_dir() {
         Ok(app_data) => {
-            let xpi_path = app_data.join("extension").join("firefox").join("integration.xpi");
-            std::fs::read(xpi_path).unwrap_or_else(|_| {
-                include_bytes!("../../browser-extension/release/7c2944a3066543438b23-0.2.9.xpi").to_vec()
-            })
+            let local = app_data.join("extension").join("firefox").join("integration.xpi");
+            if let Ok(bytes) = std::fs::read(&local) {
+                bytes
+            } else {
+                let release_dir = app_data
+                    .join("..")
+                    .join("..")
+                    .join("browser-extension")
+                    .join("release");
+                crate::commands::transfer::find_latest_xpi(&release_dir)
+                    .and_then(|path| std::fs::read(path).ok())
+                    .unwrap_or_else(|| embedded.to_vec())
+            }
         }
-        Err(_) => {
-            include_bytes!("../../browser-extension/release/7c2944a3066543438b23-0.2.9.xpi").to_vec()
-        }
+        Err(_) => embedded.to_vec(),
     };
-    
+
     (headers, data)
 }

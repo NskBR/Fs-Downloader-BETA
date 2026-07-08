@@ -1,5 +1,5 @@
 import { Plus, Tags, Trash2, Globe } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { AppLanguage, AppSettings, AccentColor, AppColor } from "../domain/settings";
 import { downloadCategories } from "../domain/categories";
@@ -7,6 +7,7 @@ import {
   chooseDownloadFolder,
   createCategoryFolders,
 } from "../services/folderService";
+import { isLaunchOnStartup, setLaunchOnStartup } from "../services/downloadService";
 import { Toggle } from "../components/ui/Toggle";
 
 interface Props {
@@ -28,6 +29,11 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
       void save(next);
     else setError("Escolha a pasta principal de downloads.");
   };
+  useEffect(() => {
+    void isLaunchOnStartup()
+      .then((enabled) => setDraft((current) => ({ ...current, launchOnStartup: enabled })))
+      .catch(() => {});
+  }, []);
   const save = async (next: AppSettings) => {
     setError(null);
     try {
@@ -184,6 +190,23 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
           />
         </div>
 
+        <div className="setting-item setting-item--toggle">
+          <div>
+            <label>Iniciar com o Windows</label>
+            <span className="description">
+              Abre o SF Downloader automaticamente quando o Windows ligar.
+            </span>
+          </div>
+          <Toggle
+            checked={draft.launchOnStartup}
+            onChange={(value) => {
+              update("launchOnStartup", value);
+              void setLaunchOnStartup(value).catch(console.error);
+            }}
+            label="Iniciar com o Windows"
+          />
+        </div>
+
         <div className="setting-item">
           <label>Local padrão dos arquivos</label>
           <span className="description">
@@ -197,6 +220,27 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
           <button className="flat-link-btn" onClick={selectFolder}>
             Alterar pasta de destino
           </button>
+        </div>
+
+        <div className="setting-section">
+          <h2>Extração</h2>
+        </div>
+
+        <div className="setting-item setting-item--toggle">
+          <div>
+            <label>Apagar arquivo após extração</label>
+            <span className="description">
+              Quando a extração automática conclui com sucesso, o arquivo
+              compactado original é removido. Em caso de falha, o arquivo é
+              mantido e a pasta extraída parcialmente é apagada.
+            </span>
+            <span className="beta-tag">BETA — pode cometer erro</span>
+          </div>
+          <Toggle
+            checked={draft.deleteArchiveAfterExtract}
+            onChange={(value) => update("deleteArchiveAfterExtract", value)}
+            label="Apagar arquivo após extração"
+          />
         </div>
 
         <div className="setting-section">

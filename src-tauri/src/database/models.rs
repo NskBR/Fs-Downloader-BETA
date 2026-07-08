@@ -69,6 +69,7 @@ pub struct DownloadTask {
     pub created_at: String,
     pub updated_at: String,
     pub completed_at: Option<String>,
+    pub delete_archive_after_extract: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -91,6 +92,7 @@ pub struct CreateDownloadInput {
     pub speed_limit_download: i64,
     pub etag: Option<String>,
     pub last_modified: Option<String>,
+    pub delete_archive_after_extract: bool,
 }
 
 fn default_max_connections() -> i64 {

@@ -1,5 +1,18 @@
 const MENU_ID = "sf-downloader-download";
 const BRIDGE = "http://127.0.0.1:17831";
+
+// Tipos desativados por padrão de fábrica (ficam no navegador, não viram
+// download no app). Imagens e textos costumam ser abertos/visualizados, não
+// baixados, então não interceptamos a menos que o usuário ative.
+const DEFAULT_DISABLED_EXTENSIONS = [
+  ".JPG",
+  ".JPEG",
+  ".PNG",
+  ".WEBP",
+  ".GIF",
+  ".TXT",
+];
+
 let bridge = { connected: false, token: "", fileExts: [], blockedHosts: [] };
 let captureEnabledState = true;
 let disabledExtensionsState = [];
@@ -364,12 +377,16 @@ chrome.webRequest.onErrorOccurred.addListener(info => requests.delete(info.reque
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => chrome.contextMenus.create({ id: MENU_ID, title: "Baixar com SF Downloader", contexts: ["link", "video", "audio", "image"] }));
-  chrome.storage.local.get("captureEnabled", result => {
+  chrome.storage.local.get(["captureEnabled", "disabledExtensions"], result => {
     if (result.captureEnabled === undefined) {
       captureEnabledState = true;
       chrome.storage.local.set({ captureEnabled: true });
     } else {
       captureEnabledState = result.captureEnabled;
+    }
+    if (!Array.isArray(result.disabledExtensions)) {
+      disabledExtensionsState = [...DEFAULT_DISABLED_EXTENSIONS];
+      chrome.storage.local.set({ disabledExtensions: disabledExtensionsState });
     }
   });
   void syncBridge();

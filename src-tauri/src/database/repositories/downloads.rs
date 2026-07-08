@@ -4,7 +4,7 @@ use crate::database::models::{
 use rusqlite::{params, Connection, OptionalExtension, Result};
 use uuid::Uuid;
 
-const COLUMNS: &str = "id,file_name,file_size,original_url,current_url,save_path,temp_path,final_path,status,mime_type,extension,supports_range,max_connections,max_parallel_downloads,speed_limit_download,etag,last_modified,total_downloaded,speed_current,speed_average,created_at,updated_at,completed_at";
+const COLUMNS: &str = "id,file_name,file_size,original_url,current_url,save_path,temp_path,final_path,status,mime_type,extension,supports_range,max_connections,max_parallel_downloads,speed_limit_download,etag,last_modified,total_downloaded,speed_current,speed_average,created_at,updated_at,completed_at,delete_archive_after_extract";
 
 fn map_task(row: &rusqlite::Row<'_>) -> Result<DownloadTask> {
     Ok(DownloadTask {
@@ -31,14 +31,15 @@ fn map_task(row: &rusqlite::Row<'_>) -> Result<DownloadTask> {
         created_at: row.get(20)?,
         updated_at: row.get(21)?,
         completed_at: row.get(22)?,
+        delete_archive_after_extract: row.get::<_, i64>(23)? != 0,
     })
 }
 
 pub fn create(connection: &Connection, input: CreateDownloadInput) -> Result<DownloadTask> {
     let id = Uuid::new_v4().to_string();
     connection.execute(
-        "INSERT INTO download_tasks(id,file_name,file_size,original_url,current_url,save_path,temp_path,final_path,status,mime_type,extension,supports_range,max_connections,max_parallel_downloads,speed_limit_download,etag,last_modified) VALUES(?1,?2,?3,?4,?4,?5,?6,?7,'pending',?8,?9,?10,?11,?12,?13,?14,?15)",
-        params![id, input.file_name, input.file_size, input.original_url, input.save_path, input.temp_path, input.final_path, input.mime_type, input.extension, input.supports_range, input.max_connections, input.max_parallel_downloads, input.speed_limit_download, input.etag, input.last_modified],
+        "INSERT INTO download_tasks(id,file_name,file_size,original_url,current_url,save_path,temp_path,final_path,status,mime_type,extension,supports_range,max_connections,max_parallel_downloads,speed_limit_download,etag,last_modified,delete_archive_after_extract) VALUES(?1,?2,?3,?4,?4,?5,?6,?7,'pending',?8,?9,?10,?11,?12,?13,?14,?15,?16)",
+        params![id, input.file_name, input.file_size, input.original_url, input.save_path, input.temp_path, input.final_path, input.mime_type, input.extension, input.supports_range, input.max_connections, input.max_parallel_downloads, input.speed_limit_download, input.etag, input.last_modified, input.delete_archive_after_extract],
     )?;
     find(connection, &id)?.ok_or(rusqlite::Error::QueryReturnedNoRows)
 }
@@ -147,6 +148,7 @@ mod tests {
             speed_limit_download: 0,
             etag: None,
             last_modified: None,
+            delete_archive_after_extract: false,
         }
     }
 

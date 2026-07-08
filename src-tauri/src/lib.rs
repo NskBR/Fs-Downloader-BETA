@@ -53,6 +53,23 @@ fn create_category_folders(
         .collect()
 }
 
+#[tauri::command]
+fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    use tauri_plugin_autostart::ManagerExt;
+    let manager = app.autolaunch();
+    if enabled {
+        manager.enable().map_err(|error| error.to_string())
+    } else {
+        manager.disable().map_err(|error| error.to_string())
+    }
+}
+
+#[tauri::command]
+fn is_autostart_enabled(app: tauri::AppHandle) -> Result<bool, String> {
+    use tauri_plugin_autostart::ManagerExt;
+    app.autolaunch().is_enabled().map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -61,6 +78,10 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .setup(|app| {
             let open_item =
                 MenuItem::with_id(app, "tray-open", "Abrir SF Downloader", true, None::<&str>)?;
@@ -110,6 +131,9 @@ pub fn run() {
             app.manage(runtime.clone());
             app.manage(browser_bridge.clone());
             browser_bridge::start(app.handle().clone(), browser_bridge.clone());
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize::new(1104.0, 611.0))));
+            }
             for id in recovered_ids {
                 let app_handle = app.handle().clone();
                 let database = database.clone();
@@ -130,9 +154,25 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if window.label() == "main" {
-                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    api.prevent_close();
-                    let _ = window.hide();
+                match event {
+                    tauri::WindowEvent::CloseRequested { api, .. } => {
+                        api.prevent_close();
+                        let _ = window.hide();
+                    }
+                    tauri::WindowEvent::Resized(_) => {
+                        const MIN_WIDTH: f64 = 1104.0;
+                        const MIN_HEIGHT: f64 = 611.0;
+                        if let (Ok(size), Ok(scale)) = (window.inner_size(), window.scale_factor()) {
+                            let logical: tauri::LogicalSize<f64> = size.to_logical(scale);
+                            if logical.width < MIN_WIDTH || logical.height < MIN_HEIGHT {
+                                let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize::new(
+                                    logical.width.max(MIN_WIDTH),
+                                    logical.height.max(MIN_HEIGHT),
+                                )));
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
         })
@@ -181,7 +221,13 @@ pub fn run() {
             commands::transfer::get_extension_dir,
             commands::transfer::open_folder,                    
             commands::transfer::open_url,
-            commands::transfer::start_drag_folder,              
+            commands::transfer::start_drag_folder,
+            commands::metrics::metrics_snapshot,
+            commands::metrics::reset_metrics,
+            commands::metrics::export_metrics,
+            commands::metrics::import_metrics,
+            set_autostart,
+            is_autostart_enabled,
             download::extraction::extraction_status
         ])
         .run(tauri::generate_context!())

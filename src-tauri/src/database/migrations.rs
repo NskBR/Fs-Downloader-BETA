@@ -80,6 +80,15 @@ WHERE action_type='download' AND status='completed';
 const MIGRATION_005: &str = r#"
 ALTER TABLE usage_downloads ADD COLUMN status TEXT NOT NULL DEFAULT 'completed';
 "#;
+const MIGRATION_006: &str = r#"
+CREATE TABLE IF NOT EXISTS metrics (
+  key TEXT PRIMARY KEY NOT NULL,
+  value INTEGER NOT NULL DEFAULT 0
+);
+"#;
+const MIGRATION_007: &str = r#"
+ALTER TABLE download_tasks ADD COLUMN delete_archive_after_extract INTEGER NOT NULL DEFAULT 0;
+"#;
 
 pub fn run(connection: &mut Connection) -> Result<()> {
     let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
@@ -111,6 +120,18 @@ pub fn run(connection: &mut Connection) -> Result<()> {
         let transaction = connection.transaction()?;
         transaction.execute_batch(MIGRATION_005)?;
         transaction.execute_batch("PRAGMA user_version = 5")?;
+        transaction.commit()?;
+    }
+    if version < 6 {
+        let transaction = connection.transaction()?;
+        transaction.execute_batch(MIGRATION_006)?;
+        transaction.execute_batch("PRAGMA user_version = 6")?;
+        transaction.commit()?;
+    }
+    if version < 7 {
+        let transaction = connection.transaction()?;
+        transaction.execute_batch(MIGRATION_007)?;
+        transaction.execute_batch("PRAGMA user_version = 7")?;
         transaction.commit()?;
     }
     Ok(())

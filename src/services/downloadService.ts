@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { DownloadTask } from "../domain/download";
 import type { AppSettings } from "../domain/settings";
 import type { ProfileStatistics } from "../domain/profile";
+import type { MetricsSnapshot } from "../domain/metrics";
 
 export interface DownloadPreview {
   url: string;
@@ -24,6 +25,7 @@ const input = (
   url,
   rootFolder: rootFolder || settings.rootDownloadFolder,
   autoOrganize: settings.autoOrganizeEnabled,
+  deleteArchiveAfterExtract: settings.deleteArchiveAfterExtract,
   maxConnections: settings.maxConnectionsPerDownload,
   maxParallelDownloads: settings.maxParallelDownloads,
   speedLimitDownload: Math.max(
@@ -112,5 +114,17 @@ export const browserExtensionConnected = () =>
 export const extractionStatus = (id: string) =>
   invoke<string | null>("extraction_status", { id });
 export const openUrl = (url: string) => invoke<void>("open_url", { url });
+export const setLaunchOnStartup = (enabled: boolean) =>
+  invoke<void>("set_autostart", { enabled });
+export const isLaunchOnStartup = () =>
+  invoke<boolean>("is_autostart_enabled");
+export const getMetrics = () =>
+  invoke<MetricsSnapshot>("metrics_snapshot");
+export const resetMetrics = () =>
+  invoke<void>("reset_metrics");
+export const exportMetrics = (format: "json" | "txt") =>
+  invoke<string>("export_metrics", { format });
+export const importMetrics = () =>
+  invoke<void>("import_metrics");
 export const profileStatistics = () =>
   invoke<ProfileStatistics>("profile_statistics");

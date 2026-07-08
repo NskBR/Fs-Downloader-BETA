@@ -6,19 +6,13 @@ import {
   Copy,
   Check,
   X,
-  Download,
-  FolderOpen,
   Puzzle,
   Flame,
-  MousePointerClick,
   Package,
 } from "lucide-react";
 import * as service from "../services/downloadService";
 
 type Tab = "chromium" | "firefox";
-
-const CHROMIUM_URL = "chrome://extensions";
-const FIREFOX_URL = "about:addons";
 
 export function BrowserIntegrationPage() {
   const [tab, setTab] = useState<Tab>("chromium");
@@ -39,18 +33,8 @@ export function BrowserIntegrationPage() {
       window.setTimeout(() => setCopied(false), 2000);
     });
   };
-  const openFolder = () =>
-    folder && void invoke("open_folder", { path: folder }).catch(console.error);
-  const startDrag = (e: React.MouseEvent) => {
-    e.preventDefault();
-    folder && void invoke("start_drag_folder", { path: folder }).catch(console.error);
-  };
   const openXpi = () =>
     folder && void service.openFile(`${folder}/integration.xpi`).catch(console.error);
-  const openBrowserPage = () => {
-    const url = tab === "chromium" ? CHROMIUM_URL : FIREFOX_URL;
-    void service.openUrl(url).catch(console.error);
-  };
   const close = () => void appWindow.close();
 
   return (
@@ -90,7 +74,7 @@ export function BrowserIntegrationPage() {
       <main className="integr-body">
         {tab === "chromium" ? (
           <div className="integr-install">
-            <div className="integr-drop" onMouseDown={startDrag} title="Arraste para a página de extensões do navegador">
+            <div className="integr-drop" onMouseDown={(e) => { e.preventDefault(); folder && void invoke("start_drag_folder", { path: folder }).catch(console.error); }} title="Arraste para a página de extensões do navegador">
               <div className="integr-drop-icon">
                 <Package size={34} />
               </div>
@@ -105,8 +89,8 @@ export function BrowserIntegrationPage() {
               <li>
                 Abra a página de extensões do navegador:
                 <div className="integr-code">
-                  <code>{CHROMIUM_URL}</code>
-                  <button className="integr-copy" onClick={() => copy(CHROMIUM_URL)} title="Copiar">
+                  <code>chrome://extensions</code>
+                  <button className="integr-copy" onClick={() => copy("chrome://extensions")} title="Copiar">
                     {copied ? <Check size={13} /> : <Copy size={13} />}
                   </button>
                 </div>
@@ -116,21 +100,9 @@ export function BrowserIntegrationPage() {
                 direito da página.
               </li>
               <li>
-                Arraste a peça acima para a página (ou use os botões abaixo).
+                Arraste a peça acima para a página de extensões do navegador.
               </li>
             </ol>
-
-            <div className="integr-actions">
-              <a className="primary-button" href="http://127.0.0.1:17831/extension.xpi" target="_blank" rel="noreferrer">
-                <Download size={15} /> Instalar diretamente
-              </a>
-              <button className="secondary-button" onClick={openBrowserPage}>
-                <MousePointerClick size={15} /> Abrir página de extensões
-              </button>
-              <button className="secondary-button" onClick={openFolder}>
-                <FolderOpen size={15} /> Abrir pasta
-              </button>
-            </div>
           </div>
         ) : (
           <div className="integr-install">
@@ -159,15 +131,6 @@ export function BrowserIntegrationPage() {
                 <code>about:debugging#/runtime/this-firefox</code>.
               </li>
             </ol>
-
-            <div className="integr-actions">
-              <button className="primary-button" onClick={openXpi}>
-                <Download size={15} /> Abrir arquivo .xpi
-              </button>
-              <button className="secondary-button" onClick={openFolder}>
-                <FolderOpen size={15} /> Abrir pasta da extensão
-              </button>
-            </div>
           </div>
         )}
       </main>
