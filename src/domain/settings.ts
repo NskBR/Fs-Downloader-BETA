@@ -1,6 +1,8 @@
 export type SpeedUnit = "Mbps" | "MB/s";
 export type AppTheme = "system" | "midnight" | "graphite" | "light";
 export type AppLanguage = "pt-BR" | "en-US";
+export type AccentColor = "ember" | "amber" | "green" | "red" | "blue" | "violet";
+export type AppColor = "slate" | "graphite" | "obsidian" | "mint" | "ocean" | "rose";
 
 export interface CustomCategory {
   id: string;
@@ -20,6 +22,8 @@ export interface AppSettings {
   uiScale: number;
   startInTrayMode: boolean;
   language: AppLanguage;
+  accentColor: AccentColor;
+  appColor: AppColor;
   customCategories: CustomCategory[];
 }
 
@@ -35,5 +39,7 @@ export const defaultSettings: AppSettings = {
   uiScale: 1.1,
   startInTrayMode: false,
   language: "pt-BR",
+  accentColor: "ember",
+  appColor: "slate",
   customCategories: [],
 };

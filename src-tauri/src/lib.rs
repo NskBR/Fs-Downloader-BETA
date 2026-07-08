@@ -179,8 +179,9 @@ pub fn run() {
             commands::transfer::update_speed_limit,
             commands::transfer::open_browser_integration_window,
             commands::transfer::get_extension_dir,
-            commands::transfer::open_folder,
-            commands::transfer::start_drag_folder,
+            commands::transfer::open_folder,                    
+            commands::transfer::open_url,
+            commands::transfer::start_drag_folder,              
             download::extraction::extraction_status
         ])
         .run(tauri::generate_context!())

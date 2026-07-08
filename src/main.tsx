@@ -9,25 +9,18 @@ import { ProgressPage } from "./pages/ProgressPage";
 import { CompletePage } from "./pages/CompletePage";
 import { BrowserIntegrationPage } from "./pages/BrowserIntegrationPage";
 import { loadSettings } from "./services/settingsStorage";
-import "./styles/global.css";
-import "./styles/scroll-fix.css";
-import "./styles/settings-scale.css";
-import "./styles/confirmation-redesign.css";
-import "./styles/confirmation-xdm.css";
-import "./styles/history-compact.css";
-import "./styles/settings-standalone.css";
-import "./styles/responsive.css";
-import "./styles/xdm-windows.css";
-import "./styles/redesign.css";
-import "./styles/download-windows.css";
+import { applyThemeSettings } from "./services/theme";
+import "./styles/app.css";
 
 const label = getCurrentWindow().label;
-const isConfirmationWindow = label === "download-confirm";
+const confirmationMatch = label.match(/^download-confirm-(.*)$/);
+const isConfirmationWindow = Boolean(confirmationMatch);
 const isProgressWindow = label.startsWith("download-progress-");
 const isCompleteWindow = label.startsWith("download-complete-");
 const isBrowserIntegrationWindow = label === "browser-integration";
 
 const initialSettings = loadSettings();
+applyThemeSettings(initialSettings);
 void getCurrentWebview().setZoom(initialSettings.uiScale).catch(console.error);
 
 if (label === "main" && !initialSettings.startInTrayMode) {
@@ -36,7 +29,7 @@ if (label === "main" && !initialSettings.startInTrayMode) {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {isConfirmationWindow ? <ConfirmationPage />
+    {isConfirmationWindow ? <ConfirmationPage token={confirmationMatch![1]} />
       : isProgressWindow ? <ProgressPage downloadId={label.substring("download-progress-".length)} />
       : isCompleteWindow ? <CompletePage downloadId={label.substring("download-complete-".length)} />
       : isBrowserIntegrationWindow ? <BrowserIntegrationPage />

@@ -1,28 +1,28 @@
 import {
   AlertTriangle,
-  Ban,
-  CheckSquare,
-  Copy,
-  ExternalLink,
   FolderOpen,
-  Link2,
   Pause,
   Play,
-  Plus,
   Search,
-  Square,
   Trash2,
   X,
+  Link2,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  MoreVertical,
+  List,
+  LayoutGrid,
+  ChevronDown,
+  Activity,
+  Zap,
+  ArrowDown,
 } from "lucide-react";
 import {
   useCallback,
   useEffect,
-  useRef,
   useState,
-  type CSSProperties,
-  type FormEvent,
 } from "react";
-import { FileIcon } from "../components/downloads/FileIcon";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { AppSettings } from "../domain/settings";
@@ -30,7 +30,7 @@ import type { PageId } from "../app/navigation";
 import { useDownloads } from "../hooks/useDownloads";
 import * as service from "../services/downloadService";
 import type { DownloadTask } from "../domain/download";
-import { elapsedSeconds, formatElapsed } from "../utils/elapsedTime";
+import { CircularProgress } from "../components/downloads/CircularProgress";
 
 const bytes = (value: number | null) => {
   if (value === null) return "—";
@@ -43,6 +43,15 @@ const bytes = (value: number | null) => {
   }
   return `${size.toFixed(index ? 1 : 0)} ${units[index]}`;
 };
+
+const sourceDomain = (value: string) => {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return value;
+  }
+};
+
 const labels: Record<string, string> = {
   pending: "Preparando",
   checking_files: "Verificando arquivos",
@@ -54,21 +63,16 @@ const labels: Record<string, string> = {
   failed: "Falhou",
   cancelled: "Cancelado",
 };
-const sourceDomain = (value: string) => {
-  try {
-    return new URL(value).hostname.replace(/^www\./, "");
-  } catch {
-    return "origem desconhecida";
-  }
-};
-const groups: Partial<Record<PageId, string[]>> = {
+
+const groups: Record<string, string[]> = {
   documents: ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv"],
   music: ["mp3", "wav", "flac", "ogg", "m4a", "aac"],
   videos: ["mp4", "mkv", "mov", "avi", "webm"],
   archives: ["zip", "rar", "7z", "tar", "gz"],
   applications: ["exe", "msi", "apk", "bat", "appimage", "dmg", "pkg"],
 };
-type SortKey = "name" | "size" | "date" | "status";
+
+type SortKey = "status" | "size" | "date";
 
 export function DownloadsPage({
   settings,
@@ -77,97 +81,58 @@ export function DownloadsPage({
   settings: AppSettings;
   filter: PageId;
 }) {
-  const [url, setUrl] = useState("");
   const [search, setSearch] = useState("");
   const [starting, setStarting] = useState(false);
-  const [composer, setComposer] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>(
-    { key: "date", direction: "desc" },
-  );
-  const [columns, setColumns] = useState<number[]>(() => {
-    try {
-      return JSON.parse(
-        localStorage.getItem("sf-downloader.columns-v4") || "[110,100]",
-      );
-    } catch {
-      return [110, 100];
-    }
+  const [view, setView] = useState<"list" | "grid">("list");
+  const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>({
+    key: "date",
+    direction: "desc",
   });
 
   const { downloads, loading, error, setError, remove, cancel, pause, resume } =
     useDownloads(settings);
-  const drag = useRef<{ index: number; x: number; width: number } | null>(null);
 
-  const [colOrder, setColOrder] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem("sf-downloader.column-order-v4");
-      return saved ? JSON.parse(saved) : ["name", "status", "size", "date"];
-    } catch {
-      return ["name", "status", "size", "date"];
-    }
-  });
+  const handleMenuAction = useCallback(
+    (action: string, downloadId: string) => {
+      const dl = downloads.find((d) => d.id === downloadId);
+      switch (action) {
+        case "pause": pause(downloadId); break;
+        case "resume": resume(downloadId); break;
+        case "cancel": cancel(downloadId); break;
+        case "folder": if (dl) service.revealInFolder(dl.finalPath); break;
+        case "open": if (dl) service.openFile(dl.finalPath); break;
+        case "delete": if (window.confirm("Tem certeza que deseja excluir este download?")) remove([downloadId]); break;
+      }
+    },
+    [downloads, pause, resume, cancel, remove],
+  );
 
   useEffect(() => {
-    localStorage.setItem(
-      "sf-downloader.column-order-v4",
-      JSON.stringify(colOrder),
-    );
-  }, [colOrder]);
+    const unlisten = listen<{ action: string; downloadId: string }>("context-menu-action", (event) => {
+      handleMenuAction(event.payload.action, event.payload.downloadId);
+    });
+    return () => { void unlisten.then((fn) => fn()); };
+  }, [handleMenuAction]);
 
-  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
-
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedIdx(index);
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleContextMenu = (e: React.MouseEvent, item: DownloadTask) => {
     e.preventDefault();
+    void invoke("show_download_context_menu", {
+      request: { download_id: item.id, status: item.status },
+    });
   };
-
-  const handleDrop = (e: React.DragEvent, targetIdx: number) => {
-    e.preventDefault();
-    if (draggedIdx === null || draggedIdx === targetIdx) return;
-    const nextOrder = [...colOrder];
-    const [moved] = nextOrder.splice(draggedIdx, 1);
-    nextOrder.splice(targetIdx, 0, moved);
-    setColOrder(nextOrder);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedIdx(null);
-  };
-
-  const getColWidth = (col: string) => {
-    if (col === "name") return "minmax(150px, 1fr)";
-    if (col === "date") return "var(--date-width)";
-    if (col === "size") return "var(--size-width)";
-    if (col === "status") return "82px";
-    return "";
-  };
-
-  const tableGridStyle = {
-    gridTemplateColumns: `25px 38px ${colOrder.map(getColWidth).join(" ")}`,
-    "--date-width": `${columns[0]}px`,
-    "--size-width": `${columns[1]}px`,
-  } as CSSProperties;
 
   const inspect = async (raw: string) => {
     if (!raw.trim()) return;
     setStarting(true);
     setError(null);
     try {
+      const token = crypto.randomUUID();
       localStorage.setItem(
-        "sf-downloader.confirmation",
-        JSON.stringify({
-          url: raw.trim(),
-          destination: settings.rootDownloadFolder,
-        }),
+        `sf-downloader.confirmation-${token}`,
+        JSON.stringify({ url: raw.trim(), destination: settings.rootDownloadFolder }),
       );
-      await service.openDownloadConfirmation();
-      setUrl("");
-      setComposer(false);
+      await service.openDownloadConfirmation(token);
     } catch (cause) {
       setError(String(cause));
     } finally {
@@ -177,519 +142,428 @@ export function DownloadsPage({
 
   useEffect(() => {
     const receive = (event: Event) => {
-      const value =
-        (event as CustomEvent<string>).detail ||
-        localStorage.getItem("sf-downloader.pending-browser-url");
+      const value = (event as CustomEvent<string>).detail || localStorage.getItem("sf-downloader.pending-browser-url");
       if (!value) return;
       localStorage.removeItem("sf-downloader.pending-browser-url");
       void inspect(value);
     };
     window.addEventListener("sf-download-request", receive);
     const pending = localStorage.getItem("sf-downloader.pending-browser-url");
-    if (pending)
-      receive(new CustomEvent("sf-download-request", { detail: pending }));
+    if (pending) receive(new CustomEvent("sf-download-request", { detail: pending }));
     return () => window.removeEventListener("sf-download-request", receive);
   }, [settings.rootDownloadFolder]);
-  useEffect(() => {
-    localStorage.setItem("sf-downloader.columns-v4", JSON.stringify(columns));
-  }, [columns]);
-
-  useEffect(() => {
-    const move = (event: MouseEvent) => {
-      const current = drag.current;
-      if (!current) return;
-      setColumns((old) =>
-        old.map((value, index) =>
-          index === current.index
-            ? Math.min(
-                index === 0 ? 250 : 180,
-                Math.max(
-                  index === 0 ? 90 : 75,
-                  current.width + event.clientX - current.x,
-                ),
-              )
-            : value,
-        ),
-      );
-    };
-    const up = () => (drag.current = null);
-    addEventListener("mousemove", move);
-    addEventListener("mouseup", up);
-    return () => {
-      removeEventListener("mousemove", move);
-      removeEventListener("mouseup", up);
-    };
-  }, []);
-
-  // Handler de ações do menu nativo de contexto
-  const handleMenuAction = useCallback(
-    (action: string, downloadId: string) => {
-      const dl = downloads.find((d) => d.id === downloadId);
-      switch (action) {
-        case "pause":
-          pause(downloadId);
-          break;
-        case "resume":
-          resume(downloadId);
-          break;
-        case "newlink":
-          void replaceLink(downloadId);
-          break;
-        case "limit": {
-          const val = prompt(
-            "Digite o limite de velocidade para este download (em MB/s, 0 para ilimitado):",
-          );
-          if (val !== null) {
-            const parsed = Number.parseFloat(val);
-            if (Number.isFinite(parsed) && parsed >= 0) {
-              void service.updateSpeedLimit(
-                downloadId,
-                Math.round(parsed * 1024 * 1024),
-              );
-            }
-          }
-          break;
-        }
-        case "cancel":
-          cancel(downloadId);
-          break;
-        case "folder":
-          if (dl) service.revealInFolder(dl.finalPath);
-          break;
-        case "open":
-          if (dl) service.openFile(dl.finalPath);
-          break;
-        case "delete":
-          if (window.confirm("Tem certeza que deseja excluir este download?")) {
-            remove([downloadId]);
-          }
-          break;
-      }
-    },
-    [downloads, pause, resume, cancel, remove],
-  );
-
-  // Escutar eventos de ação do menu nativo
-  useEffect(() => {
-    const unlisten = listen<{ action: string; downloadId: string }>(
-      "context-menu-action",
-      (event) => {
-        handleMenuAction(event.payload.action, event.payload.downloadId);
-      },
-    );
-    return () => {
-      void unlisten.then((fn) => fn());
-    };
-  }, [handleMenuAction]);
-
-  const handleContextMenu = (e: React.MouseEvent, item: DownloadTask) => {
-    e.preventDefault();
-    void invoke("show_download_context_menu", {
-      request: {
-        download_id: item.id,
-        status: item.status,
-      },
-    });
-  };
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    void inspect(url);
-  };
-
-  const replaceLink = async (id: string) => {
-    const value = prompt("Cole a nova URL para este arquivo:");
-    if (!value) return;
-    setError(null);
-    try {
-      await service.replaceDownloadUrl(id, value.trim());
-      await resume(id);
-    } catch (cause) {
-      setError(String(cause));
-    }
-  };
 
   const visible = downloads
     .filter((item) => {
-      if (
-        filter === "active" &&
-        ![
-          "pending",
-          "checking_files",
-          "downloading",
-          "paused",
-          "assembling",
-          "extracting",
-          "failed",
-        ].includes(item.status)
-      )
-        return false;
+      if (filter === "active" && !["pending", "checking_files", "downloading", "paused", "assembling", "extracting", "failed"].includes(item.status)) return false;
       if (filter === "completed" && item.status !== "completed") return false;
-      const extensions = groups[filter];
-      if (
-        extensions &&
-        !extensions.includes(item.extension?.toLowerCase() ?? "")
-      )
-        return false;
+      if (filter === "calculator") {
+        const allKnown = Object.values(groups).flat();
+        if (allKnown.includes(item.extension?.toLowerCase() ?? "")) return false;
+      } else {
+        const extensions = groups[filter];
+        if (extensions && !extensions.includes(item.extension?.toLowerCase() ?? "")) return false;
+      }
       return item.fileName.toLowerCase().includes(search.toLowerCase());
     })
     .sort((a, b) => {
       const direction = sort.direction === "asc" ? 1 : -1;
+      const statusOrder: Record<string, number> = {
+        downloading: 0, assembling: 1, extracting: 2, paused: 3, pending: 4,
+        checking_files: 5, failed: 6, cancelled: 7, completed: 8,
+      };
       const values: Record<SortKey, [string | number, string | number]> = {
-        name: [a.fileName.toLowerCase(), b.fileName.toLowerCase()],
+        status: [statusOrder[a.status] ?? 9, statusOrder[b.status] ?? 9],
         size: [a.fileSize ?? -1, b.fileSize ?? -1],
-        date: [
-          new Date(a.createdAt).getTime(),
-          new Date(b.createdAt).getTime(),
-        ],
-        status: [a.status, b.status],
+        date: [new Date(a.createdAt).getTime(), new Date(b.createdAt).getTime()],
       };
       const [left, right] = values[sort.key];
       return (left < right ? -1 : left > right ? 1 : 0) * direction;
     });
-  const changeSort = (key: SortKey) =>
+
+  const sortOptions: { key: SortKey; label: string }[] = [
+    { key: "status", label: "Status" },
+    { key: "size", label: "Tamanho" },
+    { key: "date", label: "Data" },
+  ];
+
+  const changeSort = (key: SortKey) => {
     setSort((current) => ({
       key,
-      direction:
-        current.key === key && current.direction === "asc" ? "desc" : "asc",
+      direction: current.key === key ? (current.direction === "asc" ? "desc" : "asc") : "desc",
     }));
-  const heading = (key: SortKey, label: string) => (
-    <button
-      className={`sort-heading ${sort.key === key ? "active" : ""}`}
-      onClick={() => changeSort(key)}
-    >
-      {label}
-      <span>
-        {sort.key === key ? (sort.direction === "asc" ? "↑" : "↓") : "↕"}
-      </span>
-    </button>
-  );
+  };
 
-  const toggle = (id: string) =>
+  const toggle = (id: string) => {
     setSelected((value) => {
       const next = new Set(value);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-  const picked = downloads.filter((item) => selected.has(item.id));
-
-  const resumableStates = ["paused", "failed", "cancelled"];
-  const cancelableStates = ["pending", "downloading", "paused"];
-
-  const canPause = picked.some((item) => item.status === "downloading");
-  const canResume = picked.some((item) =>
-    resumableStates.includes(item.status),
-  );
-  const canCancel = picked.some((item) =>
-    cancelableStates.includes(item.status),
-  );
-
-  const handlePauseSelected = () => {
-    picked.forEach((item) => {
-      if (item.status === "downloading") void pause(item.id);
-    });
   };
 
-  const handleResumeSelected = () => {
-    picked.forEach((item) => {
-      if (resumableStates.includes(item.status)) void resume(item.id);
-    });
+  const openDetails = (id: string, status: string) => {
+    if (status === "completed") service.openCompleteWindow(id);
+    else service.openProgressWindow(id);
   };
 
-  const handleCancelSelected = () => {
-    picked.forEach((item) => {
-      if (cancelableStates.includes(item.status)) void cancel(item.id);
-    });
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   };
 
-  const openDetails = (event: React.MouseEvent) => {
-    const row = (event.target as HTMLElement).closest<HTMLElement>(
-      ".reference-row",
-    );
-    if (!row) return;
-    const index = [
-      ...row.parentElement!.querySelectorAll(".reference-row"),
-    ].indexOf(row);
-    const item = visible[index];
-    if (item) {
-      if (item.status === "completed") {
-        void service.openCompleteWindow(item.id);
-      } else {
-        void service.openProgressWindow(item.id);
-      }
-    }
+  const getCompletedElapsed = (item: DownloadTask) => {
+    if (!item.createdAt || !item.completedAt) return "";
+    const seconds = Math.max(0, Math.floor((new Date(item.completedAt).getTime() - new Date(item.createdAt).getTime()) / 1000));
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remSeconds = seconds % 60;
+    return remSeconds === 0 ? `${minutes}min` : `${minutes}min ${remSeconds}s`;
   };
+
+  const formatTimeRemaining = (item: DownloadTask) => {
+    if (item.status !== "downloading" || !item.speedCurrent || !item.fileSize) return "";
+    const remainingSeconds = Math.ceil((item.fileSize - item.totalDownloaded) / item.speedCurrent);
+    if (remainingSeconds <= 0) return "calculando...";
+    if (remainingSeconds < 60) return `${remainingSeconds}s restantes`;
+    const minutes = Math.floor(remainingSeconds / 60);
+    const seconds = remainingSeconds % 60;
+    if (minutes < 60) return `${minutes}m ${seconds}s restantes`;
+    return `${Math.floor(minutes / 60)}h ${minutes % 60}m restantes`;
+  };
+
+  const activeDownloads = downloads.filter((d) => d.status === "downloading");
+  const totalSpeed = activeDownloads.reduce((sum, d) => sum + d.speedCurrent, 0);
 
   return (
-    <section className="downloads-workspace" onDoubleClick={openDetails}>
-      <div className="reference-toolbar">
-        <button
-          className="new-download-button"
-          onClick={() => setComposer((value) => !value)}
-        >
-          <Plus />
-          Novo
-        </button>
-        <button
-          className="toolbar-action"
-          disabled={!canPause}
-          onClick={handlePauseSelected}
-        >
-          <Pause />
-          Pausar
-        </button>
-        <button
-          className="toolbar-action"
-          disabled={!canResume}
-          onClick={handleResumeSelected}
-        >
-          <Play />
-          Resumir
-        </button>
-        <button
-          className="toolbar-action"
-          disabled={!canCancel}
-          onClick={handleCancelSelected}
-        >
-          <Ban />
-          Cancelar
-        </button>
-        <i className="toolbar-divider" />
-        <label className="toolbar-search">
+    <>
+      <header className="flux-header" data-tauri-drag-region>
+        <div className="search-container" data-tauri-drag-region>
           <Search />
           <input
+            className="search-input"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar"
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                const value = search.trim();
+                if (/^https?:\/\//i.test(value)) void inspect(value);
+              }
+            }}
+            onPaste={(event) => {
+              const text = event.clipboardData.getData("text").trim();
+              if (/^https?:\/\//i.test(text)) {
+                event.preventDefault();
+                void inspect(text);
+              }
+            }}
+            placeholder="Buscar ou cole um link para baixar…"
           />
-        </label>
-      </div>
-      {composer && (
-        <form className="url-composer" onSubmit={submit}>
-          <input
-            type="url"
-            required
-            autoFocus
-            placeholder="Cole a URL do arquivo"
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-          />
-          <button
-            className="new-download-button"
-            disabled={starting || !settings.rootDownloadFolder}
-          >
-            {starting ? "Analisando..." : "Continuar"}
-          </button>
-        </form>
-      )}
-      {!settings.rootDownloadFolder && (
-        <div className="notice compact-notice">
-          <AlertTriangle />
-          <div>
-            <strong>Defina uma pasta nas configurações</strong>
+        </div>
+
+        <div className="header-right-group" data-tauri-drag-region>
+          <div className="sort-dropdown">
+            <select
+              className="sort-select"
+              value={sort.key}
+              onChange={(event) => changeSort(event.target.value as SortKey)}
+              title="Ordenar por"
+            >
+              {sortOptions.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="sort-direction"
+              onClick={() => changeSort(sort.key)}
+              title={sort.direction === "asc" ? "Crescente" : "Decrescente"}
+            >
+              <ArrowDown
+                size={15}
+                style={{ transform: sort.direction === "asc" ? "rotate(180deg)" : "none" }}
+              />
+            </button>
           </div>
-        </div>
-      )}
-      {error && (
-        <div className="error-banner dismissible-banner" role="alert">
-          <span>{error}</span>
+
           <button
-            type="button"
-            className="banner-close-button"
-            aria-label="Fechar aviso de erro"
-            onClick={() => setError(null)}
+            className={`btn-layout-switcher ${view === "list" ? "active" : ""}`}
+            title="Visualização em Lista"
+            onClick={() => setView("list")}
           >
-            <X />
+            <List size={20} />
+          </button>
+          <button
+            className={`btn-layout-switcher ${view === "grid" ? "active" : ""}`}
+            title="Visualização em Grade"
+            onClick={() => setView("grid")}
+          >
+            <LayoutGrid size={20} />
           </button>
         </div>
-      )}
-      <div className="reference-table" style={tableGridStyle}>
-        <div className="table-head" style={tableGridStyle}>
-          <span />
-          <span />
-          {colOrder.map((col, idx) => {
-            if (col === "name")
-              return (
-                <span
-                  key="name"
-                  className="col-name"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, idx)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, idx)}
-                  onDragEnd={handleDragEnd}
-                >
-                  {heading("name", "Nome")}
-                </span>
-              );
-            if (col === "date")
-              return (
-                <span
-                  key="date"
-                  className="resizable col-date"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, idx)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, idx)}
-                  onDragEnd={handleDragEnd}
-                >
-                  {heading("date", "Data")}
-                  <i
-                    onMouseDown={(event) =>
-                      (drag.current = {
-                        index: 0,
-                        x: event.clientX,
-                        width: columns[0],
-                      })
-                    }
-                  />
-                </span>
-              );
-            if (col === "size")
-              return (
-                <span
-                  key="size"
-                  className="resizable col-size"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, idx)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, idx)}
-                  onDragEnd={handleDragEnd}
-                >
-                  {heading("size", "Tamanho")}
-                  <i
-                    onMouseDown={(event) =>
-                      (drag.current = {
-                        index: 1,
-                        x: event.clientX,
-                        width: columns[1],
-                      })
-                    }
-                  />
-                </span>
-              );
-            if (col === "status")
-              return (
-                <span
-                  key="status"
-                  className="col-status"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, idx)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, idx)}
-                  onDragEnd={handleDragEnd}
-                >
-                  {heading("status", "Status")}
-                </span>
-              );
-            return null;
-          })}
-        </div>
-        <div className="download-list">
+      </header>
+
+      {/* Main Content Area */}
+      <section className="downloads-workspace">
+
+        {/* Missing Folder Warning */}
+        {!settings.rootDownloadFolder && (
+          <div className="compact-notice">
+            <AlertTriangle />
+            <div>
+              <strong>Defina uma pasta de destino nas Configurações</strong>
+            </div>
+          </div>
+        )}
+
+        {/* Error banner */}
+        {error && (
+          <div className="dismissible-banner" role="alert">
+            <span>{error}</span>
+            <button type="button" onClick={() => setError(null)}>
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* Scrollable list of Cards */}
+        <div className={`cards-scroll-container view-${view}`}>
           {loading ? (
-            <div className="empty-compact">Carregando...</div>
+            <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px" }}>Carregando...</div>
           ) : visible.length === 0 ? (
-            <div className="empty-compact">
-              <FolderOpen />
-              <strong>Nenhum arquivo</strong>
-              <span>Use Novo para adicionar uma URL.</span>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: "16px", color: "var(--muted)" }}>
+              <FolderOpen size={48} />
+              <strong>Nenhum download encontrado</strong>
             </div>
           ) : (
             visible.map((item) => {
               const progress = item.fileSize
                 ? Math.min(100, (item.totalDownloaded / item.fileSize) * 100)
                 : 0;
-              const resumable = ["paused", "failed", "cancelled"].includes(
-                item.status,
-              );
+
+  const isCompleted = item.status === "completed";
+  const isFailed = item.status === "failed" || item.status === "cancelled";
+  const isWaiting = item.status === "pending" || item.status === "checking_files" || item.status === "assembling" || item.status === "extracting";
+  const isPaused = item.status === "paused";
+  const isDownloading = item.status === "downloading";
+
+  const statusClass = isDownloading ? "downloading"
+    : isPaused ? "paused"
+    : isCompleted ? "completed"
+    : isFailed ? "failed"
+    : "waiting";
+  const statusLabel = isDownloading ? "Baixando"
+    : isPaused ? "Pausado"
+    : isCompleted ? "Concluído"
+    : isFailed ? (item.status === "cancelled" ? "Cancelado" : "Falhou")
+    : "Na fila";
+
               return (
                 <article
-                  className={`reference-row ${selected.has(item.id) ? "selected" : ""}`}
                   key={item.id}
+                  className={`download-card status-${statusClass} ${selected.has(item.id) ? "selected" : ""}`}
                   onClick={() => toggle(item.id)}
+                  onDoubleClick={() => openDetails(item.id, item.status)}
                   onContextMenu={(event) => handleContextMenu(event, item)}
-                  style={tableGridStyle}
                 >
-                  <button className="row-check">
-                    {selected.has(item.id) ? <CheckSquare /> : <Square />}
-                  </button>
-                  <FileIcon extension={item.extension} />
+                  {/* Left Column: Status Indicator */}
+                  <div className="card-indicator-col">
+                    {(isDownloading || isPaused || isFailed) && progress > 0 ? (
+                      <CircularProgress
+                        value={progress}
+                        color={`var(--st-${statusClass})`}
+                      />
+                    ) : isCompleted ? (
+                      <div className="indicator-icon-wrapper success">
+                        <CheckCircle2 />
+                      </div>
+                    ) : isFailed ? (
+                      <div className="indicator-icon-wrapper error">
+                        <XCircle />
+                      </div>
+                    ) : (
+                      <div className="indicator-icon-wrapper waiting">
+                        <Clock />
+                      </div>
+                    )}
+                  </div>
 
-                  {colOrder.map((col) => {
-                    if (col === "name")
-                      return (
+                  {/* Center Column: Title, Info, Progress Bar */}
+                  <div className="card-details-col">
+                    <div className="card-title-row">
+                      <h3 className="card-file-name" title={item.fileName}>
+                        {item.fileName}
+                      </h3>
+                      <span className={`status-tag ${statusClass}`}>{statusLabel}</span>
+                      <span className="card-date">{formatDate(item.createdAt)}</span>
+                    </div>
+
+                    {item.originalUrl && (
+                      <button
+                        type="button"
+                        className="card-source"
+                        title="Copiar link de origem"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void navigator.clipboard.writeText(item.originalUrl);
+                        }}
+                      >
+                        <Link2 size={12} />
+                        <span>{sourceDomain(item.originalUrl)}</span>
+                      </button>
+                    )}
+
+                    <div className="card-info-row">
+                      {isDownloading ? (
+                        <>
+                          <span className="meta-size">{bytes(item.totalDownloaded)} / {bytes(item.fileSize)}</span>
+                          <span className="meta-sep" aria-hidden>·</span>
+                          <span className="meta-speed">{bytes(item.speedCurrent)}/s</span>
+                          <span className="meta-sep" aria-hidden>·</span>
+                          <span className="meta-eta accent">{formatTimeRemaining(item)}</span>
+                        </>
+                      ) : isCompleted ? (
+                        <>
+                          <span className="meta-size">{bytes(item.fileSize)}</span>
+                          <span className="meta-sep" aria-hidden>·</span>
+                          <span className="meta-done">Concluído em {getCompletedElapsed(item)}</span>
+                        </>
+                      ) : isFailed ? (
+                        <>
+                          <span className="meta-status err">{item.status === "cancelled" ? "Cancelado" : "Falhou"}</span>
+                          {item.fileSize && (
+                            <>
+                              <span className="meta-sep" aria-hidden>·</span>
+                              <span className="meta-size">{bytes(item.totalDownloaded)} de {bytes(item.fileSize)}</span>
+                            </>
+                          )}
+                        </>
+                      ) : isPaused ? (
+                        <>
+                          <span className="meta-status paused">Pausado</span>
+                          <span className="meta-sep" aria-hidden>·</span>
+                          <span className="meta-size">{bytes(item.totalDownloaded)} de {bytes(item.fileSize)}</span>
+                        </>
+                      ) : (
+                        <span className="meta-status">Na fila</span>
+                      )}
+                    </div>
+
+                    {(isDownloading || isPaused) && (
+                      <div className="card-progress-bar-track">
                         <div
-                          key="name"
-                          className={`reference-name status-${item.status} col-name`}
-                        >
-                          <strong>{item.fileName}</strong>
-                          <div className="progress-track">
-                            <i style={{ width: `${progress}%` }} />
-                          </div>
-                          <small>
-                            {labels[item.status]} ·{" "}
-                            {bytes(item.totalDownloaded)} /{" "}
-                            {bytes(item.fileSize)} ·{" "}
-                            {item.status === "downloading"
-                              ? `${bytes(item.speedCurrent)}/s`
-                              : `${progress.toFixed(0)}%`}
-                            {item.status === "completed" && item.completedAt
-                              ? ` · Tempo: ${formatElapsed(elapsedSeconds(item.createdAt, item.completedAt))}`
-                              : ""}
-                          </small>
-                          <div className="name-footer-row">
-                            <span
-                              className="download-origin"
-                              title={item.originalUrl}
-                            >
-                              <Link2 />
-                              {sourceDomain(item.originalUrl)}
-                            </span>
-                            <span className="inline-row-actions">
-                              <button
-                                title="Copiar link do download"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  void navigator.clipboard.writeText(
-                                    item.currentUrl || item.originalUrl,
-                                  );
-                                }}
-                              >
-                                <Copy />
-                              </button>
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    if (col === "date")
-                      return (
-                        <time key="date" className="col-date">
-                          {new Date(item.createdAt).toLocaleDateString("pt-BR")}
-                        </time>
-                      );
-                    if (col === "size")
-                      return (
-                        <span key="size" className="reference-size col-size">
-                          {bytes(item.fileSize)}
-                        </span>
-                      );
-                    if (col === "status")
-                      return (
-                        <span
-                          key="status"
-                          className={`status-badge status-badge--${item.status} col-status`}
-                        >
-                          {labels[item.status]}
-                        </span>
-                      );
-                    return null;
-                  })}
+                          className="card-progress-bar-fill"
+                          style={{
+                            width: `${progress}%`
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Column: Actions */}
+                  <div className="card-actions-col">
+                    {isCompleted && (
+                      <button
+                        className="card-action-btn"
+                        title="Abrir pasta de destino"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          service.revealInFolder(item.finalPath);
+                        }}
+                      >
+                        <FolderOpen />
+                      </button>
+                    )}
+
+                    {(isPaused || isFailed || isWaiting) && (
+                      <button
+                        className="card-action-btn"
+                        title="Retomar download"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void resume(item.id);
+                        }}
+                      >
+                        <Play />
+                      </button>
+                    )}
+
+                    {isDownloading && (
+                      <button
+                        className="card-action-btn"
+                        title="Pausar download"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void pause(item.id);
+                        }}
+                      >
+                        <Pause />
+                      </button>
+                    )}
+
+                    {!isCompleted && !isFailed && (
+                      <button
+                        className="card-action-btn"
+                        title="Cancelar download"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void cancel(item.id);
+                        }}
+                      >
+                        <X />
+                      </button>
+                    )}
+
+                    {isFailed && (
+                      <button
+                        className="card-action-btn"
+                        title="Excluir download"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm("Excluir este download permanentemente?")) {
+                            remove([item.id]);
+                          }
+                        }}
+                      >
+                        <Trash2 />
+                      </button>
+                    )}
+
+                    <button
+                      className="card-action-btn menu-btn"
+                      title="Opções"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleContextMenu(e, item);
+                      }}
+                    >
+                      <MoreVertical />
+                    </button>
+                  </div>
                 </article>
               );
             })
           )}
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* Discreete Footer */}
+      <footer className="flux-footer">
+        <div className="footer-left">
+          <ArrowDown />
+          <span><strong>{bytes(totalSpeed)}/s</strong> Velocidade atual</span>
+        </div>
+
+        <div className="footer-right">
+          <Zap />
+          <span>Downloads simultâneos: <strong>{activeDownloads.length}</strong></span>
+          <ChevronDown size={14} style={{ marginLeft: "4px" }} />
+        </div>
+      </footer>
+    </>
   );
 }

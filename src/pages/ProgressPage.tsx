@@ -1,8 +1,9 @@
 import {
   Ban,
+  Check,
   Clock3,
   Copy,
-  FolderOpen,
+  ExternalLink,
   Gauge,
   Link2,
   Minus,
@@ -32,9 +33,10 @@ const bytes = (value: number | null) => {
 const eta = (seconds: number) => {
   if (!Number.isFinite(seconds) || seconds < 0) return "—";
   if (seconds < 60) return `${Math.ceil(seconds)}s`;
+  if (seconds < 3600) return `${Math.ceil(seconds / 60)}min`;
   const hours = Math.floor(seconds / 3600),
     minutes = Math.ceil((seconds % 3600) / 60);
-  return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
+  return `${hours}h ${minutes}min`;
 };
 const labels: Record<string, string> = {
   pending: "Conectando",
@@ -55,17 +57,37 @@ const sourceDomain = (value: string) => {
   }
 };
 
+function CopyButton({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      className="copy-btn"
+      title={`Copiar ${label}`}
+      onClick={() =>
+        void navigator.clipboard.writeText(value).then(() => {
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1600);
+        })
+      }
+    >
+      {copied ? <Check size={12} /> : <Copy size={12} />}
+      <span>{copied ? "Copiado" : label}</span>
+    </button>
+  );
+}
+
 export function ProgressPage({ downloadId }: { downloadId: string }) {
   const [task, setTask] = useState<DownloadTask | null>(null),
     [downloaded, setDownloaded] = useState(0),
     [speed, setSpeed] = useState(0),
     [status, setStatus] = useState("pending"),
     [error, setError] = useState<string | null>(null),
-    [limit, setLimit] = useState(""),
-    [unit, setUnit] = useState<"KB" | "MB">("MB"),
+    [nameCopied, setNameCopied] = useState(false),
     [cancelOpen, setCancelOpen] = useState(false),
     [busy, setBusy] = useState(false);
   const appWindow = getCurrentWindow();
+
   useEffect(() => {
     void service.listDownloads().then((list) => {
       const found = list.find((item) => item.id === downloadId);
@@ -74,15 +96,6 @@ export function ProgressPage({ downloadId }: { downloadId: string }) {
       setDownloaded(found.totalDownloaded);
       setSpeed(found.speedCurrent);
       setStatus(found.status);
-      if (found.speedLimitDownload > 0) {
-        const mb = found.speedLimitDownload >= 1024 * 1024;
-        setUnit(mb ? "MB" : "KB");
-        setLimit(
-          String(
-            Math.round(found.speedLimitDownload / (mb ? 1024 * 1024 : 1024)),
-          ),
-        );
-      }
     });
     const listener = listen<DownloadProgress>(
       "download-progress",
@@ -106,14 +119,7 @@ export function ProgressPage({ downloadId }: { downloadId: string }) {
     );
     return () => void listener.then((dispose) => dispose());
   }, [downloadId]);
-  const applyLimit = async (selectedUnit = unit) => {
-    const parsed = Number(limit.replace(",", ".")),
-      value =
-        Number.isFinite(parsed) && parsed > 0
-          ? Math.floor(parsed * (selectedUnit === "MB" ? 1024 * 1024 : 1024))
-          : 0;
-    await service.updateSpeedLimit(downloadId, value);
-  };
+
   const pauseResume = async () => {
     setError(null);
     try {
@@ -133,7 +139,6 @@ export function ProgressPage({ downloadId }: { downloadId: string }) {
     setBusy(true);
     try {
       await service.cancelDownload(downloadId, deleteFiles);
-      setDownloaded(deleteFiles ? 0 : downloaded);
       setStatus("cancelled");
       setSpeed(0);
       setCancelOpen(false);
@@ -144,11 +149,15 @@ export function ProgressPage({ downloadId }: { downloadId: string }) {
       setBusy(false);
     }
   };
+
   if (!task)
     return (
       <main className="download-window">
         <header className="download-window-title" data-tauri-drag-region>
-          <span>Download em progresso</span>
+          <span>
+            <Gauge />
+            Download em progresso
+          </span>
           <div className="download-window-controls">
             <button title="Minimizar" onClick={() => void appWindow.minimize()}>
               <Minus />
@@ -161,21 +170,22 @@ export function ProgressPage({ downloadId }: { downloadId: string }) {
         <div className="window-loading">Carregando detalhes...</div>
       </main>
     );
+
   const total = task.fileSize ?? 0,
     progress = total ? Math.min(100, (downloaded / total) * 100) : 0,
     isActive = status === "downloading",
-    remaining = isActive && speed > 0 ? (total - downloaded) / speed : -1;
+    remaining = isActive && speed > 0 ? (total - downloaded) / speed : -1,
+    source = task.currentUrl || task.originalUrl;
+
   return (
-    <main
-      className={`download-window progress-compact progress-status--${status}`}
-    >
-      <header
-        className={`download-window-title progress-title progress-title--${status}`}
-        data-tauri-drag-region
-      >
-        <span>
+    <main className={`download-window progress-compact status-${status} progress-open`}>
+      <header className="download-window-title" data-tauri-drag-region>
+        <span className="progress-title-text">
           <Gauge />
-          {labels[status] ?? "Download"}
+          <span className="progress-title-label">{labels[status] ?? "Download"}</span>
+          <span className="progress-title-name" title={task.fileName}>
+            {task.fileName}
+          </span>
         </span>
         <div className="download-window-controls">
           <button title="Minimizar" onClick={() => void appWindow.minimize()}>
@@ -186,75 +196,68 @@ export function ProgressPage({ downloadId }: { downloadId: string }) {
           </button>
         </div>
       </header>
+
       <section className="download-window-content">
-        <div className="progress-file">
+        <div className="pg-head">
           <FileIcon extension={task.extension} />
-          <div>
-            <strong title={task.fileName}>{task.fileName}</strong>
-            <div className="large-progress">
-              <i style={{ width: `${progress}%` }} />
-            </div>
-            <span className="progress-file-meta">
-              {bytes(downloaded)} / {bytes(task.fileSize)}
-              <button
-                title="Copiar link do download"
-                onClick={() =>
-                  void navigator.clipboard.writeText(
-                    task.currentUrl || task.originalUrl,
-                  )
-                }
-              >
-                <Link2 />
-                {sourceDomain(task.originalUrl)}
-                <Copy />
-              </button>
-            </span>
-          </div>
-          <b>{progress.toFixed(0)}%</b>
-        </div>
-        <div className="progress-stats">
-          <article>
-            <Gauge />
-            <span>
-              Velocidade<strong>{isActive ? `${bytes(speed)}/s` : "—"}</strong>
-            </span>
-          </article>
-          <article>
-            <Clock3 />
-            <span>
-              Tempo restante<strong>{eta(remaining)}</strong>
-            </span>
-          </article>
-        </div>
-        <label className="progress-limit">
-          <span>
-            <Gauge />
-            Limite de velocidade
-          </span>
-          <input
-            inputMode="decimal"
-            value={limit}
-            onChange={(event) =>
-              /^\d*([.,]\d*)?$/.test(event.target.value) &&
-              setLimit(event.target.value)
+          <strong
+            className="pg-name"
+            title={task.fileName}
+            onClick={() =>
+              void navigator.clipboard.writeText(task.fileName).then(() => {
+                setNameCopied(true);
+                window.setTimeout(() => setNameCopied(false), 1600);
+              })
             }
-            onBlur={() => void applyLimit()}
-            placeholder="Ilimitado"
-          />
-          <select
-            value={unit}
-            onChange={(event) => {
-              const nextUnit = event.target.value as "KB" | "MB";
-              setUnit(nextUnit);
-              void applyLimit(nextUnit);
-            }}
           >
-            <option value="KB">KB/s</option>
-            <option value="MB">MB/s</option>
-          </select>
-        </label>
+            {task.fileName}
+          </strong>
+          <span className="pg-percent">{progress.toFixed(0)}%</span>
+        </div>
+
+        <div
+          className="large-progress"
+          role="progressbar"
+          aria-valuenow={Math.round(progress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <i style={{ width: `${progress}%` }} />
+        </div>
+
+        <div className="pg-stats">
+          <span className="pg-size">
+            <strong>{bytes(downloaded)}</strong>{" "}
+            <em>/ {bytes(task.fileSize)}</em>
+          </span>
+          <span className="pg-stat">
+            <Gauge size={13} />
+            {isActive ? `${bytes(speed)}/s` : "—"}
+          </span>
+          <span className="pg-stat">
+            <Clock3 size={13} />
+            {eta(remaining)}
+          </span>
+        </div>
+
+        <div className="pg-origin">
+          <button
+            type="button"
+            className="pg-origin-link"
+            title={`${source} — clique para abrir`}
+            onClick={() => void service.openUrl(source)}
+          >
+            <Link2 size={12} />
+            <span className="pg-origin-value">{sourceDomain(task.originalUrl)}</span>
+            <ExternalLink size={11} />
+          </button>
+          <CopyButton value={source} label="Copiar" />
+        </div>
+
+        {nameCopied && <span className="copy-toast">Nome copiado</span>}
         {error && <p className="window-error">{error}</p>}
       </section>
+
       <footer className="progress-actions">
         {["pending", "downloading"].includes(status) && (
           <button className="pause" onClick={() => void pauseResume()}>
@@ -275,6 +278,7 @@ export function ProgressPage({ downloadId }: { downloadId: string }) {
           </button>
         )}
       </footer>
+
       {cancelOpen && (
         <div className="cancel-overlay">
           <section className="cancel-dialog">
@@ -296,7 +300,6 @@ export function ProgressPage({ downloadId }: { downloadId: string }) {
             </div>
             <footer>
               <button disabled={busy} onClick={() => void cancel(false)}>
-                <FolderOpen />
                 Manter arquivos
               </button>
               <button

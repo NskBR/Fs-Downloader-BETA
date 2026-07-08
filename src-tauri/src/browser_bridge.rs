@@ -298,11 +298,11 @@ async fn get_extension_xpi(State(state): State<BridgeState>) -> impl IntoRespons
         Ok(app_data) => {
             let xpi_path = app_data.join("extension").join("firefox").join("integration.xpi");
             std::fs::read(xpi_path).unwrap_or_else(|_| {
-                include_bytes!("../../browser-extension/release/7c2944a3066543438b23-0.2.7.xpi").to_vec()
+                include_bytes!("../../browser-extension/release/7c2944a3066543438b23-0.2.9.xpi").to_vec()
             })
         }
         Err(_) => {
-            include_bytes!("../../browser-extension/release/7c2944a3066543438b23-0.2.7.xpi").to_vec()
+            include_bytes!("../../browser-extension/release/7c2944a3066543438b23-0.2.9.xpi").to_vec()
         }
     };
     

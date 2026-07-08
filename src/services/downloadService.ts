@@ -19,6 +19,7 @@ const input = (
   autoExtract = false,
   archivePassword?: string,
   selectedCategory?: string,
+  force = false,
 ) => ({
   url,
   rootFolder: rootFolder || settings.rootDownloadFolder,
@@ -34,12 +35,13 @@ const input = (
   autoExtract,
   archivePassword: archivePassword || null,
   selectedCategory: selectedCategory || null,
+  force,
 });
 export const listDownloads = () => invoke<DownloadTask[]>("list_downloads");
 export const inspectDownload = (url: string) =>
   invoke<DownloadPreview>("inspect_download", { url });
-export const openDownloadConfirmation = () =>
-  invoke<void>("open_download_confirmation");
+export const openDownloadConfirmation = (token: string) =>
+  invoke<void>("open_download_confirmation", { token });
 export const openProgressWindow = (id: string) =>
   invoke<void>("open_progress_window", { id });
 export const openCompleteWindow = (id: string) =>
@@ -53,6 +55,7 @@ export const startDownload = (
   autoExtract = false,
   archivePassword?: string,
   selectedCategory?: string,
+  force = false,
 ) =>
   invoke<DownloadTask>("start_download", {
     input: input(
@@ -64,6 +67,7 @@ export const startDownload = (
       autoExtract,
       archivePassword,
       selectedCategory,
+      force,
     ),
   });
 export const queueDownload = (
@@ -107,5 +111,6 @@ export const browserExtensionConnected = () =>
   invoke<boolean>("browser_extension_status");
 export const extractionStatus = (id: string) =>
   invoke<string | null>("extraction_status", { id });
+export const openUrl = (url: string) => invoke<void>("open_url", { url });
 export const profileStatistics = () =>
   invoke<ProfileStatistics>("profile_statistics");

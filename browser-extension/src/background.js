@@ -6,8 +6,24 @@ let disabledExtensionsState = [];
 const requests = new Map();
 const recentHeaders = new Map();
 const intercepted = new Set();
+const interceptedUrls = new Map();
 
 const validUrl = url => /^https?:\/\//i.test(url || "");
+
+// Tracks URLs already taken over so a single browser download is not sent to
+// the app twice (once via onHeadersReceived, once via onDeterminingFilename).
+function markInterceptedUrl(url) {
+  if (!url) return;
+  interceptedUrls.set(url, Date.now());
+  setTimeout(() => {
+    if (interceptedUrls.get(url) && Date.now() - interceptedUrls.get(url) >= 5000) {
+      interceptedUrls.delete(url);
+    }
+  }, 5000);
+}
+function wasInterceptedUrl(url) {
+  return Boolean(url) && interceptedUrls.has(url);
+}
 const normalizeExtension = value => {
   const cleaned = String(value || "").trim().toUpperCase();
   if (!cleaned) return "";
@@ -85,10 +101,6 @@ function shouldTakeOver(url, filename) {
 function shouldInterceptHeaders(info) {
   if (!bridge.connected) return null;
 
-  // === XDM approach: only intercept actual page navigations ===
-  // Never intercept xmlhttprequest, fetch, script, stylesheet, image, font, ping, etc.
-  if (info.type !== "main_frame" && info.type !== "sub_frame") return null;
-
   // Block POST requests (same as XDM's shouldInterceptFile)
   if (info.method && info.method !== "GET") return null;
 
@@ -106,6 +118,7 @@ function shouldInterceptHeaders(info) {
   let filename = null;
   let fileSize = null;
   let mimeType = null;
+  let isAttachment = false;
 
   for (const header of info.responseHeaders || []) {
     const name = header.name.toLowerCase();
@@ -127,6 +140,8 @@ function shouldInterceptHeaders(info) {
           filename = trimmed.substring(9).replace(/['"]/g, "").trim();
         }
       }
+      // A forced download (XDM takes these over regardless of resource type)
+      isAttachment = /attachment/i.test(value);
     }
     if (name === "content-type") {
       mimeType = value.split(";")[0].trim().toLowerCase();
@@ -135,6 +150,15 @@ function shouldInterceptHeaders(info) {
       fileSize = parseInt(value, 10) || null;
     }
   }
+
+  // === XDM approach: only intercept real downloads ===
+  // A passive prefetch (e.g. YouTube thumbnail on hover, lazy <img>, media preview)
+  // is fetched as an `image`/`media`/subresource type with NO Content-Disposition
+  // attachment. Those must NOT be taken over, or the browser spawns fake downloads.
+  // We only intercept when it is a user navigation (main_frame/sub_frame) OR a
+  // forced download (Content-Disposition: attachment).
+  const isNavigation = info.type === "main_frame" || info.type === "sub_frame";
+  if (!isNavigation && !isAttachment) return null;
 
   // === XDM's isHtmlOrScript: block web content MIME types ===
   // (XDM blockedMimeList: text/javascript, application/javascript, text/css, text/html)
@@ -220,11 +244,12 @@ function eraseDownload(id) {
 function onDeterminingFilename(download, suggest) {
   const url = download.finalUrl || download.url;
   syncBridge().then(() => {
-    if (!captureEnabledState || intercepted.has(download.id) || !shouldTakeOver(url, download.filename)) {
+    if (!captureEnabledState || intercepted.has(download.id) || wasInterceptedUrl(url) || !shouldTakeOver(url, download.filename)) {
       suggest();
       return;
     }
     intercepted.add(download.id);
+    markInterceptedUrl(url);
     eraseDownload(download.id);
     sendToApp(download)
       .catch(() => {})
@@ -280,6 +305,7 @@ try {
       };
 
       intercepted.add(info.requestId);
+      markInterceptedUrl(info.url);
       void sendToApp(download).finally(() => setTimeout(() => intercepted.delete(info.requestId), 5000));
 
       return { cancel: true };

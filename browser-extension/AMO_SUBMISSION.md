@@ -1,15 +1,10 @@
-# SF Downloader Integration 0.2.7 — notas para revisão AMO
+# SF Downloader Integration 0.2.9 — notas para revisão AMO
 
-## Alterações da versão 0.2.7
+## Alterações da versão 0.2.9
 
-- Corrige a perda de downloads legítimos repetidos da mesma URL.
-- Reconhece nomes UTF-8 enviados pelo cabeçalho `Content-Disposition: filename*=`.
-- Alinha os tipos de arquivo monitorados às categorias suportadas pelo aplicativo.
-- Mantém o estado de conexão sincronizado quando a captura é ativada ou desativada.
-- Adiciona filtros por extensão no popup para permitir que tipos como `.TXT`, `.MP4` ou `.MP3` continuem sendo tratados pelo navegador.
-- Adiciona content script para capturar cliques comuns antes do gerenciador nativo criar o item de download.
-- Remove consulta assíncrona ao storage no caminho crítico de interceptação, reduzindo a chance do Chromium abrir a janela nativa de salvar antes do app.
-- Renomeia ícones empacotados para `sf-small.png` e `sf-large.png`, evitando a rejeição da AMO por nomes de arquivo como `icons/icon-128.png` ou `icons/icon128.png`.
+- Corrige a detecção incorreta de recursos que não são downloads: a interceptação em `onHeadersReceived` agora só atua em navegações do usuário (`main_frame`/`sub_frame`) ou em respostas com `Content-Disposition: attachment`. Isso evita que prefetches passivos — como as miniaturas de vídeo do YouTube exibidas ao passar o mouse — sejam erroneamente tratados como downloads.
+- Mantém a correção da 0.2.8: o download é transferido ao aplicativo desktop antes de o navegador nativo detectá-lo, sem registro no histórico e sem a janela de download nativa piscando.
+- Versão alinhada à 0.2.8 em tudo o mais (filtros por extensão, content script de clique, ícones `sf-small.png`/`sf-large.png`).
 
 ## Finalidade
 
@@ -32,7 +27,7 @@ As declarações `browsingActivity`, `websiteContent` e `websiteActivity` existe
 2. Carregue a extensão no Firefox 140 ou mais recente.
 3. Abra o popup e confirme que o status informa conexão com o aplicativo.
 4. Inicie o download de um arquivo HTTP/HTTPS.
-5. Confirme que o download nativo é removido e a janela de confirmação do SF Downloader é aberta.
+5. Confirme que nenhum item de download aparece no gerenciador nativo e que a janela de confirmação do SF Downloader é aberta diretamente.
 6. Desative um tipo de arquivo no popup, por exemplo `TXT`, e confirme que ele volta a ser tratado pelo Firefox.
 7. Desative o monitoramento no popup e confirme que downloads voltam a ser tratados pelo Firefox.
 

@@ -1,7 +1,7 @@
-import { Check, Plus, Save, Tags, Trash2, Globe } from "lucide-react";
+import { Plus, Tags, Trash2, Globe } from "lucide-react";
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { AppLanguage, AppSettings } from "../domain/settings";
+import type { AppLanguage, AppSettings, AccentColor, AppColor } from "../domain/settings";
 import { downloadCategories } from "../domain/categories";
 import {
   chooseDownloadFolder,
@@ -18,12 +18,33 @@ interface Props {
 
 export function SettingsPage({ settings, onSave, saved }: Props) {
   const [draft, setDraft] = useState(settings),
-    [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
     [categoryName, setCategoryName] = useState(""),
     [categoryExtensions, setCategoryExtensions] = useState("");
-  const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) =>
-    setDraft((current) => ({ ...current, [key]: value }));
+  const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
+    const next = { ...draft, [key]: value };
+    setDraft(next);
+    if (next.rootDownloadFolder.trim())
+      void save(next);
+    else setError("Escolha a pasta principal de downloads.");
+  };
+  const save = async (next: AppSettings) => {
+    setError(null);
+    try {
+      if (next.autoOrganizeEnabled)
+        await createCategoryFolders(
+          next.rootDownloadFolder,
+          next.customCategories.map((category) => category.name),
+        );
+      onSave({ ...next, theme: settings.theme });
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Não foi possível salvar as configurações.",
+      );
+    }
+  };
   const openBrowserIntegration = () => {
     void invoke("open_browser_integration_window").catch(console.error);
   };
@@ -73,28 +94,6 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
       "customCategories",
       draft.customCategories.filter((category) => category.id !== id),
     );
-  const submit = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      if (!draft.rootDownloadFolder.trim())
-        throw new Error("Escolha a pasta principal de downloads.");
-      if (draft.autoOrganizeEnabled)
-        await createCategoryFolders(
-          draft.rootDownloadFolder,
-          draft.customCategories.map((category) => category.name),
-        );
-      onSave({ ...draft, theme: settings.theme });
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Não foi possível salvar as configurações.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
   return (
     <section className="simple-settings">
       <header>
@@ -102,16 +101,56 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
           <h1>Configurações</h1>
           <p>Somente o essencial para usar o SF Downloader.</p>
         </div>
-        <button className="settings-save-btn" disabled={busy} onClick={submit}>
-          {saved ? <Check size={13} /> : <Save size={13} />}
-          {busy ? "Salvando..." : saved ? "Salvo" : "Salvar"}
-        </button>
+        {saved && <span className="settings-autosave">Salvo automaticamente</span>}
       </header>
       {error && <div className="error-banner">{error}</div>}
 
       <div className="simple-settings-list">
         <div className="setting-section">
           <h2>Geral</h2>
+        </div>
+
+        <div className="setting-item">
+          <label>Cor de destaque</label>
+          <span className="description">
+            Define a cor do acento usada em botões, progresso e destaques do aplicativo.
+          </span>
+          <div className="accent-swatches">
+            {(["ember","amber","green","red","blue","violet"] as AccentColor[]).map((key) => (
+              <button
+                key={key}
+                type="button"
+                className={`accent-swatch ${draft.accentColor === key ? "active" : ""}`}
+                style={{ ["--swatch" as string]: `var(--accent-${key})` }}
+                onClick={() => update("accentColor", key)}
+                aria-label={key}
+                title={key}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="setting-item">
+          <label>Cor do aplicativo</label>
+          <span className="description">
+            Define a paleta base (fundo, painéis e superfícies). Combine com a cor de destaque.
+          </span>
+          <div className="accent-swatches">
+            {(["slate","graphite","obsidian","mint","ocean","rose"] as AppColor[]).map((key) => (
+              <button
+                key={key}
+                type="button"
+                className={`appcolor-swatch ${draft.appColor === key ? "active" : ""}`}
+                style={{
+                  ["--swatch" as string]: `var(--appcolor-${key})`,
+                  ["--swatch-2" as string]: `var(--appcolor-2-${key})`,
+                }}
+                onClick={() => update("appColor", key)}
+                aria-label={key}
+                title={key}
+              />
+            ))}
+          </div>
         </div>
 
         <div className="setting-item">

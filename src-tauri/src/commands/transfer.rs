@@ -35,6 +35,8 @@ pub struct StartDownloadInput {
     #[serde(default)]
     pub auto_extract: bool,
     pub archive_password: Option<String>,
+    #[serde(default)]
+    pub force: bool,
 }
 
 fn default_resume_support() -> bool {
@@ -99,19 +101,19 @@ pub fn show_ready_window(window: tauri::WebviewWindow) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn open_download_confirmation(app: AppHandle) -> Result<(), String> {
-    let label = "download-confirm";
-    if let Some(window) = app.get_webview_window(label) {
+pub async fn open_download_confirmation(app: AppHandle, token: String) -> Result<(), String> {
+    let label = format!("download-confirm-{}", token);
+    if let Some(window) = app.get_webview_window(&label) {
         window.set_focus().map_err(|error| error.to_string())?;
         return Ok(());
     }
 
     {
         let mut creating = CREATING_WINDOWS.lock().map_err(|error| error.to_string())?;
-        if creating.contains(label) {
+        if creating.contains(&label) {
             return Ok(());
         }
-        creating.insert(label.to_string());
+        creating.insert(label.clone());
     }
 
     #[cfg(debug_assertions)]
@@ -125,10 +127,10 @@ pub async fn open_download_confirmation(app: AppHandle) -> Result<(), String> {
     #[cfg(not(debug_assertions))]
     let confirmation_url = WebviewUrl::App("index.html".into());
 
-    let build_result = WebviewWindowBuilder::new(&app, label, confirmation_url)
+    let build_result = WebviewWindowBuilder::new(&app, &label, confirmation_url)
         .title("Confirmar download")
-        .inner_size(540.0, 324.0)
-        .min_inner_size(520.0, 310.0)
+        .inner_size(600.0, 320.0)
+        .min_inner_size(560.0, 220.0)
         .resizable(false)
         .decorations(false)
         .visible(false)
@@ -138,7 +140,7 @@ pub async fn open_download_confirmation(app: AppHandle) -> Result<(), String> {
 
     {
         if let Ok(mut creating) = CREATING_WINDOWS.lock() {
-            creating.remove(label);
+            creating.remove(&label);
         }
     }
 
@@ -174,8 +176,8 @@ pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), Stri
     let url = WebviewUrl::App("index.html".into());
 
     let build_result = WebviewWindowBuilder::new(&app, &label, url)
-        .title("SF Downloader - Progresso")
-        .inner_size(540.0, 278.0)
+      .title("SF Downloader - Progresso")
+      .inner_size(540.0, 252.0)
         .resizable(false)
         .decorations(false)
         .visible(false)
@@ -199,11 +201,6 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
     if let Some(window) = app.get_webview_window(&label) {
         window.set_focus().map_err(|error| error.to_string())?;
         return Ok(());
-    }
-    for (existing_label, window) in app.webview_windows() {
-        if existing_label.starts_with("download-complete-") && existing_label != label {
-            let _ = window.close();
-        }
     }
 
     {
@@ -362,7 +359,9 @@ pub async fn queue_download(
         input.resume_support,
     )
     .await?;
-    reject_duplicate(&database, &prepared.input)?;
+    if !input.force {
+        reject_duplicate(&database, &prepared.input)?;
+    }
     let connection = database.connect()?;
     let task = downloads::create(&connection, prepared.input)
         .map_err(|error| format!("Falha ao persistir o download: {error}"))?;
@@ -416,7 +415,9 @@ pub async fn start_download(
         input.resume_support,
     )
     .await?;
-    reject_duplicate(&database, &prepared.input)?;
+    if !input.force {
+        reject_duplicate(&database, &prepared.input)?;
+    }
     let connection = database.connect()?;
     let task = downloads::create(&connection, prepared.input)
         .map_err(|error| format!("Falha ao persistir o download: {error}"))?;
@@ -934,6 +935,37 @@ pub fn open_folder(path: String) -> Result<(), String> {
     {
         std::process::Command::new("xdg-open")
             .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn open_url(url: String) -> Result<(), String> {
+    let parsed = Url::parse(&url)
+        .map_err(|e| format!("URL inválida: {e}"))?;
+    if parsed.scheme() != "http" && parsed.scheme() != "https" {
+        return Err("Apenas links http(s) são suportados".into());
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/c", "start", "", &url])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&url)
             .spawn()
             .map_err(|e| e.to_string())?;
     }

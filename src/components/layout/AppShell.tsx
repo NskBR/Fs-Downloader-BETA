@@ -1,90 +1,113 @@
 import {
   Archive,
-  ChevronDown,
   Download,
   FileText,
   Grid2X2,
-  HelpCircle,
   Menu,
   Music2,
   Settings,
   Video,
-  UserRound,
   X,
+  ChevronDown,
+  ChevronRight,
+  Puzzle,
+  Info,
+  MoreHorizontal,
 } from "lucide-react";
 import { useEffect, useState, type PropsWithChildren } from "react";
 import type { PageId } from "../../app/navigation";
-import type { AppTheme } from "../../domain/settings";
-import { downloadCategories } from "../../domain/categories";
+import type { DownloadTask } from "../../domain/download";
 import * as downloadService from "../../services/downloadService";
 import { TitleBar } from "./TitleBar";
+import { invoke } from "@tauri-apps/api/core";
 import logo from "../../assets/sf-logo.png";
-import { getVersion } from "@tauri-apps/api/app";
 
 interface Props extends PropsWithChildren {
   activePage: PageId;
   onNavigate: (page: PageId) => void;
-  theme: AppTheme;
-  onThemeChange: (theme: AppTheme) => void;
 }
-const categories = [
-  {
-    key: "documents",
-    label: "Documentos",
-    icon: FileText,
-    page: "documents" as PageId,
-  },
-  { key: "music", label: "Músicas", icon: Music2, page: "music" as PageId },
-  { key: "videos", label: "Vídeos", icon: Video, page: "videos" as PageId },
-  {
-    key: "archives",
-    label: "Compactados",
-    icon: Archive,
-    page: "archives" as PageId,
-  },
-  {
-    key: "applications",
-    label: "Aplicativos",
-    icon: Grid2X2,
-    page: "applications" as PageId,
-  },
-];
+
+const groups = {
+  documents: ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv"],
+  music: ["mp3", "wav", "flac", "ogg", "m4a", "aac"],
+  videos: ["mp4", "mkv", "mov", "avi", "webm"],
+  archives: ["zip", "rar", "7z", "tar", "gz"],
+  applications: ["exe", "msi", "apk", "bat", "appimage", "dmg", "pkg"],
+};
 
 export function AppShell({
   activePage,
   onNavigate,
-  theme,
-  onThemeChange,
   children,
 }: Props) {
-  const [open, setOpen] = useState(false),
-    [categoriesOpen, setCategoriesOpen] = useState(true),
-    [helpOpen, setHelpOpen] = useState(false),
-    [appVersion, setAppVersion] = useState("0.2.0"),
-    [extension, setExtension] = useState<
-      "checking" | "connected" | "disconnected"
-    >("checking");
+  const [open, setOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [typesOpen, setTypesOpen] = useState(true);
+  const [downloads, setDownloads] = useState<DownloadTask[]>([]);
+  const [extensionConnected, setExtensionConnected] = useState<boolean | null>(null);
+
   useEffect(() => {
-    getVersion().then(setAppVersion).catch(() => {});
+    const update = () => {
+      downloadService.listDownloads()
+        .then(setDownloads)
+        .catch(console.error);
+    };
+    update();
+    const timer = setInterval(update, 2000);
+    return () => clearInterval(timer);
   }, []);
+
   useEffect(() => {
-    const refresh = () =>
-      void downloadService
-        .browserExtensionConnected()
-        .then((value) => setExtension(value ? "connected" : "disconnected"))
-        .catch(() => setExtension("disconnected"));
-    refresh();
-    const timer = window.setInterval(refresh, 2000);
-    return () => window.clearInterval(timer);
+    const updateStatus = () => {
+      downloadService.browserExtensionConnected()
+        .then(setExtensionConnected)
+        .catch(() => setExtensionConnected(false));
+    };
+    updateStatus();
+    const timer = setInterval(updateStatus, 3000);
+    return () => clearInterval(timer);
   }, []);
+
   const navigate = (page: PageId) => {
     onNavigate(page);
     setOpen(false);
   };
+
+  const openExternal = (url: string) => {
+    void invoke("open_url", { url }).catch(console.error);
+  };
+
+
+
+  // Calculate dynamic counts
+  const allCount = downloads.length;
+  const archivesCount = downloads.filter(d => groups.archives.includes(d.extension?.toLowerCase() || "")).length;
+  const documentsCount = downloads.filter(d => groups.documents.includes(d.extension?.toLowerCase() || "")).length;
+  const videosCount = downloads.filter(d => groups.videos.includes(d.extension?.toLowerCase() || "")).length;
+  const musicCount = downloads.filter(d => groups.music.includes(d.extension?.toLowerCase() || "")).length;
+  const applicationsCount = downloads.filter(d => groups.applications.includes(d.extension?.toLowerCase() || "")).length;
+  const othersCount = downloads.filter(d => {
+    const ext = d.extension?.toLowerCase() || "";
+    return !groups.archives.includes(ext) &&
+           !groups.documents.includes(ext) &&
+           !groups.videos.includes(ext) &&
+           !groups.music.includes(ext) &&
+           !groups.applications.includes(ext);
+  }).length;
+
+  const typeItems = [
+    { id: "archives" as PageId, label: "Compactados", icon: Archive, count: archivesCount },
+    { id: "documents" as PageId, label: "Documentos", icon: FileText, count: documentsCount },
+    { id: "videos" as PageId, label: "Vídeos", icon: Video, count: videosCount },
+    { id: "music" as PageId, label: "Músicas", icon: Music2, count: musicCount },
+    { id: "applications" as PageId, label: "Programas", icon: Grid2X2, count: applicationsCount },
+    { id: "calculator" as PageId, label: "Outros", icon: MoreHorizontal, count: othersCount },
+  ];
+
   return (
     <div className="window-frame">
-      <TitleBar theme={theme} onThemeChange={onThemeChange} />
-      <div className="app-shell redesigned-shell">
+      <TitleBar />
+      <div className="app-shell">
         <button
           className="mobile-menu"
           onClick={() => setOpen(true)}
@@ -99,87 +122,85 @@ export function AppShell({
             aria-label="Fechar menu"
           />
         )}
-        <aside
-          className={`sidebar redesigned-sidebar ${open ? "sidebar--open" : ""}`}
-        >
-          <button
-            className="brand"
-            title="SF Downloader"
-            onClick={() => navigate("downloads")}
-          >
-            <img className="brand__logo" src={logo} alt="SF Downloader" />
-          </button>
-          <nav className="navigation" aria-label="Navegação principal">
+        <aside className={`sidebar ${open ? "sidebar--open" : ""}`}>
+          <nav className="navigation sidebar-nav" aria-label="Navegação principal">
             <button
-              className={`navigation__item primary-nav ${activePage === "downloads" ? "navigation__item--active" : ""}`}
+              className={`navigation__item ${activePage === "downloads" ? "navigation__item--active" : ""}`}
               onClick={() => navigate("downloads")}
             >
-              <Download />
-              <span>Downloads</span>
-            </button>
-            <button
-              className="category-toggle"
-              onClick={() => setCategoriesOpen((value) => !value)}
-            >
-              <ChevronDown className={categoriesOpen ? "open" : ""} />
-              <span>Categorias</span>
-            </button>
-            {categoriesOpen && (
-              <div className="category-navigation">
-                {categories.map(({ key, label, icon: Icon, page }) => (
-                  <button
-                    key={key}
-                    className={`navigation__item ${activePage === page ? "navigation__item--active" : ""}`}
-                    onClick={() => navigate(page)}
-                  >
-                    <Icon />
-                    <span>{label}</span>
-                  </button>
-                ))}
+              <div>
+                <Download />
+                <span>Todos os downloads</span>
               </div>
-            )}
-          </nav>
-          <div className="sidebar-actions">
-            <button
-              className={`sidebar-profile-btn ${activePage === "profile" ? "active" : ""}`}
-              onClick={() => navigate("profile")}
-            >
-              <UserRound />
-              <span>Meu Perfil</span>
+              <span className="counter-badge">{allCount}</span>
             </button>
+
+            <button
+              className="navigation__group"
+              onClick={() => setTypesOpen((value) => !value)}
+              aria-expanded={typesOpen}
+            >
+              <span className="navigation__group-label">
+                {typesOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                Tipos de arquivo
+              </span>
+            </button>
+            {typesOpen && typeItems.map((item) => {
+              const isActive = activePage === item.id;
+              return (
+                <button
+                  key={item.id}
+                  className={`navigation__item navigation__item--child ${isActive ? "navigation__item--active" : ""}`}
+                  onClick={() => navigate(item.id)}
+                >
+                  <div>
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </div>
+                  <span className="counter-badge">{item.count}</span>
+                </button>
+              );
+            })}
+          </nav>
+          
+          <div className="sidebar-actions">
             <div className="sidebar-footer-row">
               <button
                 className={`sidebar-footer-btn ${activePage === "settings" ? "active" : ""}`}
                 onClick={() => navigate("settings")}
                 title="Configurações"
               >
-                <Settings />
+                <Settings size={18} />
               </button>
+              
+              <button
+                className={`sidebar-footer-btn ${extensionConnected ? "is-connected" : ""}`}
+                onClick={() => {
+                  void invoke("open_browser_integration_window").catch(console.error);
+                }}
+                title={`Integração de Navegadores — ${extensionConnected ? "conectada" : "desconectada"}`}
+              >
+                <Puzzle size={18} />
+                <span
+                  className={`sidebar-status-dot ${extensionConnected ? "connected" : "disconnected"}`}
+                  aria-hidden="true"
+                />
+              </button>
+              
               <button
                 className="sidebar-footer-btn"
                 onClick={() => setHelpOpen(true)}
-                title="Ajuda"
+                title="Sobre o aplicativo"
               >
-                <HelpCircle />
+                <Info size={18} />
               </button>
-            </div>
-            <div className="sidebar-footer-info">
-              <div className={`sidebar-extension ${extension}`} title={
-                extension === "connected"
-                  ? "Extensão conectada"
-                  : extension === "checking"
-                    ? "Verificando..."
-                    : "Extensão desconectada"
-              }>
-                <i />
-                <span>extensão</span>
-              </div>
-              <span className="sidebar-app-version">v{appVersion} Fix</span>
             </div>
           </div>
         </aside>
+        
         <main className="main-content">{children}</main>
       </div>
+
       {helpOpen && (
         <div className="help-overlay" onMouseDown={() => setHelpOpen(false)}>
           <section
@@ -187,38 +208,44 @@ export function AppShell({
             onMouseDown={(event) => event.stopPropagation()}
           >
             <header>
-              <div>
-                <span>ORGANIZAÇÃO AUTOMÁTICA</span>
-                <h2>Ajuda sobre categorias</h2>
+              <div className="help-brand">
+                <img className="help-logo" src={logo} alt="SF Downloader" />
+                <div>
+                  <span>SF DOWNLOADER</span>
+                  <h2>Sobre o Aplicativo</h2>
+                </div>
               </div>
-              <button onClick={() => setHelpOpen(false)}>
+              <button onClick={() => setHelpOpen(false)} aria-label="Fechar">
                 <X />
               </button>
             </header>
-            <p>
-              Quando a organização automática está ativa, cada arquivo é salvo
-              na pasta correspondente ao seu formato.
+
+            <p className="help-intro">
+              Gerenciador de downloads desktop moderno, feito para velocidade e
+              organização. Conexões múltiplas, retomada, categorização automática
+              e integração com o navegador.
             </p>
-            <div className="help-category-list">
-              {downloadCategories.map(
-                ({ name, extensions, icon: Icon, color }) => (
-                  <article key={name}>
-                    <i style={{ color, background: `${color}18` }}>
-                      <Icon />
-                    </i>
-                    <div>
-                      <strong>{name}</strong>
-                      <span>
-                        {extensions.length
-                          ? extensions.map((value) => `.${value}`).join(", ")
-                          : "Formatos não classificados"}
-                      </span>
-                    </div>
-                  </article>
-                ),
-              )}
+
+            <ul className="help-features">
+              <li><Download size={15} /> Downloads segmentados e retomáveis</li>
+              <li><Archive size={15} /> Extração automática de arquivos</li>
+              <li><Grid2X2 size={15} /> Organização por categorias</li>
+              <li><Puzzle size={15} /> Extensão para navegadores</li>
+            </ul>
+
+            <div className="help-meta">
+              <div className="help-meta-row"><span>Versão</span><b>0.2.1</b></div>
+              <div className="help-meta-row"><span>Tecnologia</span><b>Tauri · React · Rust</b></div>
+              <div className="help-meta-row"><span>Licença</span><b>Uso pessoal</b></div>
             </div>
+
             <footer>
+              <button
+                className="help-link"
+                onClick={() => openExternal("https://github.com/anomalyco/opencode")}
+              >
+                Repositório no GitHub
+              </button>
               <button onClick={() => setHelpOpen(false)}>Fechar</button>
             </footer>
           </section>
