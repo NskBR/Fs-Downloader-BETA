@@ -79,12 +79,21 @@ html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 body {
   font-family: var(--font);
   color: var(--text);
-  background: var(--bg);
+  background: var(--bg-fill);
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+/* Evita seleção de texto ao arrastar (janela arrastável / cliques seguros) */
+body, #root {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input, textarea, [contenteditable="true"], .path-display, .path-row {
+  -webkit-user-select: text;
+  user-select: text;
+}
 
 /* ----- Janela (uma só, sem divisões) -------------------------------------- */
 .window-frame {
@@ -94,7 +103,7 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: var(--bg-fill);
 }
 
 /* Custom title bar integrada no topo (região de arrasto real) */
@@ -107,8 +116,7 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
   height: 40px;
   flex-shrink: 0;
   padding: 0 6px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-surface);
 }
 .titlebar-side { display: flex; align-items: center; min-width: 0; }
 .titlebar-side:first-child { padding-left: 8px; }
@@ -148,28 +156,47 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 
 /* A sidebar é parte do painel, sem borda separando */
 .sidebar {
+  position: relative;
   width: 224px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 14px 12px;
-  background: var(--panel);     /* igual ao conteúdo = sem divisão */
+  background: var(--bg-surface);     /* igual ao conteúdo = sem divisão */
+}
+/* Indicador único que viaja entre navegação e rodapé */
+.sidebar-indicator {
+  position: absolute;
+  top: 0; left: 0;
+  border-radius: 10px;
+  background: var(--ember-soft);
+  background: color-mix(in srgb, var(--ember) 26%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--ember);
+  pointer-events: none;
+  z-index: 0;
+  transition: transform 0.34s cubic-bezier(0.22, 0.61, 0.36, 1),
+    width 0.34s cubic-bezier(0.22, 0.61, 0.36, 1),
+    height 0.34s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.2s ease;
+  will-change: transform, width, height;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-indicator { transition: opacity 0.2s ease; }
 }
 
-/* Logo no topo esquerdo, bem aparente */
+/* Logo centralizada no topo da sidebar */
 .brand {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 4px 8px 18px;
-  text-align: left;
+  justify-content: center;
+  padding: 6px 8px 16px;
   width: 100%;
 }
 .brand__logo {
-  width: 38px; height: 38px;
+  width: 44px; height: 44px;
   object-fit: contain;
-  border-radius: 10px;
+  border-radius: 12px;
   flex-shrink: 0;
 }
 .brand strong {
@@ -181,9 +208,10 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 }
 .brand span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
 
-.navigation { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; }
+.navigation { position: relative; display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; }
 .sidebar-nav { padding-top: 8px; }
 .navigation__item {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -195,15 +223,18 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
   font-size: 13.5px;
   font-weight: 500;
   text-align: left;
-  transition: 0.15s;
+  transition: background 0.15s, color 0.15s, transform 0.12s;
 }
 .navigation__item > div { display: flex; align-items: center; gap: 11px; min-width: 0; }
 /* ícone SEM box */
 .navigation__item > div > svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--muted); transition: color 0.15s; }
-.navigation__item:hover { color: var(--text); background: var(--surface); }
-.navigation__item:hover > div > svg { color: var(--text-2); }
-.navigation__item--active { color: var(--text); background: var(--surface); font-weight: 600; border-left: 3px solid var(--ember); }
+.navigation__item { position: relative; z-index: 1; }
+.navigation__item:hover:not(.navigation__item--active) { color: var(--text); background: var(--surface); }
+.navigation__item:hover:not(.navigation__item--active) > div > svg { color: var(--text-2); }
+.navigation__item--active { color: var(--text); font-weight: 600; }
 .navigation__item--active > div > svg { color: var(--ember); }
+
+
 .counter-badge {
   font-size: 11px; font-weight: 600;
   color: var(--muted);
@@ -230,16 +261,25 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
   display: flex; flex-direction: column; gap: 6px;
   margin-top: auto; padding-top: 10px;
 }
-.sidebar-footer-row { display: flex; justify-content: center; gap: 12px; }
+.sidebar-footer-row {
+  position: relative;
+  display: flex; justify-content: space-around; gap: 6px;
+  padding: 5px;
+  border-radius: 12px;
+  border: 1px solid var(--line-soft);
+  background: transparent;
+}
 .sidebar-footer-btn {
+  position: relative;
+  z-index: 1;
   display: grid; place-items: center;
-  width: 34px; height: 34px;
-  border-radius: 9px; color: var(--text-2);
-  transition: 0.15s;
+  width: 36px; height: 32px;
+  border-radius: 8px; color: var(--text-2);
+  transition: background 0.15s, color 0.15s;
 }
 .sidebar-footer-btn svg { width: 17px; height: 17px; }
-.sidebar-footer-btn:hover, .sidebar-footer-btn.active { color: var(--ember); background: var(--surface); }
-.sidebar-footer-btn { position: relative; }
+.sidebar-footer-btn:hover { color: var(--text); }
+.sidebar-footer-btn.active { color: var(--ember); }
 .sidebar-status-dot {
   position: absolute; top: 4px; right: 4px;
   width: 7px; height: 7px; border-radius: 50%;
@@ -251,6 +291,23 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 /* esconder legados */
 .sidebar-footer-info, .sidebar-profile-btn, .primary-nav, .category-toggle, .category-navigation { display: none; }
 
+/* Wrapper de transição entre seções */
+.page-transition {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  animation: page-in 0.26s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-transition { animation: none; }
+}
+
 /* ----- Conteúdo (mesmo painel da sidebar) -------------------------------- */
 .main-content {
   flex: 1;
@@ -260,7 +317,7 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
   flex-direction: column;
   overflow: hidden;
   padding: 16px 18px;
-  background: var(--panel);   /* igual à sidebar => sem divisão */
+  background: var(--bg-surface);   /* igual à sidebar => sem divisão */
 }
 
 /* ----- Cabeçalho da lista ------------------------------------------------- */
@@ -314,14 +371,18 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 .sort-dropdown { display: flex; align-items: center; gap: 2px; height: 38px; padding: 2px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .sort-select {
   height: 100%; border: 0; outline: none; background: transparent; color: var(--text);
+  color-scheme: dark;
   font-size: 12px; font-weight: 600; padding: 0 4px 0 8px; border-radius: 8px; cursor: pointer;
 }
-.sort-select option { color: initial; }
+.sort-select option {
+  background: var(--panel);
+  color: var(--text);
+}
 .sort-direction {
   display: grid; place-items: center; width: 28px; height: 32px;
   border: 0; border-radius: 8px; color: var(--text-2); background: transparent; transition: 0.15s;
 }
-.sort-direction:hover { color: var(--ember); background: var(--bg); }
+.sort-direction:hover { color: var(--ember); background: var(--surface); }
 
 /* ----- Workspace e cartões de download ------------------------------------ */
 .downloads-workspace { flex: 1; display: flex; flex-direction: column; min-height: 0; }
@@ -372,7 +433,7 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
   flex-shrink: 0;
 }
 .download-card:hover { background: var(--surface-2); }
-.download-card.selected { box-shadow: 0 0 0 1px var(--ember); }
+.download-card.selected { border-left-color: var(--ember); background: var(--surface-2); }
 
 /* cor da borda esquerda por status */
 .download-card.status-downloading { border-left-color: var(--st-downloading); }
@@ -473,20 +534,37 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 /* ----- Visualização em grade --------------------------------------------- */
 .cards-scroll-container.view-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   align-content: start;
+  gap: 10px;
 }
 .cards-scroll-container.view-grid .download-card {
-  flex-direction: column;
-  align-items: stretch;
+  flex-direction: row;
+  align-items: center;
   gap: 10px;
-  padding: 14px;
+  padding: 10px 12px;
+  position: relative;
 }
-.cards-scroll-container.view-grid .card-indicator-col { width: 100%; height: auto; justify-content: flex-start; }
-.cards-scroll-container.view-grid .card-details-col { gap: 6px; }
-.cards-scroll-container.view-grid .card-title-row { flex-wrap: wrap; }
+.cards-scroll-container.view-grid .card-indicator-col { width: 40px; height: 40px; flex-shrink: 0; }
+.cards-scroll-container.view-grid .card-details-col { flex: 1; min-width: 0; gap: 4px; }
+.cards-scroll-container.view-grid .card-title-row { flex-wrap: nowrap; }
 .cards-scroll-container.view-grid .card-date { display: none; }
-.cards-scroll-container.view-grid .card-actions-col { justify-content: flex-end; border-top: 1px solid var(--line-soft); padding-top: 8px; margin-top: 2px; }
+.cards-scroll-container.view-grid .card-actions-col {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  flex-direction: row;
+  gap: 4px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 3px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.cards-scroll-container.view-grid .download-card:hover .card-actions-col { opacity: 1; }
 
 /* ----- Rodapé de status --------------------------------------------------- */
 .flux-footer {
@@ -521,7 +599,7 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
   position: sticky; top: 0; z-index: 1;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   padding: 2px 0 18px;
-  background: var(--panel);
+  background: var(--bg-surface);
   border-bottom: 1px solid var(--line);
 }
 .simple-settings h1 { margin: 0; font-size: 24px; font-weight: 700; }
@@ -533,7 +611,7 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
   font-size: 11px; font-weight: 600; white-space: nowrap;
 }
 
-.simple-settings-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+.simple-settings-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 0 10px; }
 .simple-settings-list::-webkit-scrollbar { width: 8px; }
 .simple-settings-list::-webkit-scrollbar-track { background: transparent; }
 .simple-settings-list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
@@ -624,6 +702,7 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
   border: 1px solid rgba(240, 178, 50, 0.4);
 }
 .accent-swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+.accent-swatches.swatches-locked { opacity: 0.4; pointer-events: none; filter: saturate(0.6); }
 .accent-swatch {
   width: 30px; height: 30px; border-radius: 50%;
   background: var(--swatch);
@@ -704,14 +783,18 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 .download-window {
   position: relative; display: flex; flex-direction: column;
   width: 100%; height: 100%; overflow: hidden;
-  color: var(--text); background: var(--panel); font-size: 13px;
+  color: var(--text); background: var(--bg-fill); font-size: 13px;
 }
 .download-window-title {
   display: flex; align-items: center; justify-content: space-between;
   height: 44px; flex-shrink: 0; padding: 0 6px 0 16px;
-  background: var(--panel); font-weight: 600;
+  background: var(--bg-surface); font-weight: 600;
 }
 .download-window-title span { display: inline-flex; align-items: center; gap: 9px; }
+/* Texto/ícones do titlebar deixam o clique passar para a região de arrasto */
+.download-window-title > span,
+.download-window-title > span * { pointer-events: none; }
+.download-window-controls, .download-window-controls * { pointer-events: auto; }
 .download-window-title svg { width: 17px; color: var(--ember); }
 .download-window-title.success svg { color: var(--st-completed); }
 .download-window-title button { display: grid; place-items: center; width: 42px; height: 44px; color: var(--text-2); }
@@ -740,7 +823,7 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
   height: 100%;
   border-radius: 14px;
   overflow: hidden;
-  background: var(--bg);
+  background: var(--bg-fill);
 }
 .confirm-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -748,6 +831,8 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
   background: transparent;
 }
 .confirm-header-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.confirm-header-left, .confirm-header-left * { pointer-events: none; }
+.confirm-window-controls, .confirm-window-controls * { pointer-events: auto; }
 .confirm-header-left > svg { width: 20px; height: 20px; color: var(--ember); flex-shrink: 0; }
 .confirm-title { font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; }
 .confirm-window-controls { display: flex; align-items: center; gap: 10px; }
@@ -802,7 +887,7 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 .confirm-change-btn {
   flex-shrink: 0; height: 100%; padding: 0 14px;
   border: 0; border-radius: 6px;
-  color: var(--text); background: var(--bg); font-size: 12px; font-weight: 600;
+  color: var(--text); background: var(--bg-fill); font-size: 12px; font-weight: 600;
   transition: 0.15s;
 }
 .confirm-change-btn:hover { color: var(--ember); background: var(--ember-soft); }
@@ -871,7 +956,7 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 
 .window-error { color: var(--st-failed); font-size: 12px; margin: 0; }
 
-.download-window-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; background: var(--panel); flex-shrink: 0; }
+.download-window-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; background: var(--bg-surface); flex-shrink: 0; }
 .download-window-actions button { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--text); background: var(--surface); font-weight: 600; }
 .download-window-actions button.primary { color: #1e1f22; border-color: transparent; background: var(--ember); }
 .download-window-actions button:hover { filter: brightness(1.07); }
@@ -943,6 +1028,22 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 .large-progress i {
   display: block; height: 100%; border-radius: 999px;
   background: var(--ember); transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 35%,
+    rgba(255, 255, 255, 0.32) 50%,
+    rgba(255, 255, 255, 0) 65%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  background-position: 150% 0;
+}
+.progress-compact.status-downloading .large-progress i {
+  animation: progress-sheen 1.4s linear infinite;
+}
+@keyframes progress-sheen {
+  from { background-position: 150% 0; }
+  to { background-position: -120% 0; }
 }
 .progress-compact.status-paused .large-progress i { background: var(--st-paused); }
 .progress-compact.status-completed .large-progress i { background: var(--st-completed); }
@@ -982,7 +1083,7 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 .copy-btn:hover { color: var(--ember); border-color: var(--ember); }
 .copy-btn svg { width: 11px; height: 11px; }
 .copy-toast { align-self: flex-start; padding: 3px 9px; border-radius: 999px; color: #1e1f22; background: var(--st-completed); font-size: 10.5px; font-weight: 600; }
-.progress-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 16px; background: var(--panel); flex-shrink: 0; }
+.progress-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 16px; background: var(--bg-surface); flex-shrink: 0; }
 .progress-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 34px; padding: 0 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--text); background: var(--surface); font-weight: 600; font-size: 12.5px; transition: background 0.16s, border-color 0.16s, color 0.16s; }
 .progress-actions button.pause { color: var(--st-paused); border-color: rgba(240,178,50,0.4); }
 .progress-actions button.resume { color: #1e1f22; border-color: transparent; background: var(--ember); }
@@ -1138,12 +1239,13 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 .error-banner { margin-bottom: 12px; }
 
 /* ----- Janela de Integração de Navegadores ------------------------------- */
-.integr-layout { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; background: var(--bg); }
+.integr-layout { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; background: var(--bg-fill); }
 .integr-header {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   padding: 16px 20px; border-bottom: 1px solid var(--line); flex-shrink: 0;
 }
 .integr-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.integr-title, .integr-title * { pointer-events: none; }
 .integr-title svg { color: var(--ember); flex-shrink: 0; }
 .integr-title strong { display: block; font-size: 15px; font-weight: 700; color: var(--text); }
 .integr-title span { display: block; margin-top: 2px; color: var(--muted); font-size: 11.5px; }
@@ -1231,3 +1333,170 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
   .flux-footer { font-size: 11px; }
   .stats-grid { grid-template-columns: 1fr; }
 }
+
+/* ----- Editor de gradiente (presets prontos) --------------------------- */
+.gradient-editor {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.gradient-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+.gradient-toggle input { width: 16px; height: 16px; accent-color: var(--ember); }
+.gradient-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.gradient-preset {
+  width: 44px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  box-shadow: 0 0 0 1px var(--line);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.gradient-preset:hover { border-color: var(--ember); }
+.gradient-preset.active { border-color: var(--ember); box-shadow: 0 0 0 1px var(--ember); }
+.gradient-preview {
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+.gradient-controls { margin-top: 4px; display: flex; flex-direction: column; gap: 12px; }
+.gradient-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.gradient-row > span {
+  width: 88px;
+  flex-shrink: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.gradient-segmented {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.gradient-segmented button {
+  padding: 6px 14px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  background: var(--surface);
+}
+.gradient-segmented button.active {
+  background: var(--ember);
+  color: #1e1f22;
+  font-weight: 600;
+}
+.gradient-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+.gradient-slider input[type="range"] { flex: 1; accent-color: var(--ember); }
+.gradient-slider b { font-size: 12px; color: var(--text-2); min-width: 38px; text-align: right; }
+.gradient-stops { display: flex; flex-direction: column; gap: 8px; }
+.gradient-stop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.gradient-stop input[type="color"] {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.gradient-stop .gradient-slider { flex: 1; }
+.gradient-stop-remove {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--st-failed);
+  flex-shrink: 0;
+}
+.gradient-stop-remove:hover:not(:disabled) { background: rgba(237, 66, 69, 0.12); }
+.gradient-stop-remove:disabled { opacity: 0.35; cursor: not-allowed; }
+.gradient-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 7px 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+.gradient-add:hover { color: var(--ember); border-color: var(--ember); }
+.gradient-custom-toggle {
+  align-self: flex-start;
+  font-size: 12.5px;
+  color: var(--text-2);
+  padding: 4px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.gradient-custom-toggle:hover { color: var(--ember); }
+.gradient-custom { display: flex; flex-direction: column; gap: 12px; }
+.setting-item--full { flex-direction: column; align-items: stretch; }
+.setting-item--full > label { margin-bottom: 2px; }
+
+/* ----- Menu de contexto (lista de downloads) ---------------------------- */
+.ctx-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 210px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: ctx-in 0.12s ease;
+}
+@keyframes ctx-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+.ctx-item svg { color: var(--muted); flex-shrink: 0; transition: color 0.12s; }
+.ctx-item:hover { background: var(--surface-2); }
+.ctx-item:hover svg { color: var(--ember); }
+.ctx-item--danger:hover { background: rgba(237, 66, 69, 0.12); color: var(--st-failed); }
+.ctx-item--danger:hover svg { color: var(--st-failed); }
+.ctx-sep { height: 1px; margin: 5px 8px; background: var(--line); }

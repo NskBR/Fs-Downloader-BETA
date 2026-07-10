@@ -15,7 +15,7 @@ import {
   MoreHorizontal,
   BarChart3,
 } from "lucide-react";
-import { useEffect, useState, type PropsWithChildren } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type PropsWithChildren } from "react";
 import type { PageId } from "../../app/navigation";
 import type { DownloadTask } from "../../domain/download";
 import * as downloadService from "../../services/downloadService";
@@ -45,6 +45,14 @@ export function AppShell({
   const [helpOpen, setHelpOpen] = useState(false);
   const [typesOpen, setTypesOpen] = useState(true);
   const [downloads, setDownloads] = useState<DownloadTask[]>([]);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const [indicator, setIndicator] = useState<{ top: number; left: number; width: number; height: number; visible: boolean }>({
+    top: 0,
+    left: 0,
+    width: 0,
+    height: 0,
+    visible: false,
+  });
 
   useEffect(() => {
     const update = () => {
@@ -56,6 +64,27 @@ export function AppShell({
     const timer = setInterval(update, 2000);
     return () => clearInterval(timer);
   }, []);
+
+  useLayoutEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+    const active =
+      sidebar.querySelector<HTMLElement>(".navigation__item--active") ??
+      sidebar.querySelector<HTMLElement>(".sidebar-footer-btn.active");
+    if (!active) {
+      setIndicator((prev) => ({ ...prev, visible: false }));
+      return;
+    }
+    const base = sidebar.getBoundingClientRect();
+    const rect = active.getBoundingClientRect();
+    setIndicator({
+      top: rect.top - base.top,
+      left: rect.left - base.left,
+      width: rect.width,
+      height: rect.height,
+      visible: true,
+    });
+  }, [activePage, typesOpen]);
 
   const navigate = (page: PageId) => {
     onNavigate(page);
@@ -111,7 +140,20 @@ export function AppShell({
             aria-label="Fechar menu"
           />
         )}
-        <aside className={`sidebar ${open ? "sidebar--open" : ""}`}>
+        <aside className={`sidebar ${open ? "sidebar--open" : ""}`} ref={sidebarRef}>
+          <span
+            className="sidebar-indicator"
+            style={{
+              transform: `translate(${indicator.left}px, ${indicator.top}px)`,
+              width: indicator.width,
+              height: indicator.height,
+              opacity: indicator.visible ? 1 : 0,
+            }}
+            aria-hidden="true"
+          />
+          <div className="brand">
+            <img className="brand__logo" src={logo} alt="SF Downloader" />
+          </div>
           <nav className="navigation sidebar-nav" aria-label="Navegação principal">
             <button
               className={`navigation__item ${activePage === "downloads" ? "navigation__item--active" : ""}`}
@@ -181,7 +223,9 @@ export function AppShell({
           </div>
         </aside>
         
-        <main className="main-content">{children}</main>
+        <main className="main-content">
+          <div key={activePage} className="page-transition">{children}</div>
+        </main>
       </div>
 
       {helpOpen && (

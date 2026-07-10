@@ -23,7 +23,7 @@ export function App() {
   useEffect(()=>{const media=matchMedia("(prefers-color-scheme: dark)");const apply=()=>{document.documentElement.dataset.theme=settings.theme==="system"?(media.matches?"midnight":"light"):settings.theme;document.documentElement.lang=settings.language};apply();media.addEventListener("change",apply);return()=>media.removeEventListener("change",apply)},[settings.theme,settings.language]);
   useEffect(()=>{
     applyThemeSettings(settings);
-  },[settings.accentColor, settings.appColor]);
+  },[settings.accentColor, settings.appColor, settings.interfaceGradient]);
   useEffect(()=>{void getCurrentWebview().setZoom(settings.uiScale).catch(console.error)},[settings.uiScale]);
   useEffect(() => { const handler = () => setActivePage(pageFromHash()); addEventListener("hashchange", handler); return () => removeEventListener("hashchange", handler); }, []);
   const navigate = (page: PageId) => { if(page!=="settings")previousPage.current=page;localStorage.setItem("sf-downloader.last-page",page); location.hash = page; setActivePage(page); };

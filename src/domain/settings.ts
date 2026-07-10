@@ -4,6 +4,19 @@ export type AppLanguage = "pt-BR" | "en-US";
 export type AccentColor = "ember" | "amber" | "green" | "red" | "blue" | "violet";
 export type AppColor = "slate" | "graphite" | "obsidian" | "mint" | "ocean" | "rose";
 
+export interface GradientStop {
+  color: string;
+  position: number;
+}
+
+export interface GradientConfig {
+  enabled: boolean;
+  type: "linear" | "radial";
+  angle: number;
+  intensity: number;
+  stops: GradientStop[];
+}
+
 export interface CustomCategory {
   id: string;
   name: string;
@@ -26,6 +39,7 @@ export interface AppSettings {
   language: AppLanguage;
   accentColor: AccentColor;
   appColor: AppColor;
+  interfaceGradient: GradientConfig;
   customCategories: CustomCategory[];
 }
 
@@ -45,5 +59,15 @@ export const defaultSettings: AppSettings = {
   language: "pt-BR",
   accentColor: "ember",
   appColor: "slate",
+  interfaceGradient: {
+    enabled: false,
+    type: "linear",
+    angle: 160,
+    intensity: 40,
+    stops: [
+      { color: "#16171a", position: 0 },
+      { color: "#1f2024", position: 100 },
+    ],
+  },
   customCategories: [],
 };

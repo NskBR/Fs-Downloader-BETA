@@ -2,7 +2,6 @@ import { Minus, Square, X, Puzzle } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
-import logo from "../../assets/sf-logo.png";
 
 const appWindow = getCurrentWindow();
 
@@ -24,9 +23,7 @@ export function TitleBar() {
       data-tauri-drag-region
       onDoubleClick={() => void appWindow.toggleMaximize()}
     >
-      <div className="titlebar-side" data-tauri-drag-region>
-        <img className="titlebar-brand__logo" src={logo} alt="Logo" />
-      </div>
+      <div className="titlebar-side" data-tauri-drag-region></div>
       <div className="titlebar-center" data-tauri-drag-region>
         <strong>SF Downloader</strong>
       </div>

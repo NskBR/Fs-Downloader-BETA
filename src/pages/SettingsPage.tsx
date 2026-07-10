@@ -9,6 +9,55 @@ import {
 } from "../services/folderService";
 import { isLaunchOnStartup, setLaunchOnStartup } from "../services/downloadService";
 import { Toggle } from "../components/ui/Toggle";
+import { GradientEditor } from "../components/ui/GradientEditor";
+import type { GradientConfig } from "../domain/settings";
+
+function hueSatOf(hex: string): [number, number] {
+  const clean = hex.replace("#", "");
+  const full = clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean.padEnd(6, "0").slice(0, 6);
+  const r = parseInt(full.slice(0, 2), 16) / 255;
+  const g = parseInt(full.slice(2, 4), 16) / 255;
+  const b = parseInt(full.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), delta = max - min;
+  const light = (max + min) / 2;
+  let hue = 0, sat = 0;
+  if (delta !== 0) {
+    sat = light > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+    switch (max) {
+      case r: hue = ((g - b) / delta) % 6; break;
+      case g: hue = (b - r) / delta + 2; break;
+      default: hue = (r - g) / delta + 4; break;
+    }
+    hue = (hue * 60 + 360) % 360;
+  }
+  return [hue, sat];
+}
+
+function pickAppColorFromGradient(config: GradientConfig): AppColor {
+  // Usa o stop mais saturado como cor representativa do gradiente.
+  let best = config.stops[0]?.color ?? "#16171a";
+  let bestSat = -1;
+  for (const stop of config.stops) {
+    const [, sat] = hueSatOf(stop.color);
+    if (sat > bestSat) { bestSat = sat; best = stop.color; }
+  }
+  const [hue, sat] = hueSatOf(best);
+  if (sat < 0.15) return "slate";
+  if (hue < 20 || hue >= 330) return "rose";
+  if (hue < 70) return "rose";
+  if (hue < 170) return "mint";
+  if (hue < 260) return "ocean";
+  return "rose";
+}
+
+const interfaceGradientPresets: GradientConfig[] = [
+  { enabled: true, type: "linear", angle: 160, intensity: 40, stops: [{ color: "#16171a", position: 0 }, { color: "#1f2024", position: 100 }] },
+  { enabled: true, type: "linear", angle: 160, intensity: 30, stops: [{ color: "#0c0d10", position: 0 }, { color: "#15171c", position: 100 }] },
+  { enabled: true, type: "linear", angle: 200, intensity: 45, stops: [{ color: "#0f151b", position: 0 }, { color: "#16212b", position: 100 }] },
+  { enabled: true, type: "linear", angle: 160, intensity: 40, stops: [{ color: "#1a1417", position: 0 }, { color: "#221a1e", position: 100 }] },
+  { enabled: true, type: "radial", angle: 160, intensity: 45, stops: [{ color: "#15171c", position: 0 }, { color: "#0c0d10", position: 100 }] },
+  { enabled: true, type: "linear", angle: 135, intensity: 35, stops: [{ color: "#121815", position: 0 }, { color: "#1a201d", position: 100 }] },
+];
 
 interface Props {
   settings: AppSettings;
@@ -139,13 +188,16 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
         <div className="setting-item">
           <label>Cor do aplicativo</label>
           <span className="description">
-            Define a paleta base (fundo, painéis e superfícies). Combine com a cor de destaque.
+            {draft.interfaceGradient.enabled
+              ? "Bloqueado enquanto o gradiente da interface está ativo."
+              : "Define a paleta base (fundo, painéis e superfícies). Combine com a cor de destaque."}
           </span>
-          <div className="accent-swatches">
+          <div className={`accent-swatches ${draft.interfaceGradient.enabled ? "swatches-locked" : ""}`}>
             {(["slate","graphite","obsidian","mint","ocean","rose"] as AppColor[]).map((key) => (
               <button
                 key={key}
                 type="button"
+                disabled={draft.interfaceGradient.enabled}
                 className={`appcolor-swatch ${draft.appColor === key ? "active" : ""}`}
                 style={{
                   ["--swatch" as string]: `var(--appcolor-${key})`,
@@ -157,6 +209,26 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
               />
             ))}
           </div>
+        </div>
+
+        <div className="setting-item setting-item--full">
+          <label>Gradiente da interface</label>
+          <span className="description">
+            Aplica um gradiente no fundo da janela do aplicativo. Painéis permanecem sólidos para legibilidade.
+          </span>
+          <GradientEditor
+            config={draft.interfaceGradient}
+            label="interface"
+            presets={interfaceGradientPresets}
+            onChange={(value) => {
+              const next = value.enabled
+                ? { ...draft, interfaceGradient: value, appColor: pickAppColorFromGradient(value) }
+                : { ...draft, interfaceGradient: value };
+              setDraft(next);
+              if (next.rootDownloadFolder.trim()) void save(next);
+              else setError("Escolha a pasta principal de downloads.");
+            }}
+          />
         </div>
 
         <div className="setting-item">

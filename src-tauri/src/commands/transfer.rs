@@ -874,8 +874,8 @@ pub async fn open_browser_integration_window(app: AppHandle) -> Result<(), Strin
 
     let build_result = WebviewWindowBuilder::new(&app, label, url)
         .title("Integração do Navegador")
-        .inner_size(680.0, 480.0)
-        .min_inner_size(680.0, 480.0)
+        .inner_size(700.0, 560.0)
+        .min_inner_size(700.0, 560.0)
         .resizable(false)
         .decorations(false)
         .visible(false)

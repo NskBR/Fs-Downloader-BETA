@@ -11,6 +11,7 @@ import {
   XCircle,
   Clock,
   MoreVertical,
+  FileText,
   List,
   LayoutGrid,
   ChevronDown,
@@ -23,6 +24,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { AppSettings } from "../domain/settings";
@@ -84,6 +86,9 @@ export function DownloadsPage({
   const [search, setSearch] = useState("");
   const [starting, setStarting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const lastSelectedRef = useRef<string | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; item: DownloadTask } | null>(null);
+  const ctxMenuRef = useRef<HTMLDivElement | null>(null);
   const [view, setView] = useState<"list" | "grid">("list");
   const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>({
     key: "date",
@@ -117,10 +122,46 @@ export function DownloadsPage({
 
   const handleContextMenu = (e: React.MouseEvent, item: DownloadTask) => {
     e.preventDefault();
-    void invoke("show_download_context_menu", {
-      request: { download_id: item.id, status: item.status },
-    });
+    if (!selected.has(item.id)) {
+      lastSelectedRef.current = item.id;
+      setSelected(new Set([item.id]));
+    }
+    setCtxMenu({ x: e.clientX, y: e.clientY, item });
   };
+
+  const runMenuAction = (action: string, item: DownloadTask) => {
+    setCtxMenu(null);
+    handleMenuAction(action, item.id);
+  };
+
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const close = () => setCtxMenu(null);
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setCtxMenu(null); };
+    window.addEventListener("mousedown", close);
+    window.addEventListener("resize", close);
+    window.addEventListener("blur", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", close);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("blur", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [ctxMenu]);
+
+  useEffect(() => {
+    if (!ctxMenu || !ctxMenuRef.current) return;
+    const el = ctxMenuRef.current;
+    const rect = el.getBoundingClientRect();
+    const pad = 8;
+    let x = ctxMenu.x;
+    let y = ctxMenu.y;
+    if (x + rect.width + pad > window.innerWidth) x = window.innerWidth - rect.width - pad;
+    if (y + rect.height + pad > window.innerHeight) y = window.innerHeight - rect.height - pad;
+    el.style.left = `${Math.max(pad, x)}px`;
+    el.style.top = `${Math.max(pad, y)}px`;
+  }, [ctxMenu]);
 
   const inspect = async (raw: string) => {
     if (!raw.trim()) return;
@@ -194,11 +235,28 @@ export function DownloadsPage({
     }));
   };
 
-  const toggle = (id: string) => {
+  const handleSelect = (id: string, event: React.MouseEvent) => {
     setSelected((value) => {
-      const next = new Set(value);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
+      if (event.shiftKey && lastSelectedRef.current) {
+        const ids = visible.map((item) => item.id);
+        const anchor = ids.indexOf(lastSelectedRef.current);
+        const target = ids.indexOf(id);
+        if (anchor !== -1 && target !== -1) {
+          const [start, end] = anchor < target ? [anchor, target] : [target, anchor];
+          const next = new Set(value);
+          for (let i = start; i <= end; i++) next.add(ids[i]);
+          return next;
+        }
+      }
+      if (event.ctrlKey || event.metaKey) {
+        const next = new Set(value);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        lastSelectedRef.current = id;
+        return next;
+      }
+      lastSelectedRef.current = id;
+      return new Set([id]);
     });
   };
 
@@ -365,7 +423,7 @@ export function DownloadsPage({
                 <article
                   key={item.id}
                   className={`download-card status-${statusClass} ${selected.has(item.id) ? "selected" : ""}`}
-                  onClick={() => toggle(item.id)}
+                  onClick={(event) => handleSelect(item.id, event)}
                   onDoubleClick={() => openDetails(item.id, item.status)}
                   onContextMenu={(event) => handleContextMenu(event, item)}
                 >
@@ -564,6 +622,46 @@ export function DownloadsPage({
           <ChevronDown size={14} style={{ marginLeft: "4px" }} />
         </div>
       </footer>
+
+      {ctxMenu && (
+        <div
+          ref={ctxMenuRef}
+          className="ctx-menu"
+          style={{ left: ctxMenu.x, top: ctxMenu.y }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {ctxMenu.item.status === "downloading" && (
+            <button className="ctx-item" onClick={() => runMenuAction("pause", ctxMenu.item)}>
+              <Pause size={15} /> Pausar download
+            </button>
+          )}
+          {["paused", "failed", "cancelled"].includes(ctxMenu.item.status) && (
+            <button className="ctx-item" onClick={() => runMenuAction("resume", ctxMenu.item)}>
+              <Play size={15} /> Retomar download
+            </button>
+          )}
+          {["pending", "downloading", "paused"].includes(ctxMenu.item.status) && (
+            <button className="ctx-item" onClick={() => runMenuAction("cancel", ctxMenu.item)}>
+              <X size={15} /> Cancelar download
+            </button>
+          )}
+
+          <div className="ctx-sep" />
+
+          <button className="ctx-item" onClick={() => runMenuAction("folder", ctxMenu.item)}>
+            <FolderOpen size={15} /> Abrir pasta de destino
+          </button>
+          {ctxMenu.item.status === "completed" && (
+            <button className="ctx-item" onClick={() => runMenuAction("open", ctxMenu.item)}>
+              <FileText size={15} /> Abrir arquivo
+            </button>
+          )}
+          <button className="ctx-item ctx-item--danger" onClick={() => runMenuAction("delete", ctxMenu.item)}>
+            <Trash2 size={15} /> Excluir download
+          </button>
+        </div>
+      )}
     </>
   );
 }
