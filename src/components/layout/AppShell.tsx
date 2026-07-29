@@ -26,6 +26,7 @@ import logo from "../../assets/sf-logo.png";
 interface Props extends PropsWithChildren {
   activePage: PageId;
   onNavigate: (page: PageId) => void;
+  sidebarAnimation: boolean;
 }
 
 const groups = {
@@ -39,6 +40,7 @@ const groups = {
 export function AppShell({
   activePage,
   onNavigate,
+  sidebarAnimation,
   children,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -140,7 +142,7 @@ export function AppShell({
             aria-label="Fechar menu"
           />
         )}
-        <aside className={`sidebar ${open ? "sidebar--open" : ""}`} ref={sidebarRef}>
+        <aside className={`sidebar ${open ? "sidebar--open" : ""} ${sidebarAnimation !== false ? "" : "sidebar--no-animation"}`} ref={sidebarRef}>
           <span
             className="sidebar-indicator"
             style={{

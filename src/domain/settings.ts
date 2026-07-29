@@ -40,6 +40,7 @@ export interface AppSettings {
   accentColor: AccentColor;
   appColor: AppColor;
   interfaceGradient: GradientConfig;
+  sidebarAnimation: boolean;
   customCategories: CustomCategory[];
 }
 
@@ -54,7 +55,7 @@ export const defaultSettings: AppSettings = {
   speedLimitDownloadMbps: 0,
   theme: "midnight",
   uiScale: 1.1,
-  startInTrayMode: false,
+  startInTrayMode: true,
   launchOnStartup: false,
   language: "pt-BR",
   accentColor: "ember",
@@ -69,5 +70,6 @@ export const defaultSettings: AppSettings = {
       { color: "#1f2024", position: 100 },
     ],
   },
+  sidebarAnimation: true,
   customCategories: [],
 };

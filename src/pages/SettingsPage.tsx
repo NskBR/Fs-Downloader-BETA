@@ -263,24 +263,38 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
         </div>
 
         <div className="setting-item setting-item--toggle">
-          <div>
-            <label>Iniciar com o Windows</label>
-            <span className="description">
-              Abre o SF Downloader automaticamente quando o Windows ligar.
-            </span>
-          </div>
-          <Toggle
-            checked={draft.launchOnStartup}
-            onChange={(value) => {
-              update("launchOnStartup", value);
-              void setLaunchOnStartup(value).catch(console.error);
-            }}
-            label="Iniciar com o Windows"
-          />
-        </div>
+           <div>
+             <label>Iniciar com o Windows</label>
+             <span className="description">
+               Abre o SF Downloader automaticamente quando o Windows ligar.
+             </span>
+           </div>
+           <Toggle
+             checked={draft.launchOnStartup}
+             onChange={(value) => {
+               update("launchOnStartup", value);
+               void setLaunchOnStartup(value).catch(console.error);
+             }}
+             label="Iniciar com o Windows"
+           />
+         </div>
 
-        <div className="setting-item">
-          <label>Local padrão dos arquivos</label>
+         <div className="setting-item setting-item--toggle">
+           <div>
+             <label>Animar seletor do sidebar</label>
+             <span className="description">
+               Ativa a animação suave do indicador ao navegar entre páginas.
+             </span>
+           </div>
+           <Toggle
+             checked={draft.sidebarAnimation}
+             onChange={(value) => update("sidebarAnimation", value)}
+             label="Animar seletor do sidebar"
+           />
+         </div>
+
+         <div className="setting-item">
+           <label>Local padrão dos arquivos</label>
           <span className="description">
             Downloads e categorias serão armazenados a partir desta pasta.
           </span>

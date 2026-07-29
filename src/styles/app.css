@@ -53,6 +53,45 @@
   --font: "Inter", "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color-scheme: dark;
 }
+/* Paletas appColor definidas em CSS — alterna via data-appcolor no <html> */
+:root[data-appcolor="slate"] {
+  --bg: #16171a; --panel: #1f2024; --surface: #26282d; --surface-2: #2e3036;
+  --line: #34363c; --line-soft: #2a2c31; --text: #f2f3f5; --text-2: #b6b9bf;
+  --muted: #888d95; --disabled: #5f636b; --st-completed: #3ba55d; --st-failed: #ed4245;
+  --st-cancelled: #ed4245; --st-downloading: #f0883e; --st-paused: #f0b232;
+}
+:root[data-appcolor="graphite"] {
+  --bg: #15171b; --panel: #1d2025; --surface: #24272d; --surface-2: #2c3037;
+  --line: #34373e; --line-soft: #282b31; --text: #e8eaed; --text-2: #b0b4ba;
+  --muted: #889098; --disabled: #5f636b; --st-completed: #34a853; --st-failed: #ea4335;
+  --st-cancelled: #ea4335; --st-downloading: #fbbc04; --st-paused: #fbbc04;
+}
+:root[data-appcolor="obsidian"] {
+  --bg: #0c0d10; --panel: #15171c; --surface: #1c1f25; --surface-2: #242832;
+  --line: #2c313a; --line-soft: #191c22; --text: #e0e2e6; --text-2: #a0a6b0;
+  --muted: #6b7280; --disabled: #4b5060; --st-completed: #22c55e; --st-failed: #ef4444;
+  --st-cancelled: #ef4444; --st-downloading: #f97316; --st-paused: #eab308;
+}
+:root[data-appcolor="mint"] {
+  --bg: #121815; --panel: #1a201d; --surface: #212824; --surface-2: #293230;
+  --line: #323a35; --line-soft: #1f2622; --text: #e4ebe6; --text-2: #a8c0a4;
+  --muted: #709070; --disabled: #4a604a; --st-completed: #22c55e; --st-failed: #ef4444;
+  --st-cancelled: #ef4444; --st-downloading: #10b981; --st-paused: #f59e0b;
+}
+:root[data-appcolor="ocean"] {
+  --bg: #0f151b; --panel: #16212b; --surface: #1d2b38; --surface-2: #263844;
+  --line: #2e3e4c; --line-soft: #19242f; --text: #e0e8f0; --text-2: #8098b0;
+  --muted: #5a7088; --disabled: #3a5068; --st-completed: #14b8a6; --st-failed: #f43f5e;
+  --st-cancelled: #f43f5e; --st-downloading: #06b6d4; --st-paused: #f59e0b;
+}
+:root[data-appcolor="rose"] {
+  --bg: #1a1417; --panel: #221a1e; --surface: #2a2127; --surface-2: #332830;
+  --line: #3a2e35; --line-soft: #241c20; --text: #f0e4e8; --text-2: #c0a0b0;
+  --muted: #8a6a7a; --disabled: #5a4050; --st-completed: #10b981; --st-failed: #ef4444;
+  --st-cancelled: #ef4444; --st-downloading: #f43f5e; --st-paused: #eab308;
+}
+
+/* Tema claro — sobrescreve as paletas acima quando ativo */
 :root[data-theme="light"] {
   --bg: #c9ccd1;
   --panel: #ffffff;
@@ -72,6 +111,9 @@
   --st-cancelled: #c9302f;
   color-scheme: light;
 }
+
+/* Transição suave ao alternar entre temas */
+:root { transition: background-color 0.3s ease, color 0.3s ease; }
 
 /* ----- Reset -------------------------------------------------------------- */
 * { box-sizing: border-box; }
@@ -184,6 +226,7 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
 @media (prefers-reduced-motion: reduce) {
   .sidebar-indicator { transition: opacity 0.2s ease; }
 }
+.sidebar--no-animation .sidebar-indicator { transition: none !important; }
 
 /* Logo centralizada no topo da sidebar */
 .brand {

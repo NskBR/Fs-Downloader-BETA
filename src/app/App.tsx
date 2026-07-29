@@ -33,5 +33,5 @@ export function App() {
     : activePage === "profile" ? <ProfilePage />
     : activePage === "metrics" ? <MetricsPage />
     : <DownloadsPage settings={settings} filter={categoryPages.includes(activePage)?activePage:"active"} />;
-  return <AppShell activePage={activePage} onNavigate={navigate}>{content}</AppShell>;
+   return <AppShell activePage={activePage} onNavigate={navigate} sidebarAnimation={settings.sidebarAnimation}>{content}</AppShell>;
 }

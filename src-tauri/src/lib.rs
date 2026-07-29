@@ -85,14 +85,21 @@ pub fn run() {
         .setup(|app| {
             let open_item =
                 MenuItem::with_id(app, "tray-open", "Abrir SF Downloader", true, None::<&str>)?;
+            let hide_item =
+                MenuItem::with_id(app, "tray-hide", "Minimizar para a bandeja", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "tray-quit", "Sair", true, None::<&str>)?;
-            let tray_menu = Menu::with_items(app, &[&open_item, &quit_item])?;
+            let tray_menu = Menu::with_items(app, &[&open_item, &hide_item, &quit_item])?;
             let mut tray = TrayIconBuilder::with_id("main-tray")
                 .tooltip("SF Downloader")
                 .menu(&tray_menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "tray-open" => show_main_window(app),
+                    "tray-hide" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.hide();
+                        }
+                    }
                     "tray-quit" => app.exit(0),
                     _ => {}
                 })
@@ -245,6 +252,7 @@ use tauri::{Emitter, Manager};
 fn show_main_window(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.unminimize();
+        let _ = window.set_skip_taskbar(false);
         let _ = window.show();
         let _ = window.set_focus();
     }
