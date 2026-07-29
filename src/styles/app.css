@@ -657,6 +657,11 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
 .footer-left, .footer-right { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .footer-left svg, .footer-right svg:first-child { color: var(--ember); width: 15px; height: 15px; flex-shrink: 0; }
 .footer-left strong, .footer-right strong { color: var(--text); font-weight: 600; }
+.footer-max-select {
+  height: 26px; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  color: var(--text); background: var(--surface); font-size: 12px; outline: none; cursor: pointer;
+}
+.footer-max-select:focus { border-color: var(--ember); }
 
 /* ----- Botões genéricos --------------------------------------------------- */
 .primary-button, .secondary-button, .new-download-button {

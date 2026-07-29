@@ -32,6 +32,6 @@ export function App() {
   const content = activePage === "settings" ? <SettingsPage settings={settings} onSave={persist} saved={saved} onBack={()=>navigate(previousPage.current)} />
     : activePage === "profile" ? <ProfilePage />
     : activePage === "metrics" ? <MetricsPage />
-    : <DownloadsPage settings={settings} filter={categoryPages.includes(activePage)?activePage:"active"} />;
+    : <DownloadsPage settings={settings} onSave={persist} filter={categoryPages.includes(activePage)?activePage:"active"} />;
    return <AppShell activePage={activePage} onNavigate={navigate} sidebarAnimation={settings.sidebarAnimation}>{content}</AppShell>;
 }

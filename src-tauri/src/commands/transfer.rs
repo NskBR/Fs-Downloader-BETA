@@ -171,24 +171,23 @@ pub async fn open_download_confirmation(
         .min_inner_size(560.0, 220.0)
         .resizable(false)
         .decorations(false)
-        .shadow(true)
         .visible(false)
         .transparent(true)
         .center()
         .build();
 
     {
-        if let Ok(mut creating) = CREATING_WINDOWS.lock() {
-            creating.remove(&label);
-        }
+      if let Ok(mut creating) = CREATING_WINDOWS.lock() {
+        creating.remove(&label);
+      }
     }
 
     build_result.map_err(|error| format!("Falha ao abrir confirmação: {error}"))?;
     Ok(())
-}
+  }
 
-#[tauri::command]
-pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), String> {
+  #[tauri::command]
+  pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), String> {
     let label = format!("download-{}", id);
     if let Some(window) = app.get_webview_window(&label) {
         window.set_focus().map_err(|error| error.to_string())?;
@@ -219,16 +218,15 @@ pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), Stri
       .inner_size(580.0, 240.0)
         .resizable(false)
         .decorations(false)
-        .shadow(true)
         .visible(false)
         .transparent(true)
         .center()
         .build();
 
     {
-        if let Ok(mut creating) = CREATING_WINDOWS.lock() {
-            creating.remove(&label);
-        }
+      if let Ok(mut creating) = CREATING_WINDOWS.lock() {
+        creating.remove(&label);
+      }
     }
 
     build_result.map_err(|error| format!("Falha ao abrir progresso: {error}"))?;
@@ -267,16 +265,15 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
         .inner_size(580.0, 240.0)
         .resizable(false)
         .decorations(false)
-        .shadow(true)
         .visible(false)
         .transparent(true)
         .center()
         .build();
 
     {
-        if let Ok(mut creating) = CREATING_WINDOWS.lock() {
-            creating.remove(&label);
-        }
+      if let Ok(mut creating) = CREATING_WINDOWS.lock() {
+        creating.remove(&label);
+      }
     }
 
     build_result.map_err(|error| format!("Falha ao abrir conclusão: {error}"))?;
@@ -917,16 +914,15 @@ pub async fn open_browser_integration_window(app: AppHandle) -> Result<(), Strin
         .min_inner_size(700.0, 560.0)
         .resizable(false)
         .decorations(false)
-        .shadow(true)
         .visible(false)
         .transparent(true)
         .center()
         .build();
 
     {
-        if let Ok(mut creating) = CREATING_WINDOWS.lock() {
-            creating.remove(label);
-        }
+      if let Ok(mut creating) = CREATING_WINDOWS.lock() {
+        creating.remove(label);
+      }
     }
 
     build_result.map_err(|error| format!("Falha ao abrir integração: {error}"))?;

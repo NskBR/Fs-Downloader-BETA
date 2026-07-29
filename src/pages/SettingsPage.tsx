@@ -279,23 +279,6 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
            />
          </div>
 
-         <div className="setting-item">
-           <label>Downloads simultâneos</label>
-           <span className="description">
-             Quantos arquivos baixar ao mesmo tempo.
-           </span>
-           <select
-             value={draft.maxParallelDownloads}
-             onChange={(event) =>
-               update("maxParallelDownloads", parseInt(event.target.value, 10))
-             }
-           >
-             {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => (
-               <option key={n} value={n}>{n}</option>
-             ))}
-           </select>
-         </div>
-
          <div className="setting-item setting-item--toggle">
            <div>
              <label>Animar seletor do sidebar</label>
@@ -308,6 +291,24 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
              onChange={(value) => update("sidebarAnimation", value)}
              label="Animar seletor do sidebar"
            />
+         </div>
+
+         <div className="setting-item">
+           <label htmlFor="theme-select">Tema da interface</label>
+           <span className="description">
+             Define o visual geral do aplicativo.
+           </span>
+           <select
+             id="theme-select"
+             value={draft.theme}
+             onChange={(event) =>
+               update("theme", event.target.value as AppTheme)
+             }
+           >
+             <option value="system">Seguir sistema</option>
+             <option value="midnight">Escuro (noturno)</option>
+             <option value="light">Claro</option>
+           </select>
          </div>
 
          <div className="setting-item">

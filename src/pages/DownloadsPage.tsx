@@ -83,12 +83,14 @@ const groups: Record<string, string[]> = {
 type SortKey = "status" | "size" | "date";
 
 export function DownloadsPage({
-  settings,
-  filter,
-}: {
-  settings: AppSettings;
-  filter: PageId;
-}) {
+   settings,
+   onSave,
+   filter,
+ }: {
+   settings: AppSettings;
+   onSave: (settings: AppSettings) => void;
+   filter: PageId;
+ }) {
   const [search, setSearch] = useState("");
   const [starting, setStarting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -647,11 +649,22 @@ export function DownloadsPage({
           <span><strong>{bytes(totalSpeed)}/s</strong> Velocidade atual</span>
         </div>
 
-        <div className="footer-right">
-          <Zap />
-          <span>Downloads simultâneos: <strong>{activeDownloads.length}</strong></span>
-          <ChevronDown size={14} style={{ marginLeft: "4px" }} />
-        </div>
+         <div className="footer-right">
+           <Zap />
+           <span>Máx. simultâneos:</span>
+           <select
+             className="footer-max-select"
+             value={settings.maxParallelDownloads}
+             onChange={(event) => {
+               const next = { ...settings, maxParallelDownloads: parseInt(event.target.value, 10) };
+               onSave(next);
+             }}
+           >
+             {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => (
+               <option key={n} value={n}>{n}</option>
+             ))}
+           </select>
+         </div>
       </footer>
 
       {ctxMenu && (
