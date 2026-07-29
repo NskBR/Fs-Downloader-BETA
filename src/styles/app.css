@@ -1673,14 +1673,8 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
   background: linear-gradient(90deg, var(--ember), #ffb37a);
   transition: width 0.4s ease;
 }
-.dw-bar--active i::after {
-  content: "";
-  position: absolute; inset: 0;
-  background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.22) 0 8px, transparent 8px 16px);
-  background-size: 32px 32px;
-  animation: dw-bar-flow 0.7s linear infinite;
-}
-@keyframes dw-bar-flow { from { background-position: 0 0; } to { background-position: 32px 0; } }
+.dw-bar--active i::after { animation: dw-bar-flow 1.2s linear infinite; }
+@keyframes dw-bar-flow { from { background-position: 0 0; } to { background-position: 24px 0; } }
 .dw-size-row { display: flex; align-items: center; gap: 10px; }
 .dw-icon-btn {
   display: grid; place-items: center; width: 20px; height: 20px;
@@ -1784,3 +1778,18 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
 }
 .dw-cancel-dialog footer button.delete { background: var(--st-failed); color: #fff; }
 .dw-cancel-dialog footer button:hover { filter: brightness(1.1); }
+
+/* ----- Download toolbar buttons (pause-all / resume-all) ------------------ */
+.btn-pause-all, .btn-resume-all {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 8px;
+  background: transparent; border: 1px solid transparent; color: var(--muted);
+  transition: 0.15s; cursor: pointer;
+}
+.btn-pause-all:hover { color: var(--st-paused); background: var(--ember-soft); border-color: var(--line); }
+.btn-resume-all:hover { color: var(--st-completed); background: var(--ember-soft); border-color: var(--line); }
+
+/* ----- Black border fix for transparent Windows --------------------------- */
+/* On Windows DWM, transparent borderless windows can show a dark seam at the corners.
+   A subtle inset box-shadow covers those edge gaps so the window edge looks clean. */
+.dw-window { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03); }

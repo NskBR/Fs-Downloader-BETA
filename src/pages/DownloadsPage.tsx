@@ -364,15 +364,31 @@ export function DownloadsPage({
           >
             <List size={20} />
           </button>
-          <button
-            className={`btn-layout-switcher ${view === "grid" ? "active" : ""}`}
-            title="Visualização em Grade"
-            onClick={() => setView("grid")}
-          >
-            <LayoutGrid size={20} />
-          </button>
-        </div>
-      </header>
+           <button
+             className={`btn-layout-switcher ${view === "grid" ? "active" : ""}`}
+             title="Visualização em Grade"
+             onClick={() => setView("grid")}
+           >
+             <LayoutGrid size={20} />
+           </button>
+ 
+           <button
+             className="btn-pause-all"
+             title="Pausar todos os downloads"
+             onClick={() => downloads.filter((d) => d.status === "downloading").forEach((d) => void pause(d.id))}
+           >
+             <Pause size={16} />
+           </button>
+ 
+           <button
+             className="btn-resume-all"
+             title="Retomar todos os downloads"
+             onClick={() => downloads.filter((d) => d.status === "paused").forEach((d) => void resume(d.id))}
+           >
+             <Play size={16} />
+           </button>
+         </div>
+       </header>
 
       {/* Main Content Area */}
       <section className="downloads-workspace">

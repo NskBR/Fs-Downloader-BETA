@@ -91,7 +91,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
           next.rootDownloadFolder,
           next.customCategories.map((category) => category.name),
         );
-      onSave({ ...next, theme: settings.theme });
+      onSave(next);
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -277,6 +277,23 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
              }}
              label="Iniciar com o Windows"
            />
+         </div>
+
+         <div className="setting-item">
+           <label>Downloads simultâneos</label>
+           <span className="description">
+             Quantos arquivos baixar ao mesmo tempo.
+           </span>
+           <select
+             value={draft.maxParallelDownloads}
+             onChange={(event) =>
+               update("maxParallelDownloads", parseInt(event.target.value, 10))
+             }
+           >
+             {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => (
+               <option key={n} value={n}>{n}</option>
+             ))}
+           </select>
          </div>
 
          <div className="setting-item setting-item--toggle">
