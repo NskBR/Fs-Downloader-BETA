@@ -33,6 +33,7 @@ import { useDownloads } from "../hooks/useDownloads";
 import * as service from "../services/downloadService";
 import type { DownloadTask } from "../domain/download";
 import { CircularProgress } from "../components/downloads/CircularProgress";
+import { FileIcon } from "../components/downloads/FileIcon";
 
 const bytes = (value: number | null) => {
   if (value === null) return "—";
@@ -52,6 +53,11 @@ const sourceDomain = (value: string) => {
   } catch {
     return value;
   }
+};
+
+const fileExtension = (name: string) => {
+  const dot = name.lastIndexOf(".");
+  return dot >= 0 ? name.slice(dot + 1) : null;
 };
 
 const labels: Record<string, string> = {
@@ -164,16 +170,20 @@ export function DownloadsPage({
   }, [ctxMenu]);
 
   const inspect = async (raw: string) => {
-    if (!raw.trim()) return;
+    const url = raw.trim();
+    if (!url) return;
+    // Evita janelas duplicadas da mesma URL (paste + Enter + pending/deep link).
+    // Não impede baixar URLs diferentes ao mesmo tempo.
+    if (!service.shouldOpenConfirmation(url)) return;
     setStarting(true);
     setError(null);
     try {
       const token = crypto.randomUUID();
       localStorage.setItem(
         `sf-downloader.confirmation-${token}`,
-        JSON.stringify({ url: raw.trim(), destination: settings.rootDownloadFolder }),
+        JSON.stringify({ url, destination: settings.rootDownloadFolder }),
       );
-      await service.openDownloadConfirmation(token);
+      await service.openDownloadConfirmation(token, url);
     } catch (cause) {
       setError(String(cause));
     } finally {
@@ -436,7 +446,12 @@ export function DownloadsPage({
                       />
                     ) : isCompleted ? (
                       <div className="indicator-icon-wrapper success">
-                        <CheckCircle2 />
+                        <div className="completed-check">
+                          <CheckCircle2 />
+                        </div>
+                        <div className="completed-file-icon">
+                          <FileIcon extension={fileExtension(item.fileName)} />
+                        </div>
                       </div>
                     ) : isFailed ? (
                       <div className="indicator-icon-wrapper error">

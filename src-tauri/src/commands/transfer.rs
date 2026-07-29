@@ -90,11 +90,37 @@ pub struct DownloadPreview {
     pub extension: Option<String>,
 }
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{LazyLock, Mutex};
+use std::time::Instant;
 
 static CREATING_WINDOWS: LazyLock<Mutex<HashSet<String>>> =
     LazyLock::new(|| Mutex::new(HashSet::new()));
+
+// Dedupe por URL para impedir janelas de confirmação duplicadas da MESMA URL
+// disparadas em sequência por caminhos diferentes (paste, Enter, deep link,
+// extensão). URLs diferentes continuam abrindo janelas independentes.
+static RECENT_CONFIRMATIONS: LazyLock<Mutex<HashMap<String, Instant>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn confirmation_recently_opened(url: &str) -> bool {
+    if url.is_empty() {
+        return false;
+    }
+    let mut map = match RECENT_CONFIRMATIONS.lock() {
+        Ok(map) => map,
+        Err(_) => return false,
+    };
+    let now = Instant::now();
+    map.retain(|_, time| now.duration_since(*time).as_secs() < 10);
+    if let Some(last) = map.get(url) {
+        if now.duration_since(*last).as_millis() < 2500 {
+            return true;
+        }
+    }
+    map.insert(url.to_string(), now);
+    false
+}
 
 #[tauri::command]
 pub fn show_ready_window(window: tauri::WebviewWindow) -> Result<(), String> {
@@ -103,10 +129,20 @@ pub fn show_ready_window(window: tauri::WebviewWindow) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn open_download_confirmation(app: AppHandle, token: String) -> Result<(), String> {
+pub async fn open_download_confirmation(
+    app: AppHandle,
+    token: String,
+    url: String,
+) -> Result<(), String> {
     let label = format!("download-confirm-{}", token);
     if let Some(window) = app.get_webview_window(&label) {
         window.set_focus().map_err(|error| error.to_string())?;
+        return Ok(());
+    }
+
+    // Bloqueia janela duplicada da mesma URL (dispara em sequência por caminhos
+    // diferentes). URLs diferentes seguem abrindo normalmente.
+    if confirmation_recently_opened(&url) {
         return Ok(());
     }
 
@@ -135,8 +171,9 @@ pub async fn open_download_confirmation(app: AppHandle, token: String) -> Result
         .min_inner_size(560.0, 220.0)
         .resizable(false)
         .decorations(false)
+        .shadow(true)
         .visible(false)
-        .background_color(tauri::webview::Color(26, 29, 36, 255))
+        .transparent(true)
         .center()
         .build();
 
@@ -152,7 +189,7 @@ pub async fn open_download_confirmation(app: AppHandle, token: String) -> Result
 
 #[tauri::command]
 pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), String> {
-    let label = format!("download-progress-{}", id);
+    let label = format!("download-{}", id);
     if let Some(window) = app.get_webview_window(&label) {
         window.set_focus().map_err(|error| error.to_string())?;
         return Ok(());
@@ -178,12 +215,13 @@ pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), Stri
     let url = WebviewUrl::App("index.html".into());
 
     let build_result = WebviewWindowBuilder::new(&app, &label, url)
-      .title("SF Downloader - Progresso")
-      .inner_size(540.0, 252.0)
+      .title("SF Downloader - Download")
+      .inner_size(580.0, 240.0)
         .resizable(false)
         .decorations(false)
+        .shadow(true)
         .visible(false)
-        .background_color(tauri::webview::Color(26, 29, 36, 255))
+        .transparent(true)
         .center()
         .build();
 
@@ -199,7 +237,7 @@ pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), Stri
 
 #[tauri::command]
 pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), String> {
-    let label = format!("download-complete-{}", id);
+    let label = format!("download-{}", id);
     if let Some(window) = app.get_webview_window(&label) {
         window.set_focus().map_err(|error| error.to_string())?;
         return Ok(());
@@ -225,12 +263,13 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
     let url = WebviewUrl::App("index.html".into());
 
     let build_result = WebviewWindowBuilder::new(&app, &label, url)
-        .title("SF Downloader - Concluído")
-        .inner_size(560.0, 252.0)
+        .title("SF Downloader - Download")
+        .inner_size(580.0, 240.0)
         .resizable(false)
         .decorations(false)
+        .shadow(true)
         .visible(false)
-        .background_color(tauri::webview::Color(26, 29, 36, 255))
+        .transparent(true)
         .center()
         .build();
 
@@ -878,8 +917,9 @@ pub async fn open_browser_integration_window(app: AppHandle) -> Result<(), Strin
         .min_inner_size(700.0, 560.0)
         .resizable(false)
         .decorations(false)
+        .shadow(true)
         .visible(false)
-        .background_color(tauri::webview::Color(26, 29, 36, 255))
+        .transparent(true)
         .center()
         .build();
 

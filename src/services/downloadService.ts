@@ -42,8 +42,24 @@ const input = (
 export const listDownloads = () => invoke<DownloadTask[]>("list_downloads");
 export const inspectDownload = (url: string) =>
   invoke<DownloadPreview>("inspect_download", { url });
-export const openDownloadConfirmation = (token: string) =>
-  invoke<void>("open_download_confirmation", { token });
+export const openDownloadConfirmation = (token: string, url = "") =>
+  invoke<void>("open_download_confirmation", { token, url });
+
+// Dedupe global (nível de módulo, sobrevive a remount/StrictMode) para impedir
+// janelas de confirmação duplicadas da MESMA URL disparadas em sequência por
+// caminhos diferentes (paste, Enter, deep link, extensão). URLs diferentes
+// continuam abrindo janelas independentes.
+const recentConfirmations = new Map<string, number>();
+export function shouldOpenConfirmation(url: string, windowMs = 2500): boolean {
+  const now = Date.now();
+  for (const [key, time] of recentConfirmations) {
+    if (now - time > 10000) recentConfirmations.delete(key);
+  }
+  const last = recentConfirmations.get(url);
+  if (last && now - last < windowMs) return false;
+  recentConfirmations.set(url, now);
+  return true;
+}
 export const openProgressWindow = (id: string) =>
   invoke<void>("open_progress_window", { id });
 export const openCompleteWindow = (id: string) =>

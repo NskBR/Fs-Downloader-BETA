@@ -19,21 +19,21 @@ Gerenciador de downloads desktop (Tauri 2 + React 18 + TypeScript + Rust).
 |-------|--------|---------|
 | `main` | App principal (sidebar + telas) | `src/app/App.tsx` |
 | `main` | App principal (sidebar + telas) | `src/app/App.tsx` |
-| `download-confirm-{token}` | Confirmação de novo download | `src/pages/ConfirmationPage.tsx` |
-| `download-progress-{id}` | Janela "Download em andamento" | `src/pages/ProgressPage.tsx` |
-| `download-complete-{id}` | Janela de concluído | `src/pages/CompletePage.tsx` |
+| `download-confirm-{token}` | Confirmação de novo download (janela à parte, pré-início) | `src/pages/ConfirmationPage.tsx` |
+| `download-{id}` | Janela unificada de download: progresso **e** concluído (morph por `status`) | `src/pages/DownloadWindow.tsx` |
 | `browser-integration` | Popup de integração | `src/pages/BrowserIntegrationPage.tsx` |
 
-- As janelas são criadas no Rust (`src-tauri/src/commands/transfer.rs`, `open_progress_window`/`open_complete_window`/`open_confirm_window`) via `WebviewWindowBuilder`, todas `resizable(false)` e `decorations(false)`: Confirmação `560×220`, Progresso `540×252`, Complete `560×252`. Mude o tamanho em `transfer.rs`, **não** no `tauri.conf.json`.
+- As janelas são criadas no Rust (`src-tauri/src/commands/transfer.rs`, `open_progress_window`/`open_complete_window`/`open_download_confirmation`) via `WebviewWindowBuilder`, todas `resizable(false)` e `decorations(false)`: Confirmação `600×320` (cresce), Download unificado `720×352`, raio 16px. Mude o tamanho em `transfer.rs`, **não** no `tauri.conf.json`.
 - **Janelas são borderless** → barras de título são custom e usam `data-tauri-drag-region`. Não remover esse atributo de elementos arrastáveis.
-- Janelas filhas (`download-progress-*`, `download-complete-*`) são reveladas pelo backend via comando `show_ready_window` (chamado pelo frontend em `src/main.tsx` após `document.fonts.ready`, com fallback de 2s). Não use `show()` direto nelas — deixe o mecanismo `show_ready_window` cuidar da exibição, senão a janela pode aparecer em branco/antes do CSS.
+- A janela unificada `download-{id}` cobre progresso e conclusão: ao concluir, o backend chama `open_complete_window` que **foca a janela `download-{id}` já existente** (morph) em vez de abrir janela nova. Se a janela de progresso foi fechada, cria uma nova `download-{id}` mostrando o estado concluído.
+- Janelas filhas (`download-{id}`, `download-confirm-*`) são reveladas pelo backend via comando `show_ready_window` (chamado pelo frontend em `src/main.tsx` após `document.fonts.ready`, com fallback de 2s). Não use `show()` direto nelas — deixe o mecanismo `show_ready_window` cuidar da exibição, senão a janela pode aparecer em branco/antes do CSS.
 - Ao adicionar uma nova label de janela, registre-a em `src-tauri/capabilities/default.json` (`windows` e `permissions`), senão a janela abre sem permissões.
 
 ## Fluxo de dados de download
 
-- Backend emite evento `download-progress` (`src-tauri/src/download/engine.rs`): `src/hooks/useDownloads.ts` e `src/pages/ProgressPage.tsx` escutam.
+- Backend emite evento `download-progress` (`src-tauri/src/download/engine.rs`): `src/hooks/useDownloads.ts` e `src/pages/DownloadWindow.tsx` escutam.
 - Tipos fonte da verdade: `src/domain/download.ts` → `DownloadTask` e `DownloadProgress`.
-- `DownloadTask` já traz `speedAverage`, `supportsRange`, `etag`, etc. A `ProgressPage` atual usa só uma fração — aproveite esses campos em vez de criar estado novo.
+- `DownloadTask` já traz `speedAverage`, `supportsRange`, `etag`, etc. O `DownloadWindow` aproveita esses campos nas "Mais detalhes" em vez de criar estado novo.
 - Abrir link externo: comando `open_url` em `src-tauri/src/commands/transfer.rs` (valida http/https, usa `cmd /c start`/`open`/`xdg-open`). Exponha via `services/downloadService.ts` (`openUrl`) — **não** use `window.open` (bloqueado no webview Tauri).
 - Deep link: protocolo `sfdownloader://download?url=<https-url>` (registrado em `tauri.conf.json` → `plugins.deep-link`). Tratado em `src/App.tsx`.
 - Links consumidos são marcados na sessão para impedir que `F5` duplique downloads ativos. Ao testar deep links, recarregar a janela não deve criar tarefa duplicada.

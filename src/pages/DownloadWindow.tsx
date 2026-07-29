@@ -1,0 +1,425 @@
+import {
+  Ban,
+  ChevronDown,
+  Clock3,
+  Copy,
+  Check,
+  ExternalLink,
+  FileText,
+  FolderOpen,
+  Gauge,
+  Link2,
+  Minus,
+  Pause,
+  Play,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { listen } from "@tauri-apps/api/event";
+import { FileIcon } from "../components/downloads/FileIcon";
+import * as service from "../services/downloadService";
+import type { DownloadProgress, DownloadStatus, DownloadTask } from "../domain/download";
+import { elapsedSeconds, formatElapsed } from "../utils/elapsedTime";
+
+const bytes = (value: number | null) => {
+  if (value === null || value < 0) return "Desconhecido";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let size = value,
+    index = 0;
+  while (size >= 1024 && index < 4) {
+    size /= 1024;
+    index++;
+  }
+  return `${size.toFixed(index ? 1 : 0)} ${units[index]}`;
+};
+
+const eta = (seconds: number) => {
+  if (!Number.isFinite(seconds) || seconds < 0) return "—";
+  if (seconds < 60) return `${Math.ceil(seconds)}s`;
+  if (seconds < 3600) return `${Math.ceil(seconds / 60)}min`;
+  const hours = Math.floor(seconds / 3600),
+    minutes = Math.ceil((seconds % 3600) / 60);
+  return `${hours}h ${minutes}min`;
+};
+
+const statusLabels: Record<DownloadStatus, string> = {
+  pending: "Conectando",
+  checking_files: "Verificando arquivos",
+  downloading: "Baixando",
+  paused: "Pausado",
+  assembling: "Montando arquivo",
+  extracting: "Extraindo arquivo",
+  completed: "Concluído",
+  failed: "Falhou",
+  cancelled: "Cancelado",
+};
+
+const sourceDomain = (value: string) => {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return "origem desconhecida";
+  }
+};
+
+const formatDateTime = (value: string | null) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  return (
+    date.toLocaleDateString("pt-BR") +
+    " " +
+    date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+  );
+};
+
+function Donut({ value, status }: { value: number; status: DownloadStatus }) {
+  const size = 108,
+    stroke = 7,
+    radius = (size - stroke) / 2,
+    circumference = 2 * Math.PI * radius,
+    clamped = Math.max(0, Math.min(100, value)),
+    offset = circumference - (clamped / 100) * circumference;
+  return (
+    <div className="dw-donut" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--dw-track)"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--dw-accent)"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          style={{ transition: "stroke-dashoffset 0.4s ease, stroke 0.2s ease" }}
+        />
+      </svg>
+      <div className="dw-donut-center">
+        <strong>{Math.round(clamped)}%</strong>
+        <span>{statusLabels[status]}</span>
+      </div>
+    </div>
+  );
+}
+
+export function DownloadWindow({ downloadId }: { downloadId: string }) {
+  const [task, setTask] = useState<DownloadTask | null>(null);
+  const [downloaded, setDownloaded] = useState(0);
+  const [speed, setSpeed] = useState(0);
+  const [status, setStatus] = useState<DownloadStatus>("pending");
+  const [error, setError] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [extraction, setExtraction] = useState<string | null>(null);
+  const appWindow = getCurrentWindow();
+
+  useEffect(() => {
+    void Promise.all([
+      service.listDownloads(),
+      service.extractionStatus(downloadId),
+    ]).then(([list, result]) => {
+      const found = list.find((item) => item.id === downloadId);
+      if (!found) return;
+      setTask(found);
+      setDownloaded(found.totalDownloaded);
+      setSpeed(found.speedCurrent);
+      setStatus(found.status);
+      setExtraction(result);
+    });
+    const listener = listen<DownloadProgress>("download-progress", ({ payload }) => {
+      if (payload.id !== downloadId) return;
+      setDownloaded(payload.downloaded);
+      setSpeed(payload.speed);
+      setStatus(payload.status);
+      setTask((current) =>
+        current
+          ? {
+              ...current,
+              status: payload.status,
+              totalDownloaded: payload.downloaded,
+              speedCurrent: payload.speed,
+            }
+          : current,
+      );
+      setError(payload.error);
+    });
+    return () => void listener.then((dispose) => dispose());
+  }, [downloadId]);
+
+  const pauseResume = async () => {
+    setError(null);
+    try {
+      if (["pending", "downloading"].includes(status)) {
+        await service.pauseDownload(downloadId);
+        setStatus("paused");
+        setSpeed(0);
+      } else {
+        await service.resumeDownload(downloadId);
+        setStatus("downloading");
+      }
+    } catch (cause) {
+      setError(String(cause));
+    }
+  };
+
+  const cancel = async (deleteFiles: boolean) => {
+    setBusy(true);
+    try {
+      await service.cancelDownload(downloadId, deleteFiles);
+      setStatus("cancelled");
+      setSpeed(0);
+      setCancelOpen(false);
+      await appWindow.close();
+    } catch (cause) {
+      setError(String(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copyPath = (text: string) => {
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    });
+  };
+
+  if (!task)
+    return (
+      <main className="dw-window">
+        <header className="dw-title" data-tauri-drag-region>
+          <span>
+            <Gauge />
+            Download
+          </span>
+          <div className="dw-controls">
+            <button title="Minimizar" onClick={() => void appWindow.minimize()}>
+              <Minus />
+            </button>
+            <button title="Fechar" onClick={() => void appWindow.close()}>
+              <X />
+            </button>
+          </div>
+        </header>
+        <div className="dw-loading">Carregando detalhes...</div>
+      </main>
+    );
+
+  const total = task.fileSize ?? 0,
+    progress = total ? Math.min(100, (downloaded / total) * 100) : 0,
+    isCompleted = status === "completed",
+    isActive = status === "downloading",
+    isFailed = status === "failed" || status === "cancelled",
+    remaining = isActive && speed > 0 ? (total - downloaded) / speed : -1,
+    source = task.currentUrl || task.originalUrl,
+    domain = sourceDomain(task.originalUrl),
+    totalTime = formatElapsed(elapsedSeconds(task.createdAt, task.completedAt)),
+    avgSpeed = task.speedAverage > 0 ? `${bytes(task.speedAverage)}/s` : "—",
+    destination = task.finalPath.replace(/[\\/][^\\/]*$/, "");
+
+  return (
+    <main className={`dw-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}`}>
+      <header className="dw-title" data-tauri-drag-region>
+        <span className="dw-title-text">
+          <FileIcon extension={task.extension} />
+          <span className="dw-title-name" title={task.fileName}>
+            {task.fileName}
+          </span>
+        </span>
+        <div className="dw-controls">
+          <button title="Minimizar" onClick={() => void appWindow.minimize()}>
+            <Minus />
+          </button>
+          <button title="Fechar janela" onClick={() => void appWindow.close()}>
+            <X />
+          </button>
+        </div>
+      </header>
+
+      <section className="dw-body">
+        <div className="dw-left">
+          <Donut value={isCompleted ? 100 : progress} status={status} />
+        </div>
+
+        <div className="dw-right">
+          <p className="dw-origin">
+            {isCompleted ? "Baixado de " : `${statusLabels[status]} de `}
+            <span className="dw-origin-domain">{domain}</span>
+          </p>
+
+          <div className="dw-size-row">
+            {!isCompleted && !isFailed && (
+              <button className="dw-icon-btn" title="Pausar/Retomar" onClick={() => void pauseResume()}>
+                {isActive ? <Pause /> : <Play />}
+              </button>
+            )}
+            {isCompleted && (
+              <button className="dw-icon-btn" title="Copiar destino" onClick={() => copyPath(task.finalPath)}>
+                {copied ? <Check /> : <Copy />}
+              </button>
+            )}
+            <p className="dw-size">
+              {bytes(downloaded)}
+              {!isCompleted && total ? <em> / {bytes(total)}</em> : null}
+            </p>
+          </div>
+
+          {!isCompleted && (
+            <p className="dw-meta">
+              Velocidade: {isActive ? `${bytes(speed)}/s` : "—"}
+              <span className="dw-dot">•</span>
+              Tempo restante: {eta(remaining)}
+            </p>
+          )}
+
+          {!isCompleted && (
+            <div className={`dw-bar${isActive ? " dw-bar--active" : ""}`} role="progressbar" aria-valuenow={Math.round(progress)}>
+              <i style={{ width: `${progress}%` }} />
+            </div>
+          )}
+
+          {isCompleted && (
+            <p className="dw-meta">
+              Concluído em {formatDateTime(task.completedAt)}
+              <span className="dw-dot">•</span>
+              {totalTime}
+            </p>
+          )}
+
+          {isCompleted && (
+            <p className="dw-path" title={destination}>
+              <FolderOpen size={12} />
+              <span className="dw-path-value">{destination}</span>
+            </p>
+          )}
+
+          {isFailed && (
+            <p className="dw-meta dw-meta-error">{status === "cancelled" ? "Cancelado" : "Falhou"}</p>
+          )}
+
+        </div>
+      </section>
+
+      <div className="dw-divider" />
+
+      <footer className="dw-footer">
+        <button className="dw-details-toggle" onClick={() => setDetailsOpen((value) => !value)}>
+          <ChevronDown className={detailsOpen ? "open" : ""} />
+          Mais detalhes
+        </button>
+
+        {isCompleted ? (
+          <div className="dw-footer-actions">
+            <button className="dw-btn-primary" onClick={() => void service.openFile(task.finalPath)}>
+              <FileText size={16} />
+              Abrir arquivo
+            </button>
+            <button className="dw-btn-ghost" onClick={() => void service.revealInFolder(task.finalPath)}>
+              <FolderOpen size={16} />
+              Abrir pasta
+            </button>
+          </div>
+        ) : (
+          <button className="dw-btn-cancel" onClick={() => setCancelOpen(true)}>
+            <Ban size={15} />
+            Cancelar
+          </button>
+        )}
+      </footer>
+
+      {detailsOpen && (
+        <div className="dw-details">
+          <p className="dw-details-title">Detalhes</p>
+          <div className="dw-detail-row">
+            <span>Tamanho</span>
+            <b>{bytes(task.fileSize)}</b>
+          </div>
+          <div className="dw-detail-row">
+            <span>Vel. média</span>
+            <b>{avgSpeed}</b>
+          </div>
+          <div className="dw-detail-row">
+            <span>Tempo total</span>
+            <b>{totalTime}</b>
+          </div>
+          <div className="dw-detail-row">
+            <span>Origem</span>
+            <b className="dw-detail-link" title={source}>
+              <Link2 size={12} />
+              {domain}
+              <ExternalLink size={11} />
+            </b>
+          </div>
+          <div className="dw-detail-row">
+            <span>Salvo em</span>
+            <b className="dw-detail-path" title={task.finalPath}>
+              {task.finalPath}
+            </b>
+          </div>
+          <div className="dw-detail-row">
+            <span>ETag</span>
+            <b className="dw-detail-path">{task.etag ?? "—"}</b>
+          </div>
+          <div className="dw-detail-row">
+            <span>Retomada</span>
+            <b>{task.supportsRange ? "Suportada" : "Não suportada"}</b>
+          </div>
+          {extraction && (
+            <div className="dw-detail-row">
+              <span>Extração</span>
+              <b>{extraction}</b>
+            </div>
+          )}
+        </div>
+      )}
+
+      {error && <p className="dw-error">{error}</p>}
+
+      {cancelOpen && (
+        <div className="dw-cancel-overlay">
+          <section className="dw-cancel-dialog">
+            <header>
+              <span>Cancelar download?</span>
+              <button onClick={() => setCancelOpen(false)}>
+                <X />
+              </button>
+            </header>
+            <div>
+              <i>!</i>
+              <p>
+                <strong>Deseja realmente cancelar este download?</strong>
+                <span>Você pode manter os arquivos parciais para retomar depois ou apagá-los agora.</span>
+              </p>
+            </div>
+            <footer>
+              <button disabled={busy} onClick={() => void cancel(false)}>
+                Manter arquivos
+              </button>
+              <button className="delete" disabled={busy} onClick={() => void cancel(true)}>
+                <Trash2 />
+                Apagar arquivos
+              </button>
+              <button disabled={busy} onClick={() => setCancelOpen(false)}>
+                Voltar
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+    </main>
+  );
+}
