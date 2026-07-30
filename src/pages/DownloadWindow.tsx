@@ -397,54 +397,30 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
 
       <div className="dw-divider" />
 
-      {cancelOpen ? (
-        <div className="dw-cancel-inline">
-          <div className="dw-cancel-inline-header">
-            <AlertTriangle size={15} />
-            <span>Cancelar este download?</span>
-          </div>
-          <p className="dw-cancel-inline-desc">
-            Escolha se deseja manter os arquivos parciais para retomar depois ou apagá-los do disco.
-          </p>
-          <div className="dw-cancel-inline-actions">
-            <button className="dw-cancel-btn-keep" disabled={busy} onClick={() => void cancel(false)}>
-              Manter arquivos
-            </button>
-            <button className="dw-cancel-btn-delete" disabled={busy} onClick={() => void cancel(true)}>
-              <Trash2 size={13} />
-              <span>Apagar arquivos</span>
-            </button>
-            <button className="dw-cancel-btn-back" disabled={busy} onClick={() => setCancelOpen(false)}>
-              Voltar
-            </button>
-          </div>
-        </div>
-      ) : (
-        <footer className="dw-footer">
-          <button className="dw-details-toggle" onClick={() => setDetailsOpen((value) => !value)}>
-            <ChevronDown className={detailsOpen ? "open" : ""} />
-            Mais detalhes
-          </button>
+      <footer className="dw-footer">
+        <button className="dw-details-toggle" onClick={() => setDetailsOpen((value) => !value)}>
+          <ChevronDown className={detailsOpen ? "open" : ""} />
+          Mais detalhes
+        </button>
 
-          {isCompleted ? (
-            <div className="dw-footer-actions">
-              <button className="dw-btn-primary" onClick={() => void service.openFile(task.finalPath)}>
-                <FileText size={16} />
-                Abrir arquivo
-              </button>
-              <button className="dw-btn-ghost" onClick={() => void service.revealInFolder(task.finalPath)}>
-                <FolderOpen size={16} />
-                Abrir pasta
-              </button>
-            </div>
-          ) : (
-            <button className="dw-btn-cancel" onClick={() => setCancelOpen(true)}>
-              <Ban size={15} />
-              Cancelar
+        {isCompleted ? (
+          <div className="dw-footer-actions">
+            <button className="dw-btn-primary" onClick={() => void service.openFile(task.finalPath)}>
+              <FileText size={16} />
+              Abrir arquivo
             </button>
-          )}
-        </footer>
-      )}
+            <button className="dw-btn-ghost" onClick={() => void service.revealInFolder(task.finalPath)}>
+              <FolderOpen size={16} />
+              Abrir pasta
+            </button>
+          </div>
+        ) : (
+          <button className="dw-btn-cancel" onClick={() => setCancelOpen(true)}>
+            <Ban size={15} />
+            Cancelar
+          </button>
+        )}
+      </footer>
 
       {detailsOpen && !cancelOpen && (
         <div className="dw-details">
@@ -489,6 +465,30 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
               <b>{extraction}</b>
             </div>
           )}
+        </div>
+      )}
+
+      {cancelOpen && (
+        <div className="dw-cancel-sheet">
+          <div className="dw-cancel-sheet-icon">
+            <AlertTriangle size={22} />
+          </div>
+          <p className="dw-cancel-sheet-title">Cancelar este download?</p>
+          <p className="dw-cancel-sheet-desc">
+            Escolha se deseja manter os arquivos parciais para retomar depois ou apagá-los do disco.
+          </p>
+          <div className="dw-cancel-sheet-actions">
+            <button className="dw-cancel-btn-keep" disabled={busy} onClick={() => void cancel(false)}>
+              Manter arquivos
+            </button>
+            <button className="dw-cancel-btn-delete" disabled={busy} onClick={() => void cancel(true)}>
+              <Trash2 size={13} />
+              <span>Apagar arquivos</span>
+            </button>
+            <button className="dw-cancel-btn-back" disabled={busy} onClick={() => setCancelOpen(false)}>
+              Voltar
+            </button>
+          </div>
         </div>
       )}
     </main>
