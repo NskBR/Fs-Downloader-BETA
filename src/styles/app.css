@@ -1266,7 +1266,7 @@ input::-ms-clear {
   position: absolute;
   left: 0; right: 0; top: 46px; bottom: 0;
   background: var(--bg-fill, #16171a);
-  padding: 18px 20px 16px;
+  padding: 18px 20px 20px;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -1381,7 +1381,8 @@ input::-ms-clear {
 .confirm-error-sep {
   height: 1px;
   background: var(--line, rgba(255,255,255,0.06));
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  margin-top: auto;
 }
 .confirm-error-actions {
   display: flex;
