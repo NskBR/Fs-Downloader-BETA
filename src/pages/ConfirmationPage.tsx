@@ -145,8 +145,10 @@ export function ConfirmationPage({ token }: { token: string }) {
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       if (!active) return;
       if (error) {
+        await new Promise((r) => setTimeout(r, 50));
+        if (!active) return;
         void appWindow
-          .setSize(new LogicalSize(600, 460))
+          .setSize(new LogicalSize(600, 500))
           .catch(() => {});
         return;
       }
