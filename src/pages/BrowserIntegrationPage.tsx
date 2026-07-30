@@ -106,29 +106,33 @@ export function BrowserIntegrationPage() {
           </div>
         ) : (
           <div className="integr-install">
-            <div className="integr-xpi" onClick={openXpi} title="Clique para abrir o arquivo .xpi no Firefox">
+            <div
+              className="integr-xpi"
+              onClick={openXpi}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                folder && void invoke("start_drag_folder", { path: `${folder}/integration.xpi` }).catch(console.error);
+              }}
+              title="Clique para abrir/instalar no Firefox ou arraste para a aba do navegador"
+            >
               <div className="integr-drop-icon">
                 <Package size={26} />
               </div>
-              <strong>integration.xpi</strong>
+              <strong>integration.xpi (Clique ou Arraste)</strong>
               <span>
-                Arquivo de instalação do Firefox. Clique para abrir no navegador
-                ou use “Abrir pasta” e instale manualmente.
+                Clique para instalar diretamente no Firefox ou segure e arraste esta peça para o seu navegador.
               </span>
             </div>
 
             <ol className="integr-steps">
               <li>
-                Clique na peça acima para abrir o <code>integration.xpi</code> no
-                Firefox e confirme a instalação.
+                Clique no card acima para abrir o instalador no Firefox, ou arraste-o direto para o navegador.
               </li>
               <li>
-                Ou abra <code>about:addons</code> → engrenagem → “Instalar
-                complemento a partir de arquivo…” e selecione o .xpi.
+                Ou <button className="integr-link-btn" onClick={() => folder && void service.revealInFolder(`${folder}/integration.xpi`)}>abrir pasta no Explorer</button> para selecionar em <code>about:addons</code>.
               </li>
               <li>
-                Para testes, carregue temporariamente em{" "}
-                <code>about:debugging#/runtime/this-firefox</code>.
+                Para testes em desenvolvimento: <code>about:debugging#/runtime/this-firefox</code>.
               </li>
             </ol>
           </div>

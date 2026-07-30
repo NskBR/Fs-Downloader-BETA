@@ -94,10 +94,21 @@ pub fn open_file(path: String) -> Result<(), String> {
         return Err("Arquivo não encontrado no disco.".into());
     }
     #[cfg(target_os = "windows")]
-    std::process::Command::new("cmd")
-        .args(["/C", "start", "", &normalized])
-        .spawn()
-        .map_err(|error| format!("Não foi possível abrir o arquivo: {error}"))?;
+    {
+        if normalized.to_lowercase().ends_with(".xpi") {
+            if std::process::Command::new("cmd")
+                .args(["/C", "start", "firefox", &normalized])
+                .spawn()
+                .is_ok()
+            {
+                return Ok(());
+            }
+        }
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "", &normalized])
+            .spawn()
+            .map_err(|error| format!("Não foi possível abrir o arquivo: {error}"))?;
+    }
     #[cfg(target_os = "linux")]
     std::process::Command::new("xdg-open")
         .arg(&path)

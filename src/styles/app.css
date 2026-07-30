@@ -1649,6 +1649,19 @@ input::-ms-clear {
 .integr-code code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .integr-copy { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; color: var(--muted); flex-shrink: 0; }
 .integr-copy:hover { color: var(--ember-solid); background: var(--ember-soft); }
+.integr-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ember-solid);
+  font-weight: 600;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.integr-link-btn:hover {
+  opacity: 0.85;
+}
 
 .integr-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .integr-actions .primary-button, .integr-actions .secondary-button { min-height: 38px; }
