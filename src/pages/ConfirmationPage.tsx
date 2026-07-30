@@ -7,7 +7,6 @@ import {
   FileText,
   FolderOpen,
   Globe,
-  Info,
   LockKeyhole,
   Minus,
   Package,
@@ -145,7 +144,7 @@ export function ConfirmationPage({ token }: { token: string }) {
       if (!active) return;
       if (error) {
         void appWindow
-          .setSize(new LogicalSize(600, 420))
+          .setSize(new LogicalSize(600, 280))
           .catch(() => {});
         return;
       }
@@ -444,23 +443,11 @@ export function ConfirmationPage({ token }: { token: string }) {
 
       {error && (
         <div className="confirm-error-sheet">
-          <div className="confirm-error-hero">
-            <div className="confirm-error-icon">
-              <AlertTriangle />
-            </div>
-            <div className="confirm-error-hero-text">
-              <h2 className="confirm-error-title">Erro ao iniciar download</h2>
-              <div className="confirm-error-info-box">
-                <div className="confirm-error-info-icon">
-                  <Info size={15} />
-                </div>
-                <div className="confirm-error-info-text">
-                  <p>{stripFileName(error)}</p>
-                </div>
-              </div>
-            </div>
+          <div className="confirm-error-icon">
+            <AlertTriangle />
           </div>
-
+          <h2 className="confirm-error-title">Erro ao iniciar download</h2>
+          <p className="confirm-error-msg">{stripFileName(error)}</p>
           <div className="confirm-error-sep" />
           <div className="confirm-error-actions">
             <button className="confirm-error-btn" onClick={() => setError(null)}>
