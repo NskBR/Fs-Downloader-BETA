@@ -13,5 +13,11 @@ export function loadSettings(): AppSettings {
 }
 
 export function saveSettings(settings: AppSettings): void {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  const json = JSON.stringify(settings);
+  localStorage.setItem(SETTINGS_KEY, json);
+  try {
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: SETTINGS_KEY, newValue: json }),
+    );
+  } catch {}
 }

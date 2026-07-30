@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   Ban,
   ChevronDown,
   Clock3,
@@ -15,8 +16,9 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { LogicalSize } from "@tauri-apps/api/dpi";
 import { listen } from "@tauri-apps/api/event";
 import { FileIcon } from "../components/downloads/FileIcon";
 import * as service from "../services/downloadService";
@@ -46,11 +48,11 @@ const eta = (seconds: number) => {
 
 const statusLabels: Record<DownloadStatus, string> = {
   pending: "Conectando",
-  checking_files: "Verificando arquivos",
+  checking_files: "Verificando",
   downloading: "Baixando",
   paused: "Pausado",
-  assembling: "Montando arquivo",
-  extracting: "Extraindo arquivo",
+  assembling: "Montando",
+  extracting: "Extraindo",
   completed: "Concluído",
   failed: "Falhou",
   cancelled: "Cancelado",
@@ -75,15 +77,30 @@ const formatDateTime = (value: string | null) => {
 };
 
 function Donut({ value, status }: { value: number; status: DownloadStatus }) {
-  const size = 108,
-    stroke = 7,
+  const size = 84,
+    stroke = 6,
     radius = (size - stroke) / 2,
     circumference = 2 * Math.PI * radius,
     clamped = Math.max(0, Math.min(100, value)),
     offset = circumference - (clamped / 100) * circumference;
+  const strokeColor =
+    status === "completed"
+      ? "var(--st-completed)"
+      : status === "failed" || status === "cancelled"
+      ? "var(--st-failed)"
+      : status === "paused"
+      ? "var(--st-paused)"
+      : "url(#dw-donut-gradient)";
+
   return (
     <div className="dw-donut" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <defs>
+          <linearGradient id="dw-donut-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="var(--ember-stop-1, #06b6d4)" />
+            <stop offset="100%" stopColor="var(--ember-stop-2, #22d3ee)" />
+          </linearGradient>
+        </defs>
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -97,7 +114,7 @@ function Donut({ value, status }: { value: number; status: DownloadStatus }) {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="var(--dw-accent)"
+          stroke={strokeColor}
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -126,6 +143,26 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
   const [copied, setCopied] = useState(false);
   const [extraction, setExtraction] = useState<string | null>(null);
   const appWindow = getCurrentWindow();
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    let fitted = false;
+    const fit = async () => {
+      if (!detailsOpen && fitted) return;
+      const root = mainRef.current;
+      if (!root) return;
+      await document.fonts?.ready.catch(() => {});
+      const height = root.scrollHeight || root.offsetHeight;
+      if (height > 0) {
+        fitted = true;
+        const targetHeight = detailsOpen ? Math.max(340, height) : Math.max(205, height);
+        void appWindow
+          .setSize(new LogicalSize(450, targetHeight))
+          .catch(() => {});
+      }
+    };
+    void fit();
+  }, [detailsOpen]);
 
   useEffect(() => {
     void Promise.all([
@@ -232,7 +269,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
     destination = task.finalPath.replace(/[\\/][^\\/]*$/, "");
 
   return (
-    <main className={`dw-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}`}>
+    <main ref={mainRef} className={`dw-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}`}>
       <header className="dw-title" data-tauri-drag-region>
         <span className="dw-title-text">
           <FileIcon extension={task.extension} />
@@ -257,7 +294,15 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
 
         <div className="dw-right">
           <p className="dw-origin">
-            {isCompleted ? "Baixado de " : `${statusLabels[status]} de `}
+            {isCompleted
+              ? "Baixado de "
+              : status === "checking_files"
+              ? "Verificando arquivos de "
+              : status === "assembling"
+              ? "Montando arquivo de "
+              : status === "extracting"
+              ? "Extraindo arquivo de "
+              : `${statusLabels[status]} de `}
             <span className="dw-origin-domain">{domain}</span>
           </p>
 
@@ -387,15 +432,41 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
         </div>
       )}
 
-      {error && <p className="dw-error">{error}</p>}
+      {error && (
+        <div className="dw-cancel-overlay">
+          <section className="dw-cancel-dialog dw-error-dialog">
+            <header>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <AlertTriangle size={15} style={{ color: "var(--st-failed)" }} />
+                <span>Aviso do sistema</span>
+              </span>
+              <button onClick={() => setError(null)} title="Fechar aviso">
+                <X size={14} />
+              </button>
+            </header>
+            <div>
+              <i style={{ background: "var(--st-failed)", color: "#ffffff" }}>!</i>
+              <p>
+                <strong>Não foi possível concluir a ação</strong>
+                <span>{error}</span>
+              </p>
+            </div>
+            <footer>
+              <button className="delete" onClick={() => setError(null)}>
+                Entendi
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
 
       {cancelOpen && (
         <div className="dw-cancel-overlay">
           <section className="dw-cancel-dialog">
             <header>
               <span>Cancelar download?</span>
-              <button onClick={() => setCancelOpen(false)}>
-                <X />
+              <button onClick={() => setCancelOpen(false)} title="Fechar">
+                <X size={14} />
               </button>
             </header>
             <div>
@@ -407,11 +478,11 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
             </div>
             <footer>
               <button disabled={busy} onClick={() => void cancel(false)}>
-                Manter arquivos
+                Manter
               </button>
               <button className="delete" disabled={busy} onClick={() => void cancel(true)}>
-                <Trash2 />
-                Apagar arquivos
+                <Trash2 size={13} />
+                <span>Apagar</span>
               </button>
               <button disabled={busy} onClick={() => setCancelOpen(false)}>
                 Voltar

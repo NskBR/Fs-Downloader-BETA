@@ -1,7 +1,21 @@
 export type SpeedUnit = "Mbps" | "MB/s";
 export type AppTheme = "system" | "midnight" | "graphite" | "light";
 export type AppLanguage = "pt-BR" | "en-US";
-export type AccentColor = "ember" | "amber" | "green" | "red" | "blue" | "violet";
+export type AccentColor =
+  | "cyan"
+  | "emerald"
+  | "amber"
+  | "red"
+  | "blue"
+  | "violet"
+  | "pink"
+  | "coral"
+  | "gradient_sunset"
+  | "gradient_cyberpunk"
+  | "gradient_ocean"
+  | "gradient_aurora"
+  | "ember"
+  | "green";
 export type AppColor = "slate" | "graphite" | "obsidian" | "mint" | "ocean" | "rose";
 
 export interface GradientStop {

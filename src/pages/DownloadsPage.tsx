@@ -72,6 +72,7 @@ const labels: Record<string, string> = {
   cancelled: "Cancelado",
 };
 
+
 const groups: Record<string, string[]> = {
   documents: ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv"],
   music: ["mp3", "wav", "flac", "ogg", "m4a", "aac"],
@@ -82,6 +83,33 @@ const groups: Record<string, string[]> = {
 
 type SortKey = "status" | "size" | "date";
 
+const SORT_PREF_KEY = "sf-downloader.sort_preference";
+const VIEW_PREF_KEY = "sf-downloader.view_preference";
+
+const loadSortPref = (): { key: SortKey; direction: "asc" | "desc" } => {
+  try {
+    const raw = localStorage.getItem(SORT_PREF_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && ["status", "size", "date"].includes(parsed.key)) {
+        return {
+          key: parsed.key as SortKey,
+          direction: parsed.direction === "asc" ? "asc" : "desc",
+        };
+      }
+    }
+  } catch {}
+  return { key: "date", direction: "desc" };
+};
+
+const loadViewPref = (): "list" | "grid" => {
+  try {
+    const raw = localStorage.getItem(VIEW_PREF_KEY);
+    if (raw === "grid" || raw === "list") return raw;
+  } catch {}
+  return "list";
+};
+
 export function DownloadsPage({
    settings,
    onSave,
@@ -90,18 +118,15 @@ export function DownloadsPage({
    settings: AppSettings;
    onSave: (settings: AppSettings) => void;
    filter: PageId;
- }) {
+  }) {
   const [search, setSearch] = useState("");
   const [starting, setStarting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const lastSelectedRef = useRef<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; item: DownloadTask } | null>(null);
   const ctxMenuRef = useRef<HTMLDivElement | null>(null);
-  const [view, setView] = useState<"list" | "grid">("list");
-  const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>({
-    key: "date",
-    direction: "desc",
-  });
+  const [view, setView] = useState<"list" | "grid">(loadViewPref);
+  const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>(loadSortPref);
 
   const { downloads, loading, error, setError, remove, cancel, pause, resume } =
     useDownloads(settings);
@@ -174,8 +199,6 @@ export function DownloadsPage({
   const inspect = async (raw: string) => {
     const url = raw.trim();
     if (!url) return;
-    // Evita janelas duplicadas da mesma URL (paste + Enter + pending/deep link).
-    // Não impede baixar URLs diferentes ao mesmo tempo.
     if (!service.shouldOpenConfirmation(url)) return;
     setStarting(true);
     setError(null);
@@ -241,10 +264,23 @@ export function DownloadsPage({
   ];
 
   const changeSort = (key: SortKey) => {
-    setSort((current) => ({
-      key,
-      direction: current.key === key ? (current.direction === "asc" ? "desc" : "asc") : "desc",
-    }));
+    setSort((current) => {
+      const next: { key: SortKey; direction: "asc" | "desc" } = {
+        key,
+        direction: current.key === key ? (current.direction === "asc" ? "desc" : "asc") : "desc",
+      };
+      try {
+        localStorage.setItem(SORT_PREF_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const changeView = (nextView: "list" | "grid") => {
+    setView(nextView);
+    try {
+      localStorage.setItem(VIEW_PREF_KEY, nextView);
+    } catch {}
   };
 
   const handleSelect = (id: string, event: React.MouseEvent) => {
@@ -362,40 +398,38 @@ export function DownloadsPage({
           <button
             className={`btn-layout-switcher ${view === "list" ? "active" : ""}`}
             title="Visualização em Lista"
-            onClick={() => setView("list")}
+            onClick={() => changeView("list")}
           >
             <List size={20} />
           </button>
-           <button
-             className={`btn-layout-switcher ${view === "grid" ? "active" : ""}`}
-             title="Visualização em Grade"
-             onClick={() => setView("grid")}
-           >
-             <LayoutGrid size={20} />
-           </button>
- 
-           <button
-             className="btn-pause-all"
-             title="Pausar todos os downloads"
-             onClick={() => downloads.filter((d) => d.status === "downloading").forEach((d) => void pause(d.id))}
-           >
-             <Pause size={16} />
-           </button>
- 
-           <button
-             className="btn-resume-all"
-             title="Retomar todos os downloads"
-             onClick={() => downloads.filter((d) => d.status === "paused").forEach((d) => void resume(d.id))}
-           >
-             <Play size={16} />
-           </button>
-         </div>
-       </header>
+          <button
+            className={`btn-layout-switcher ${view === "grid" ? "active" : ""}`}
+            title="Visualização em Grade"
+            onClick={() => changeView("grid")}
+          >
+            <LayoutGrid size={20} />
+          </button>
+
+          <button
+            className="btn-pause-all"
+            title="Pausar todos os downloads"
+            onClick={() => downloads.filter((d) => d.status === "downloading").forEach((d) => void pause(d.id))}
+          >
+            <Pause size={16} />
+          </button>
+
+          <button
+            className="btn-resume-all"
+            title="Retomar todos os downloads"
+            onClick={() => downloads.filter((d) => d.status === "paused").forEach((d) => void resume(d.id))}
+          >
+            <Play size={16} />
+          </button>
+        </div>
+      </header>
 
       {/* Main Content Area */}
       <section className="downloads-workspace">
-
-        {/* Missing Folder Warning */}
         {!settings.rootDownloadFolder && (
           <div className="compact-notice">
             <AlertTriangle />

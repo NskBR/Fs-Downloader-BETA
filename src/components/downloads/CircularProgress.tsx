@@ -20,6 +20,9 @@ export function CircularProgress({
   const clamped = Math.max(0, Math.min(100, value));
   const offset = circumference - (clamped / 100) * circumference;
 
+  const isDefaultEmber = !color || color === "var(--ember)";
+  const strokeColor = isDefaultEmber ? "url(#circ-progress-gradient)" : color;
+
   return (
     <svg
       className={className}
@@ -29,6 +32,12 @@ export function CircularProgress({
       role="img"
       aria-label={`${Math.round(clamped)}% concluído`}
     >
+      <defs>
+        <linearGradient id="circ-progress-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="var(--ember-stop-1, #06b6d4)" />
+          <stop offset="100%" stopColor="var(--ember-stop-2, #22d3ee)" />
+        </linearGradient>
+      </defs>
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -42,7 +51,7 @@ export function CircularProgress({
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke={color}
+        stroke={strokeColor}
         strokeWidth={stroke}
         strokeLinecap="round"
         strokeDasharray={circumference}

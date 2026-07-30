@@ -16,10 +16,35 @@ const confirmationMatch = label.match(/^download-confirm-(.*)$/);
 const isConfirmationWindow = Boolean(confirmationMatch);
 const isLiveWindow = label.startsWith("download-") && !isConfirmationWindow;
 const isBrowserIntegrationWindow = label === "browser-integration";
+const isMainWindow = label === "main";
+
+if (isMainWindow) {
+  document.documentElement.classList.add("window-type-main");
+  document.body.classList.add("window-type-main");
+} else if (isConfirmationWindow) {
+  document.documentElement.classList.add("window-type-confirmation");
+  document.body.classList.add("window-type-confirmation");
+} else if (isLiveWindow) {
+  document.documentElement.classList.add("window-type-live");
+  document.body.classList.add("window-type-live");
+} else if (isBrowserIntegrationWindow) {
+  document.documentElement.classList.add("window-type-integration");
+  document.body.classList.add("window-type-integration");
+}
 
 const initialSettings = loadSettings();
 applyThemeSettings(initialSettings);
 void getCurrentWebview().setZoom(initialSettings.uiScale).catch(console.error);
+
+window.addEventListener("storage", (event) => {
+  if (event.key === "sf-downloader.settings.v1" && event.newValue) {
+    try {
+      const updated = JSON.parse(event.newValue);
+      applyThemeSettings(updated);
+      void getCurrentWebview().setZoom(updated.uiScale).catch(console.error);
+    } catch {}
+  }
+});
 
 if (label === "main" && !initialSettings.startInTrayMode) {
   void getCurrentWindow().show().catch(console.error);

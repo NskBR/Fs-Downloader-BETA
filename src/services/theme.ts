@@ -57,54 +57,69 @@ function applyIntensity(color: string, intensity: number): string {
 }
 
 export function buildGradient(config: GradientConfig): string {
-  const stops: GradientStop[] = (config.stops ?? [])
-    .map((stop) => ({
-      color: applyIntensity(stop.color || "#888888", config.intensity),
-      position: clamp(stop.position ?? 0, 0, 100),
-    }))
-    .sort((a, b) => a.position - b.position);
-  const safeStops =
-    stops.length >= 2
-      ? stops
-      : stops.length === 1
-        ? [stops[0], { ...stops[0], position: 100 }]
-        : [
-            { color: applyIntensity("#888888", config.intensity), position: 0 },
-            { color: applyIntensity("#888888", config.intensity), position: 100 },
-          ];
-  const body = safeStops
-    .map((stop) => `${stop.color} ${Math.round(stop.position)}%`)
+  if (!config || !config.stops || config.stops.length === 0) {
+    return "var(--bg)";
+  }
+  const stopsStr = config.stops
+    .map((stop) => `${stop.color || "#12151b"} ${Math.round(stop.position ?? 0)}%`)
     .join(", ");
+  const angle = config.angle ?? 135;
   return config.type === "radial"
-    ? `radial-gradient(circle at 30% 20%, ${body})`
-    : `linear-gradient(${clamp(config.angle, 0, 360)}deg, ${body})`;
+    ? `radial-gradient(circle at 40% 30%, ${stopsStr})`
+    : `linear-gradient(${angle}deg, ${stopsStr})`;
 }
 
-const accentColors: Record<string, { base: string; strong: string; soft: string }> = {
-  ember:   { base: "#f0883e", strong: "#faa53c", soft: "rgba(240,136,62,0.14)" },
-  amber:   { base: "#f0b232", strong: "#f7c948", soft: "rgba(240,178,50,0.14)" },
-  green:   { base: "#3ba55d", strong: "#4cc47a", soft: "rgba(59,165,93,0.14)" },
-  red:     { base: "#ed4245", strong: "#f5565a", soft: "rgba(237,66,69,0.14)" },
-  blue:    { base: "#4a90d9", strong: "#5fa3e8", soft: "rgba(74,144,217,0.14)" },
-  violet:  { base: "#a06cd5", strong: "#b485e0", soft: "rgba(160,108,213,0.14)" },
+const accentColors: Record<string, { base: string; solid: string; stop1: string; stop2: string; strong: string; soft: string }> = {
+  // Cores Sólidas Únicas
+  cyan:    { base: "#06b6d4", solid: "#06b6d4", stop1: "#06b6d4", stop2: "#22d3ee", strong: "#22d3ee", soft: "rgba(6, 182, 212, 0.16)" },
+  emerald: { base: "#10b981", solid: "#10b981", stop1: "#10b981", stop2: "#34d399", strong: "#34d399", soft: "rgba(16, 185, 129, 0.16)" },
+  amber:   { base: "#f59e0b", solid: "#f59e0b", stop1: "#f59e0b", stop2: "#fbbf24", strong: "#fbbf24", soft: "rgba(245, 158, 11, 0.16)" },
+  red:     { base: "#ef4444", solid: "#ef4444", stop1: "#ef4444", stop2: "#f87171", strong: "#f87171", soft: "rgba(239, 68, 68, 0.16)" },
+  blue:    { base: "#3b82f6", solid: "#3b82f6", stop1: "#3b82f6", stop2: "#60a5fa", strong: "#60a5fa", soft: "rgba(59, 130, 246, 0.16)" },
+  violet:  { base: "#8b5cf6", solid: "#8b5cf6", stop1: "#8b5cf6", stop2: "#a78bfa", strong: "#a78bfa", soft: "rgba(139, 92, 246, 0.16)" },
+  pink:    { base: "#ec4899", solid: "#ec4899", stop1: "#ec4899", stop2: "#f472b6", strong: "#f472b6", soft: "rgba(236, 72, 153, 0.16)" },
+  coral:   { base: "#f97316", solid: "#f97316", stop1: "#f97316", stop2: "#fb923c", strong: "#fb923c", soft: "rgba(249, 115, 22, 0.16)" },
+
+  // Gradientes de Destaque Futuristas
+  gradient_sunset:    { base: "linear-gradient(135deg, #ff4500, #ff8c00)", solid: "#ff4500", stop1: "#ff4500", stop2: "#ff8c00", strong: "linear-gradient(135deg, #ff5722, #ffa000)", soft: "rgba(255, 69, 0, 0.18)" },
+  gradient_cyberpunk: { base: "linear-gradient(135deg, #ec4899, #8b5cf6)", solid: "#ec4899", stop1: "#ec4899", stop2: "#8b5cf6", strong: "linear-gradient(135deg, #f472b6, #a78bfa)", soft: "rgba(236, 72, 153, 0.18)" },
+  gradient_ocean:     { base: "linear-gradient(135deg, #06b6d4, #3b82f6)", solid: "#06b6d4", stop1: "#06b6d4", stop2: "#3b82f6", strong: "linear-gradient(135deg, #22d3ee, #60a5fa)", soft: "rgba(6, 182, 212, 0.18)" },
+  gradient_aurora:    { base: "linear-gradient(135deg, #10b981, #06b6d4)", solid: "#10b981", stop1: "#10b981", stop2: "#06b6d4", strong: "linear-gradient(135deg, #34d399, #22d3ee)", soft: "rgba(16, 185, 129, 0.18)" },
+
+  // Compatibilidade legada
+  ember:   { base: "#06b6d4", solid: "#06b6d4", stop1: "#06b6d4", stop2: "#22d3ee", strong: "#22d3ee", soft: "rgba(6, 182, 212, 0.16)" },
+  green:   { base: "#10b981", solid: "#10b981", stop1: "#10b981", stop2: "#34d399", strong: "#34d399", soft: "rgba(16, 185, 129, 0.16)" },
 };
 
 export function applyThemeSettings(settings: AppSettings): void {
   const root = document.documentElement;
   root.dataset.appColor = settings.appColor;
+  root.dataset.theme = "midnight";
+  root.dataset.accent = settings.accentColor;
   root.style.setProperty("--ui-scale", `${settings.uiScale}`);
 
   const a = accentColors[settings.accentColor] ?? accentColors.ember;
   root.style.setProperty("--ember", a.base);
+  root.style.setProperty("--ember-solid", a.solid);
+  root.style.setProperty("--ember-stop-1", a.stop1);
+  root.style.setProperty("--ember-stop-2", a.stop2);
   root.style.setProperty("--ember-strong", a.strong);
   root.style.setProperty("--ember-soft", a.soft);
+  root.style.setProperty("--st-completed", "#00b884");
+  root.style.setProperty("--st-failed", "#ef4444");
+  root.style.setProperty("--st-cancelled", "#ef4444");
+  root.style.setProperty("--st-paused", "#f59e0b");
 
-  const bgFill = settings.interfaceGradient.enabled
-    ? buildGradient(settings.interfaceGradient)
-    : "var(--bg)";
-  root.style.setProperty("--bg-fill", bgFill);
-  root.style.setProperty(
-    "--bg-surface",
-    settings.interfaceGradient.enabled ? "transparent" : "var(--panel)",
-  );
+  if (settings.interfaceGradient && settings.interfaceGradient.enabled) {
+    root.dataset.gradient = "true";
+    const gradStr = buildGradient(settings.interfaceGradient);
+    root.style.setProperty("--bg-fill", gradStr);
+    const intensity = clamp(settings.interfaceGradient.intensity ?? 80, 0, 100) / 100;
+    const overlayDarkness = (0.7 - intensity * 0.55).toFixed(2);
+    root.style.setProperty("--gradient-overlay", `rgba(0, 0, 0, ${overlayDarkness})`);
+  } else {
+    root.dataset.gradient = "false";
+    root.style.setProperty("--bg-fill", "var(--bg)");
+    root.style.setProperty("--gradient-overlay", "transparent");
+  }
 }

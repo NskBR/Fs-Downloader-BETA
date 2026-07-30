@@ -1,7 +1,7 @@
 import { Plus, Tags, Trash2, Globe } from "lucide-react";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { AppLanguage, AppSettings, AccentColor, AppColor } from "../domain/settings";
+import type { AppLanguage, AppSettings, AccentColor, AppColor, AppTheme } from "../domain/settings";
 import { downloadCategories } from "../domain/categories";
 import {
   chooseDownloadFolder,
@@ -9,7 +9,7 @@ import {
 } from "../services/folderService";
 import { isLaunchOnStartup, setLaunchOnStartup } from "../services/downloadService";
 import { Toggle } from "../components/ui/Toggle";
-import { GradientEditor } from "../components/ui/GradientEditor";
+import { DiscordThemeCustomizer } from "../components/ui/DiscordThemeCustomizer";
 import type { GradientConfig } from "../domain/settings";
 
 function hueSatOf(hex: string): [number, number] {
@@ -168,62 +168,52 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
         <div className="setting-item">
           <label>Cor de destaque</label>
           <span className="description">
-            Define a cor do acento usada em botões, progresso e destaques do aplicativo.
+            Define a cor do acento usada em botões, progresso e destaques do aplicativo. Suporta cores sólidas e gradientes.
           </span>
           <div className="accent-swatches">
-            {(["ember","amber","green","red","blue","violet"] as AccentColor[]).map((key) => (
+            {[
+              { id: "cyan", name: "Ciano Elétrico", bg: "#06b6d4" },
+              { id: "emerald", name: "Verde Esmeralda", bg: "#10b981" },
+              { id: "amber", name: "Âmbar Dourado", bg: "#f59e0b" },
+              { id: "red", name: "Carmim Obscuro", bg: "#ef4444" },
+              { id: "blue", name: "Azul Cobalto", bg: "#3b82f6" },
+              { id: "violet", name: "Violeta Ametista", bg: "#8b5cf6" },
+              { id: "pink", name: "Pink Neon", bg: "#ec4899" },
+              { id: "coral", name: "Coral Laranja", bg: "#f97316" },
+              { id: "gradient_sunset", name: "Gradiente Fogo Sunset", bg: "linear-gradient(135deg, #ff4500, #ff8c00)" },
+              { id: "gradient_cyberpunk", name: "Gradiente Cyberpunk Pink/Roxo", bg: "linear-gradient(135deg, #ec4899, #8b5cf6)" },
+              { id: "gradient_ocean", name: "Gradiente Oceano Ciano/Azul", bg: "linear-gradient(135deg, #06b6d4, #3b82f6)" },
+              { id: "gradient_aurora", name: "Gradiente Aurora Esmeralda/Ciano", bg: "linear-gradient(135deg, #10b981, #06b6d4)" },
+            ].map((item) => (
               <button
-                key={key}
+                key={item.id}
                 type="button"
-                className={`accent-swatch ${draft.accentColor === key ? "active" : ""}`}
-                style={{ ["--swatch" as string]: `var(--accent-${key})` }}
-                onClick={() => update("accentColor", key)}
-                aria-label={key}
-                title={key}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="setting-item">
-          <label>Cor do aplicativo</label>
-          <span className="description">
-            {draft.interfaceGradient.enabled
-              ? "Bloqueado enquanto o gradiente da interface está ativo."
-              : "Define a paleta base (fundo, painéis e superfícies). Combine com a cor de destaque."}
-          </span>
-          <div className={`accent-swatches ${draft.interfaceGradient.enabled ? "swatches-locked" : ""}`}>
-            {(["slate","graphite","obsidian","mint","ocean","rose"] as AppColor[]).map((key) => (
-              <button
-                key={key}
-                type="button"
-                disabled={draft.interfaceGradient.enabled}
-                className={`appcolor-swatch ${draft.appColor === key ? "active" : ""}`}
-                style={{
-                  ["--swatch" as string]: `var(--appcolor-${key})`,
-                  ["--swatch-2" as string]: `var(--appcolor-2-${key})`,
-                }}
-                onClick={() => update("appColor", key)}
-                aria-label={key}
-                title={key}
+                className={`accent-swatch ${draft.accentColor === item.id ? "active" : ""}`}
+                style={{ background: item.bg }}
+                onClick={() => update("accentColor", item.id as AccentColor)}
+                aria-label={item.name}
+                title={item.name}
               />
             ))}
           </div>
         </div>
 
         <div className="setting-item setting-item--full">
-          <label>Gradiente da interface</label>
-          <span className="description">
-            Aplica um gradiente no fundo da janela do aplicativo. Painéis permanecem sólidos para legibilidade.
-          </span>
-          <GradientEditor
+          <DiscordThemeCustomizer
             config={draft.interfaceGradient}
-            label="interface"
-            presets={interfaceGradientPresets}
-            onChange={(value) => {
-              const next = value.enabled
-                ? { ...draft, interfaceGradient: value, appColor: pickAppColorFromGradient(value) }
-                : { ...draft, interfaceGradient: value };
+            appColor={draft.appColor}
+            onChangeGradient={(value) => {
+              const next = { ...draft, interfaceGradient: value };
+              setDraft(next);
+              if (next.rootDownloadFolder.trim()) void save(next);
+              else setError("Escolha a pasta principal de downloads.");
+            }}
+            onSelectAppColor={(color) => {
+              const next = {
+                ...draft,
+                appColor: color,
+                interfaceGradient: { ...draft.interfaceGradient, enabled: false },
+              };
               setDraft(next);
               if (next.rootDownloadFolder.trim()) void save(next);
               else setError("Escolha a pasta principal de downloads.");
@@ -293,23 +283,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
            />
          </div>
 
-         <div className="setting-item">
-           <label htmlFor="theme-select">Tema da interface</label>
-           <span className="description">
-             Define o visual geral do aplicativo.
-           </span>
-           <select
-             id="theme-select"
-             value={draft.theme}
-             onChange={(event) =>
-               update("theme", event.target.value as AppTheme)
-             }
-           >
-             <option value="system">Seguir sistema</option>
-             <option value="midnight">Escuro (noturno)</option>
-             <option value="light">Claro</option>
-           </select>
-         </div>
+
 
          <div className="setting-item">
            <label>Local padrão dos arquivos</label>
