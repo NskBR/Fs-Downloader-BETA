@@ -1266,93 +1266,95 @@ input::-ms-clear {
   position: absolute;
   left: 0; right: 0; top: 46px; bottom: 0;
   background: var(--bg-fill, #16171a);
-  padding: 28px 28px 20px;
+  padding: 18px 20px 16px;
   display: flex;
   flex-direction: column;
   gap: 0;
   z-index: 20;
   animation: dw-fade 0.18s ease;
+  overflow: hidden;
 }
 .confirm-error-hero {
   display: flex;
   align-items: flex-start;
-  gap: 20px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 14px;
 }
 .confirm-error-icon {
   color: var(--st-failed, #ff5a5f);
   flex-shrink: 0;
-  width: 80px;
-  height: 80px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 0 12px rgba(255, 90, 95, 0.4));
+  filter: drop-shadow(0 0 8px rgba(255, 90, 95, 0.35));
 }
 .confirm-error-icon svg {
-  width: 80px;
-  height: 80px;
+  width: 52px;
+  height: 52px;
 }
 .confirm-error-hero-text {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
   flex: 1;
 }
 .confirm-error-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text, #f2f3f5);
 }
 .confirm-error-info-box {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 10px 12px;
   background: var(--surface, #26282d);
   border: 1px solid var(--line, rgba(255,255,255,0.06));
-  border-radius: 10px;
+  border-radius: 8px;
 }
 .confirm-error-info-icon {
   color: var(--accent-blue, #4a90d9);
   flex-shrink: 0;
   margin-top: 1px;
 }
+.confirm-error-info-icon svg { width: 15px; height: 15px; }
 .confirm-error-info-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 .confirm-error-info-text p {
   margin: 0;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--text, #f2f3f5);
-  line-height: 1.5;
+  line-height: 1.4;
 }
 .confirm-error-hint {
   color: var(--text-2, #b6b9bf) !important;
-  font-size: 12px !important;
+  font-size: 10px !important;
 }
 .confirm-error-suggestions {
   display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 .confirm-error-suggestion {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
-  padding: 12px;
+  padding: 8px 10px;
   background: var(--surface, #26282d);
   border: 1px solid var(--line, rgba(255,255,255,0.06));
-  border-radius: 10px;
+  border-radius: 8px;
 }
 .confirm-error-suggestion-icon {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1372,14 +1374,14 @@ input::-ms-clear {
   color: var(--accent-violet, #a06cd5);
 }
 .confirm-error-suggestion span {
-  font-size: 11px;
+  font-size: 9.5px;
   color: var(--text-2, #b6b9bf);
-  line-height: 1.4;
+  line-height: 1.3;
 }
 .confirm-error-sep {
   height: 1px;
   background: var(--line, rgba(255,255,255,0.06));
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 .confirm-error-actions {
   display: flex;
@@ -1388,13 +1390,13 @@ input::-ms-clear {
   gap: 8px;
 }
 .confirm-error-btn {
-  height: 36px;
-  padding: 0 24px;
-  border-radius: 8px;
+  height: 32px;
+  padding: 0 20px;
+  border-radius: 7px;
   border: 0;
   background: var(--st-failed, #ff5a5f);
   color: #ffffff;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: 0.15s;

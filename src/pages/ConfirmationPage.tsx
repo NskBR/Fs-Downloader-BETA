@@ -144,6 +144,12 @@ export function ConfirmationPage({ token }: { token: string }) {
       await document.fonts?.ready.catch(() => {});
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       if (!active) return;
+      if (error) {
+        void appWindow
+          .setSize(new LogicalSize(600, 380))
+          .catch(() => {});
+        return;
+      }
       const header = root.querySelector(".confirm-header") as HTMLElement | null;
       const body = root.querySelector(".confirm-body") as HTMLElement | null;
       const footer = root.querySelector(".confirm-footer") as HTMLElement | null;
