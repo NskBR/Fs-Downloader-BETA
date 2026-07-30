@@ -2,6 +2,7 @@ import { Minus, Square, X, Puzzle } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
+import { version } from "../../../package.json";
 
 const appWindow = getCurrentWindow();
 
@@ -26,6 +27,7 @@ export function TitleBar() {
       <div className="titlebar-side" data-tauri-drag-region></div>
       <div className="titlebar-center" data-tauri-drag-region>
         <strong>SF Downloader</strong>
+        <span className="titlebar-version">v{version}</span>
       </div>
       <div className="titlebar-side titlebar-actions" data-tauri-drag-region>
         <div className="nodrag titlebar-integration">
