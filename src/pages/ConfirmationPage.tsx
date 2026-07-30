@@ -257,6 +257,7 @@ export function ConfirmationPage({ token }: { token: string }) {
             {fileNameText}
           </span>
         </div>
+        {error && <span className="confirm-header-error" title={error}>{error}</span>}
         <div className="confirm-window-controls nodrag">
           <button onClick={() => void appWindow.minimize()} title="Minimizar">
             <Minus size={16} />
@@ -373,8 +374,6 @@ export function ConfirmationPage({ token }: { token: string }) {
             </button>
           </div>
         </div>
-
-        {error && <p className="window-error confirm-error">{error}</p>}
       </div>
 
       {/* 3. Rodapé Fixo */}

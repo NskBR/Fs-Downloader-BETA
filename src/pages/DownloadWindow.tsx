@@ -474,13 +474,18 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
 
       {cancelOpen && (
         <div className="dw-cancel-sheet">
-          <div className="dw-cancel-sheet-icon">
-            <AlertTriangle size={22} />
+          <div className="dw-cancel-sheet-header">
+            <div className="dw-cancel-sheet-icon">
+              <AlertTriangle />
+            </div>
+            <div className="dw-cancel-sheet-text">
+              <p className="dw-cancel-sheet-title">Cancelar este download?</p>
+              <p className="dw-cancel-sheet-desc">
+                Escolha se deseja manter ou remover somente parte referente a este download do disco.
+              </p>
+            </div>
           </div>
-          <p className="dw-cancel-sheet-title">Cancelar este download?</p>
-          <p className="dw-cancel-sheet-desc">
-            Escolha se deseja manter os arquivos parciais para retomar depois ou apagá-los do disco.
-          </p>
+          <div className="dw-cancel-sheet-sep" />
           <div className="dw-cancel-sheet-actions">
             <button className="dw-cancel-btn-keep" disabled={busy} onClick={() => void cancel(false)}>
               Manter arquivos
