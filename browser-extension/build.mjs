@@ -40,6 +40,9 @@ for (const target of ["chromium", "firefox"]) {
     
     await rm(targetZip, { force: true });
     await rename(originalZip, targetZip);
+    if (target === "firefox") {
+      await cp(targetZip, join(release, "firefox-extension.xpi"));
+    }
     console.log(`Sucesso: ${targetZip}`);
   } catch (err) {
     console.error(`Erro ao empacotar ${target}:`, err);

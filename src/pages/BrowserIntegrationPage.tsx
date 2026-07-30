@@ -76,7 +76,7 @@ export function BrowserIntegrationPage() {
           <div className="integr-install">
             <div className="integr-drop" onMouseDown={(e) => { e.preventDefault(); folder && void invoke("start_drag_folder", { path: folder }).catch(console.error); }} title="Arraste para a página de extensões do navegador">
               <div className="integr-drop-icon">
-                <Package size={34} />
+                <Package size={26} />
               </div>
               <strong>Arraste para o navegador</strong>
               <span>
@@ -108,7 +108,7 @@ export function BrowserIntegrationPage() {
           <div className="integr-install">
             <div className="integr-xpi" onClick={openXpi} title="Clique para abrir o arquivo .xpi no Firefox">
               <div className="integr-drop-icon">
-                <Package size={34} />
+                <Package size={26} />
               </div>
               <strong>integration.xpi</strong>
               <span>
