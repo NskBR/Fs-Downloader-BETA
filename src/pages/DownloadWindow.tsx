@@ -156,7 +156,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
       const height = root.scrollHeight || root.offsetHeight;
       if (height > 0) {
         fitted = true;
-        const targetHeight = cancelOpen ? Math.max(200, height) : detailsOpen ? Math.max(340, height) : Math.max(205, height);
+        const targetHeight = cancelOpen ? Math.max(260, height) : detailsOpen ? Math.max(340, height) : Math.max(205, height);
         void appWindow
           .setSize(new LogicalSize(450, targetHeight))
           .catch(() => {});

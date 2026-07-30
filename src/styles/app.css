@@ -2112,7 +2112,6 @@ input::-ms-clear {
 .dw-icon-btn.dw-danger:hover { color: var(--st-failed); background: var(--surface); }
 
 .dw-divider { height: 1px; background: var(--line); opacity: 0.6; margin: 0 18px; flex-shrink: 0; }
-.dw-window.cancel-open .dw-cancel-sheet { bottom: 0; border-bottom: none; }
 .dw-footer {
   height: 46px;
   flex-shrink: 0;
@@ -2764,10 +2763,9 @@ html, body, #root, .window-frame {
 
 .dw-cancel-sheet {
   position: absolute;
-  left: 0; right: 0; top: 34px; bottom: 52px;
+  left: 0; right: 0; top: 34px; bottom: 0;
   background: var(--panel, #1a1b1f);
-  border-bottom: 1px solid var(--line, rgba(255,255,255,0.06));
-  padding: 32px 28px 24px;
+  padding: 24px 24px 20px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -2778,61 +2776,65 @@ html, body, #root, .window-frame {
 .dw-cancel-sheet-header {
   display: flex;
   align-items: center;
-  gap: 20px;
-  margin-bottom: 20px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 .dw-cancel-sheet-icon {
   color: var(--st-failed, #ff5a5f);
   flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .dw-cancel-sheet-icon svg {
-  width: 72px;
-  height: 72px;
-  stroke-width: 1.5;
+  width: 56px;
+  height: 56px;
 }
 .dw-cancel-sheet-text {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
 }
 .dw-cancel-sheet-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text, #f2f3f5);
 }
 .dw-cancel-sheet-desc {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-2, #b6b9bf);
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 .dw-cancel-sheet-sep {
   height: 1px;
   background: var(--line, rgba(255,255,255,0.06));
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 .dw-cancel-sheet-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
 }
 .dw-cancel-btn-keep {
-  height: 36px;
-  padding: 0 18px;
-  border-radius: 8px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 7px;
   border: 1px solid var(--line, rgba(255,255,255,0.1));
   background: var(--surface, #26282d);
   color: var(--text, #f2f3f5);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: 0.15s;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .dw-cancel-btn-keep:hover {
   background: var(--surface-2, #2e3036);
@@ -2841,14 +2843,14 @@ html, body, #root, .window-frame {
 .dw-cancel-btn-delete {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 18px;
-  border-radius: 8px;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 7px;
   border: 0;
   background: var(--st-failed, #ff5a5f);
   color: #ffffff;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: 0.15s;
@@ -2857,13 +2859,13 @@ html, body, #root, .window-frame {
   filter: brightness(1.1);
 }
 .dw-cancel-btn-back {
-  height: 36px;
-  padding: 0 18px;
-  border-radius: 8px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 7px;
   border: 1px solid var(--line, rgba(255,255,255,0.1));
   background: var(--surface, #26282d);
   color: var(--text, #f2f3f5);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: 0.15s;
