@@ -880,6 +880,27 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
 .help-meta-row { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; }
 .help-meta-row span { color: var(--muted); }
 .help-meta-row b { color: var(--text); font-weight: 600; }
+.help-contact-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ember-soft);
+  border: 1px solid var(--ember-solid);
+  border-radius: 6px;
+  padding: 3px 10px;
+  color: var(--ember-solid);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.help-contact-btn:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 10px var(--ember-soft);
+}
+.help-contact-btn svg {
+  color: var(--ember-solid);
+}
 .help-dialog > footer .help-link { color: var(--ember-solid); background: none; }
 .help-dialog > footer .help-link:hover { text-decoration: underline; }
 
@@ -1612,7 +1633,7 @@ input::-ms-clear {
 
 .integr-tabs { display: flex; gap: 10px; padding: 16px 20px 0; flex-shrink: 0; }
 .integr-tab {
-  display: flex; align-items: center; gap: 9px; min-width: 0;
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 9px; min-width: 0;
   padding: 11px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm);
   color: var(--text-2); background: var(--panel); font-size: 13.5px; font-weight: 600;
   transition: 0.15s;

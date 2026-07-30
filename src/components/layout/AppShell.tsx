@@ -1,4 +1,6 @@
 import {
+  Check,
+  Copy,
   Archive,
   Download,
   FileText,
@@ -46,6 +48,13 @@ export function AppShell({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [copiedDiscord, setCopiedDiscord] = useState(false);
+  const copyDiscord = () => {
+    navigator.clipboard.writeText("nskbr1").then(() => {
+      setCopiedDiscord(true);
+      setTimeout(() => setCopiedDiscord(false), 2000);
+    });
+  };
   const [typesOpen, setTypesOpen] = useState(true);
   const [downloads, setDownloads] = useState<DownloadTask[]>([]);
   const sidebarRef = useRef<HTMLElement | null>(null);
@@ -265,7 +274,17 @@ export function AppShell({
 
             <div className="help-meta">
               <div className="help-meta-row"><span>Versão</span><b>v{version}</b></div>
-              <div className="help-meta-row"><span>Contato (Discord)</span><b>nskbr1</b></div>
+              <div className="help-meta-row">
+                <span>Contato (Discord)</span>
+                <button
+                  className="help-contact-btn"
+                  onClick={copyDiscord}
+                  title="Clique para copiar usuário do Discord"
+                >
+                  <b>nskbr1</b>
+                  {copiedDiscord ? <Check size={12} /> : <Copy size={12} />}
+                </button>
+              </div>
               <div className="help-meta-row"><span>Tecnologia</span><b>Tauri · React · Rust</b></div>
               <div className="help-meta-row"><span>Licença</span><b>Uso pessoal</b></div>
             </div>
