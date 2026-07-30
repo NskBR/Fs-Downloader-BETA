@@ -22,6 +22,7 @@ import * as downloadService from "../../services/downloadService";
 import { TitleBar } from "./TitleBar";
 import { invoke } from "@tauri-apps/api/core";
 import logo from "../../assets/sf-logo.png";
+import { version } from "../../../package.json";
 
 interface Props extends PropsWithChildren {
   activePage: PageId;
@@ -263,7 +264,8 @@ export function AppShell({
             </ul>
 
             <div className="help-meta">
-              <div className="help-meta-row"><span>Versão</span><b>0.2.2</b></div>
+              <div className="help-meta-row"><span>Versão</span><b>v{version}</b></div>
+              <div className="help-meta-row"><span>Contato (Discord)</span><b>nskbr1</b></div>
               <div className="help-meta-row"><span>Tecnologia</span><b>Tauri · React · Rust</b></div>
               <div className="help-meta-row"><span>Licença</span><b>Uso pessoal</b></div>
             </div>
