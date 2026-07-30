@@ -1084,7 +1084,13 @@ mod tests {
 // versões por nome de arquivo.
 pub(crate) fn find_latest_xpi(dir: &Path) -> Option<PathBuf> {
     let entries = std::fs::read_dir(dir).ok()?;
-    entries.flatten().map(|entry| entry.path()).find(|path| {
-        path.extension().and_then(|ext| ext.to_str()) == Some("xpi")
-    })
+    entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("xpi"))
+        .max_by_key(|path| {
+            std::fs::metadata(path)
+                .and_then(|m| m.modified())
+                .ok()
+        })
 }
