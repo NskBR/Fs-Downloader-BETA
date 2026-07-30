@@ -1269,14 +1269,11 @@ input::-ms-clear {
   padding: 18px 20px 16px;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 0;
   z-index: 20;
   animation: dw-fade 0.18s ease;
-  overflow-y: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
 }
-.confirm-error-sheet::-webkit-scrollbar { display: none; }
 .confirm-error-hero {
   display: flex;
   align-items: flex-start;
@@ -1335,51 +1332,6 @@ input::-ms-clear {
   font-size: 11px;
   color: var(--text, #f2f3f5);
   line-height: 1.4;
-}
-.confirm-error-hint {
-  color: var(--text-2, #b6b9bf) !important;
-  font-size: 10px !important;
-}
-.confirm-error-suggestions {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.confirm-error-suggestion {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  padding: 8px 10px;
-  background: var(--surface, #26282d);
-  border: 1px solid var(--line, rgba(255,255,255,0.06));
-  border-radius: 8px;
-}
-.confirm-error-suggestion-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.suggestion-green {
-  background: rgba(59, 165, 93, 0.15);
-  color: var(--accent-green, #3ba55d);
-}
-.suggestion-blue {
-  background: rgba(74, 144, 217, 0.15);
-  color: var(--accent-blue, #4a90d9);
-}
-.suggestion-purple {
-  background: rgba(160, 108, 213, 0.15);
-  color: var(--accent-violet, #a06cd5);
-}
-.confirm-error-suggestion span {
-  font-size: 9.5px;
-  color: var(--text-2, #b6b9bf);
-  line-height: 1.3;
 }
 .confirm-error-sep {
   height: 1px;
