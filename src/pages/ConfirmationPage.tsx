@@ -13,6 +13,7 @@ import {
   Package,
   X,
   AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -67,7 +68,17 @@ export function ConfirmationPage({ token }: { token: string }) {
   const appWindow = getCurrentWindow();
   const settings = useMemo(loadSettings, []);
 
-  const [destination, setDestination] = useState(payload?.destination || "");
+  const savedFolder = useMemo(() => {
+    try {
+      return localStorage.getItem("sf-downloader.last-save-folder") || "";
+    } catch {
+      return "";
+    }
+  }, []);
+
+  const [destination, setDestination] = useState(
+    savedFolder || payload?.destination || settings.rootDownloadFolder || "",
+  );
   const [preview, setPreview] = useState<service.DownloadPreview | null>(
     payload?.preview || null,
   );
@@ -157,7 +168,19 @@ export function ConfirmationPage({ token }: { token: string }) {
 
   const chooseFolder = async () => {
     const path = await open({ directory: true });
-    if (typeof path === "string") setDestination(path);
+    if (typeof path === "string" && path.trim()) {
+      setDestination(path);
+      try {
+        localStorage.setItem("sf-downloader.last-save-folder", path);
+      } catch {}
+    }
+  };
+
+  const restoreDefaultFolder = () => {
+    setDestination(settings.rootDownloadFolder);
+    try {
+      localStorage.removeItem("sf-downloader.last-save-folder");
+    } catch {}
   };
 
   const finish = async (force = false) => {
@@ -264,7 +287,20 @@ export function ConfirmationPage({ token }: { token: string }) {
         {/* Linha 2: Local e Categoria em 2 Colunas */}
         <div className="confirm-grid-row">
           <div className="confirm-field-col">
-            <span className="confirm-label">Local</span>
+            <div className="confirm-label-row">
+              <span className="confirm-label">Local</span>
+              {destination !== settings.rootDownloadFolder && (
+                <button
+                  type="button"
+                  className="confirm-btn-reset-default"
+                  onClick={restoreDefaultFolder}
+                  title="Voltar para a pasta padrão configurada no aplicativo"
+                >
+                  <RotateCcw size={12} />
+                  <span>Voltar ao padrão</span>
+                </button>
+              )}
+            </div>
             <div className="confirm-control-box">
               <FolderOpen className="field-icon" size={16} />
               <input

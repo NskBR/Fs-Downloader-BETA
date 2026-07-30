@@ -397,32 +397,56 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
 
       <div className="dw-divider" />
 
-      <footer className="dw-footer">
-        <button className="dw-details-toggle" onClick={() => setDetailsOpen((value) => !value)}>
-          <ChevronDown className={detailsOpen ? "open" : ""} />
-          Mais detalhes
-        </button>
-
-        {isCompleted ? (
-          <div className="dw-footer-actions">
-            <button className="dw-btn-primary" onClick={() => void service.openFile(task.finalPath)}>
-              <FileText size={16} />
-              Abrir arquivo
+      {cancelOpen ? (
+        <div className="dw-cancel-inline">
+          <div className="dw-cancel-inline-header">
+            <AlertTriangle size={15} />
+            <span>Cancelar este download?</span>
+          </div>
+          <p className="dw-cancel-inline-desc">
+            Escolha se deseja manter os arquivos parciais para retomar depois ou apagá-los do disco.
+          </p>
+          <div className="dw-cancel-inline-actions">
+            <button className="dw-cancel-btn-keep" disabled={busy} onClick={() => void cancel(false)}>
+              Manter arquivos
             </button>
-            <button className="dw-btn-ghost" onClick={() => void service.revealInFolder(task.finalPath)}>
-              <FolderOpen size={16} />
-              Abrir pasta
+            <button className="dw-cancel-btn-delete" disabled={busy} onClick={() => void cancel(true)}>
+              <Trash2 size={13} />
+              <span>Apagar arquivos</span>
+            </button>
+            <button className="dw-cancel-btn-back" disabled={busy} onClick={() => setCancelOpen(false)}>
+              Voltar
             </button>
           </div>
-        ) : (
-          <button className="dw-btn-cancel" onClick={() => setCancelOpen(true)}>
-            <Ban size={15} />
-            Cancelar
+        </div>
+      ) : (
+        <footer className="dw-footer">
+          <button className="dw-details-toggle" onClick={() => setDetailsOpen((value) => !value)}>
+            <ChevronDown className={detailsOpen ? "open" : ""} />
+            Mais detalhes
           </button>
-        )}
-      </footer>
 
-      {detailsOpen && (
+          {isCompleted ? (
+            <div className="dw-footer-actions">
+              <button className="dw-btn-primary" onClick={() => void service.openFile(task.finalPath)}>
+                <FileText size={16} />
+                Abrir arquivo
+              </button>
+              <button className="dw-btn-ghost" onClick={() => void service.revealInFolder(task.finalPath)}>
+                <FolderOpen size={16} />
+                Abrir pasta
+              </button>
+            </div>
+          ) : (
+            <button className="dw-btn-cancel" onClick={() => setCancelOpen(true)}>
+              <Ban size={15} />
+              Cancelar
+            </button>
+          )}
+        </footer>
+      )}
+
+      {detailsOpen && !cancelOpen && (
         <div className="dw-details">
           <p className="dw-details-title">Detalhes</p>
           <div className="dw-detail-row">
@@ -465,40 +489,6 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
               <b>{extraction}</b>
             </div>
           )}
-        </div>
-      )}
-
-
-
-      {cancelOpen && (
-        <div className="dw-cancel-overlay">
-          <section className="dw-cancel-dialog">
-            <header>
-              <span>Cancelar download?</span>
-              <button onClick={() => setCancelOpen(false)} title="Fechar">
-                <X size={14} />
-              </button>
-            </header>
-            <div>
-              <i>!</i>
-              <p>
-                <strong>Deseja realmente cancelar este download?</strong>
-                <span>Você pode manter os arquivos parciais para retomar depois ou apagá-los agora.</span>
-              </p>
-            </div>
-            <footer>
-              <button disabled={busy} onClick={() => void cancel(false)}>
-                Manter
-              </button>
-              <button className="delete" disabled={busy} onClick={() => void cancel(true)}>
-                <Trash2 size={13} />
-                <span>Apagar</span>
-              </button>
-              <button disabled={busy} onClick={() => setCancelOpen(false)}>
-                Voltar
-              </button>
-            </footer>
-          </section>
         </div>
       )}
     </main>
