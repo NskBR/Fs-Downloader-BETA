@@ -970,7 +970,6 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
   align-items: center;
   gap: 10px;
   min-width: 0;
-  flex: 1;
 }
 .confirm-header-left, .confirm-header-left * { pointer-events: none; }
 .confirm-header-icon { color: var(--st-completed, #00b884); flex-shrink: 0; }
@@ -988,9 +987,10 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 220px;
+  max-width: 200px;
   flex-shrink: 0;
   pointer-events: none;
+  margin-left: 6px;
 }
 
 .confirm-window-controls { display: flex; align-items: center; gap: 6px; pointer-events: auto; }
