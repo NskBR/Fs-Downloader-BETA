@@ -121,9 +121,9 @@ export function BrowserIntegrationPage() {
               <div className="integr-drop-icon">
                 <Package size={26} />
               </div>
-              <strong>integration.xpi (Clique ou Arraste)</strong>
+              <strong>integration.xpi (Arraste)</strong>
               <span>
-                Clique para instalar diretamente no Firefox ou segure e arraste esta peça para o seu navegador.
+                Segure e solte esta peça na página de extensões do seu navegador Firefox para instalar.
               </span>
             </div>
 
