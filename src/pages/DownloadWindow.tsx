@@ -149,21 +149,21 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
   useEffect(() => {
     let fitted = false;
     const fit = async () => {
-      if (!detailsOpen && fitted) return;
+      if (!detailsOpen && !cancelOpen && fitted) return;
       const root = mainRef.current;
       if (!root) return;
       await document.fonts?.ready.catch(() => {});
       const height = root.scrollHeight || root.offsetHeight;
       if (height > 0) {
         fitted = true;
-        const targetHeight = detailsOpen ? Math.max(340, height) : Math.max(205, height);
+        const targetHeight = cancelOpen ? Math.max(200, height) : detailsOpen ? Math.max(340, height) : Math.max(205, height);
         void appWindow
           .setSize(new LogicalSize(450, targetHeight))
           .catch(() => {});
       }
     };
     void fit();
-  }, [detailsOpen]);
+  }, [detailsOpen, cancelOpen]);
 
   useEffect(() => {
     void Promise.all([
@@ -279,7 +279,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
     destination = task.finalPath.replace(/[\\/][^\\/]*$/, "");
 
   return (
-    <main ref={mainRef} className={`dw-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}`}>
+    <main ref={mainRef} className={`dw-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}${cancelOpen ? " cancel-open" : ""}`}>
       <header className="dw-title" data-tauri-drag-region>
         <span className="dw-title-text">
           <FileIcon extension={task.extension} />
@@ -395,32 +395,36 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
         </div>
       </section>
 
-      <div className="dw-divider" />
+      {!cancelOpen && (
+        <>
+          <div className="dw-divider" />
 
-      <footer className="dw-footer">
-        <button className="dw-details-toggle" onClick={() => setDetailsOpen((value) => !value)}>
-          <ChevronDown className={detailsOpen ? "open" : ""} />
-          Mais detalhes
-        </button>
+          <footer className="dw-footer">
+            <button className="dw-details-toggle" onClick={() => setDetailsOpen((value) => !value)}>
+              <ChevronDown className={detailsOpen ? "open" : ""} />
+              Mais detalhes
+            </button>
 
-        {isCompleted ? (
-          <div className="dw-footer-actions">
-            <button className="dw-btn-primary" onClick={() => void service.openFile(task.finalPath)}>
-              <FileText size={16} />
-              Abrir arquivo
-            </button>
-            <button className="dw-btn-ghost" onClick={() => void service.revealInFolder(task.finalPath)}>
-              <FolderOpen size={16} />
-              Abrir pasta
-            </button>
-          </div>
-        ) : (
-          <button className="dw-btn-cancel" onClick={() => setCancelOpen(true)}>
-            <Ban size={15} />
-            Cancelar
-          </button>
-        )}
-      </footer>
+            {isCompleted ? (
+              <div className="dw-footer-actions">
+                <button className="dw-btn-primary" onClick={() => void service.openFile(task.finalPath)}>
+                  <FileText size={16} />
+                  Abrir arquivo
+                </button>
+                <button className="dw-btn-ghost" onClick={() => void service.revealInFolder(task.finalPath)}>
+                  <FolderOpen size={16} />
+                  Abrir pasta
+                </button>
+              </div>
+            ) : (
+              <button className="dw-btn-cancel" onClick={() => setCancelOpen(true)}>
+                <Ban size={15} />
+                Cancelar
+              </button>
+            )}
+          </footer>
+        </>
+      )}
 
       {detailsOpen && !cancelOpen && (
         <div className="dw-details">

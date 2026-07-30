@@ -148,14 +148,14 @@ export function ConfirmationPage({ token }: { token: string }) {
       const footerH = footer?.getBoundingClientRect().height || 50;
       const totalH = Math.ceil(headerH + bodyH + footerH);
       void appWindow
-        .setSize(new LogicalSize(600, Math.max(295, totalH)))
+        .setSize(new LogicalSize(600, Math.max(295, Math.min(totalH, 480))))
         .catch(() => {});
     };
     void fit();
     return () => {
       active = false;
     };
-  }, [loading, preview]);
+  }, [loading, preview, error]);
 
   const close = () => void appWindow.close();
   const isArchive = ["zip", "7z", "rar", "tar", "gz", "tgz"].includes(
