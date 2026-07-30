@@ -70,6 +70,12 @@ pub struct DownloadTask {
     pub updated_at: String,
     pub completed_at: Option<String>,
     pub delete_archive_after_extract: bool,
+    pub download_type: String,
+    pub info_hash: Option<String>,
+    pub seeds: i64,
+    pub peers: i64,
+    pub upload_speed: f64,
+    pub total_uploaded: i64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -93,6 +99,13 @@ pub struct CreateDownloadInput {
     pub etag: Option<String>,
     pub last_modified: Option<String>,
     pub delete_archive_after_extract: bool,
+    #[serde(default = "default_download_type")]
+    pub download_type: String,
+    pub info_hash: Option<String>,
+}
+
+fn default_download_type() -> String {
+    "http".into()
 }
 
 fn default_max_connections() -> i64 {
@@ -102,7 +115,7 @@ fn default_parallel_downloads() -> i64 {
     3
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateDownloadInput {
     pub id: String,
@@ -110,6 +123,14 @@ pub struct UpdateDownloadInput {
     pub total_downloaded: i64,
     pub speed_current: f64,
     pub speed_average: f64,
+    #[serde(default)]
+    pub seeds: Option<i64>,
+    #[serde(default)]
+    pub peers: Option<i64>,
+    #[serde(default)]
+    pub upload_speed: Option<f64>,
+    #[serde(default)]
+    pub total_uploaded: Option<i64>,
 }
 
 #[allow(dead_code)]

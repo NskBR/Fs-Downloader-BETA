@@ -86,11 +86,28 @@ export function ConfirmationPage({ token }: { token: string }) {
   useEffect(() => {
     if (!payload || payload.preview) return;
     let active = true;
-    void service
-      .inspectDownload(payload.url)
-      .then((result) => active && setPreview(result))
-      .catch((cause) => active && setError(String(cause)))
-      .finally(() => active && setLoading(false));
+    if (payload.url.startsWith("magnet:") || payload.url.toLowerCase().endsWith(".torrent")) {
+      void service
+        .parseTorrentInfo(payload.url)
+        .then((meta) => {
+          if (!active) return;
+          setPreview({
+            url: payload.url,
+            fileName: meta.name,
+            fileSize: meta.totalSize || null,
+            mimeType: "application/x-bittorrent",
+            extension: "torrent",
+          });
+        })
+        .catch((cause) => active && setError(String(cause)))
+        .finally(() => active && setLoading(false));
+    } else {
+      void service
+        .inspectDownload(payload.url)
+        .then((result) => active && setPreview(result))
+        .catch((cause) => active && setError(String(cause)))
+        .finally(() => active && setLoading(false));
+    }
     return () => {
       active = false;
     };

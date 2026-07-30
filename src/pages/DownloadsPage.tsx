@@ -233,7 +233,9 @@ export function DownloadsPage({
     .filter((item) => {
       if (filter === "active" && !["pending", "checking_files", "downloading", "paused", "assembling", "extracting", "failed"].includes(item.status)) return false;
       if (filter === "completed" && item.status !== "completed") return false;
-      if (filter === "calculator") {
+      if (filter === "torrents") {
+        if (item.downloadType !== "torrent" && !item.originalUrl.startsWith("magnet:") && item.extension?.toLowerCase() !== "torrent") return false;
+      } else if (filter === "calculator") {
         const allKnown = Object.values(groups).flat();
         if (allKnown.includes(item.extension?.toLowerCase() ?? "")) return false;
       } else {

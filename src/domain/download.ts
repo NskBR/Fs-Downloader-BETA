@@ -1,3 +1,53 @@
 export type DownloadStatus = "pending" | "checking_files" | "downloading" | "paused" | "assembling" | "extracting" | "completed" | "failed" | "cancelled";
-export interface DownloadTask { id:string; fileName:string; fileSize:number|null; originalUrl:string; currentUrl:string; savePath:string; tempPath:string; finalPath:string; status:DownloadStatus; mimeType:string|null; extension:string|null; supportsRange:boolean; etag:string|null; lastModified:string|null; totalDownloaded:number; speedCurrent:number; speedAverage:number; speedLimitDownload:number; createdAt:string; updatedAt:string; completedAt:string|null; }
-export interface DownloadProgress { id:string; downloaded:number; total:number|null; speed:number; status:DownloadStatus; error:string|null; }
+
+export interface DownloadTask {
+  id: string;
+  fileName: string;
+  fileSize: number | null;
+  originalUrl: string;
+  currentUrl: string;
+  savePath: string;
+  tempPath: string;
+  finalPath: string;
+  status: DownloadStatus;
+  mimeType: string | null;
+  extension: string | null;
+  supportsRange: boolean;
+  etag: string | null;
+  lastModified: string | null;
+  totalDownloaded: number;
+  speedCurrent: number;
+  speedAverage: number;
+  speedLimitDownload: number;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  downloadType?: "http" | "torrent";
+  infoHash?: string | null;
+  seeds?: number;
+  peers?: number;
+  uploadSpeed?: number;
+  totalUploaded?: number;
+}
+
+export interface TorrentFileItem {
+  index: number;
+  path: string;
+  size: number;
+}
+
+export interface ParsedTorrentMeta {
+  name: string;
+  infoHash: string;
+  totalSize: number;
+  files: TorrentFileItem[];
+}
+
+export interface DownloadProgress {
+  id: string;
+  downloaded: number;
+  total: number | null;
+  speed: number;
+  status: DownloadStatus;
+  error: string | null;
+}

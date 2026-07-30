@@ -111,6 +111,7 @@ export function AppShell({
 
   // Calculate dynamic counts
   const allCount = downloads.length;
+  const torrentsCount = downloads.filter(d => d.downloadType === "torrent" || d.originalUrl.startsWith("magnet:") || d.extension?.toLowerCase() === "torrent").length;
   const archivesCount = downloads.filter(d => groups.archives.includes(d.extension?.toLowerCase() || "")).length;
   const documentsCount = downloads.filter(d => groups.documents.includes(d.extension?.toLowerCase() || "")).length;
   const videosCount = downloads.filter(d => groups.videos.includes(d.extension?.toLowerCase() || "")).length;
@@ -126,6 +127,7 @@ export function AppShell({
   }).length;
 
   const typeItems = [
+    { id: "torrents" as PageId, label: "Torrents", icon: Download, count: torrentsCount },
     { id: "archives" as PageId, label: "Compactados", icon: Archive, count: archivesCount },
     { id: "documents" as PageId, label: "Documentos", icon: FileText, count: documentsCount },
     { id: "videos" as PageId, label: "Vídeos", icon: Video, count: videosCount },

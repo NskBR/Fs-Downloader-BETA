@@ -424,6 +424,10 @@ pub async fn queue_download(
             total_downloaded: 0,
             speed_current: 0.0,
             speed_average: 0.0,
+            seeds: None,
+            peers: None,
+            upload_speed: None,
+            total_uploaded: None,
         },
     )
     .map_err(|error| format!("Falha ao agendar o download: {error}"))
@@ -505,6 +509,10 @@ pub async fn start_download(
                         total_downloaded: 0,
                         speed_current: 0.0,
                         speed_average: 0.0,
+                        seeds: None,
+                        peers: None,
+                        upload_speed: None,
+                        total_uploaded: None,
                     },
                 );
             }
@@ -589,6 +597,10 @@ pub fn cancel_download(
             },
             speed_current: 0.0,
             speed_average: task.speed_average,
+            seeds: None,
+            peers: None,
+            upload_speed: None,
+            total_uploaded: None,
         },
     )
     .map_err(|error| format!("Falha ao cancelar o download: {error}"))?;
@@ -821,6 +833,10 @@ pub async fn resume_owned(
                 total_downloaded: offset,
                 speed_current: 0.0,
                 speed_average: task.speed_average,
+                seeds: None,
+                peers: None,
+                upload_speed: None,
+                total_uploaded: None,
             },
         )
         .map_err(|error| format!("Falha ao finalizar o download: {error}"));
@@ -1098,6 +1114,12 @@ pub fn start_drag_folder(window: tauri::WebviewWindow, path: String) -> Result<(
     ).map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn parse_torrent_info(source: String) -> Result<crate::download::torrent::ParsedTorrentMeta, String> {
+    let engine = crate::download::torrent::TorrentEngine::new();
+    engine.parse_torrent(&source).await
 }
 
 #[cfg(test)]

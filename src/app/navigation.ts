@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { BarChart3, Calculator, Clock3, Download, FolderTree, Home, Send, Settings, Users } from "lucide-react";
-export type PageId = "home" | "downloads" | "active" | "completed" | "documents" | "music" | "videos" | "archives" | "applications" | "transfer" | "organization" | "profile" | "calculator" | "settings" | "metrics";
+export type PageId = "home" | "downloads" | "active" | "completed" | "documents" | "music" | "videos" | "archives" | "applications" | "torrents" | "transfer" | "organization" | "profile" | "calculator" | "settings" | "metrics";
 export interface NavigationItem { id: PageId; label: string; description: string; icon: LucideIcon; }
 export const navigationItems: NavigationItem[] = [
   { id: "home", label: "Home", description: "Visão geral da sua atividade", icon: Home },

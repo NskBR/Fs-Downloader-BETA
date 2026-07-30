@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { DownloadTask } from "../domain/download";
+import type { DownloadTask, ParsedTorrentMeta } from "../domain/download";
 import type { AppSettings } from "../domain/settings";
 import type { ProfileStatistics } from "../domain/profile";
 import type { MetricsSnapshot } from "../domain/metrics";
@@ -144,3 +144,5 @@ export const importMetrics = () =>
   invoke<void>("import_metrics");
 export const profileStatistics = () =>
   invoke<ProfileStatistics>("profile_statistics");
+export const parseTorrentInfo = (source: string) =>
+  invoke<ParsedTorrentMeta>("parse_torrent_info", { source });

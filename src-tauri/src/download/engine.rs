@@ -266,6 +266,8 @@ pub async fn prepare_with_headers(
             etag,
             last_modified,
             delete_archive_after_extract,
+            download_type: "http".into(),
+            info_hash: None,
         },
         response,
     })
@@ -932,6 +934,10 @@ async fn download_piece(
                                     total_downloaded: aggregate,
                                     speed_current: speed,
                                     speed_average: speed,
+                                    seeds: None,
+                                    peers: None,
+                                    upload_speed: None,
+                                    total_uploaded: None,
                                 },
                             );
                         }
@@ -1350,6 +1356,10 @@ fn update_state(
                 total_downloaded: downloaded,
                 speed_current: current,
                 speed_average: average,
+                seeds: None,
+                peers: None,
+                upload_speed: None,
+                total_uploaded: None,
             },
         );
     }

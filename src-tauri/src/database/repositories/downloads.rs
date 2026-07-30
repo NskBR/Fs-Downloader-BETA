@@ -4,7 +4,7 @@ use crate::database::models::{
 use rusqlite::{params, Connection, OptionalExtension, Result};
 use uuid::Uuid;
 
-const COLUMNS: &str = "id,file_name,file_size,original_url,current_url,save_path,temp_path,final_path,status,mime_type,extension,supports_range,max_connections,max_parallel_downloads,speed_limit_download,etag,last_modified,total_downloaded,speed_current,speed_average,created_at,updated_at,completed_at,delete_archive_after_extract";
+const COLUMNS: &str = "id,file_name,file_size,original_url,current_url,save_path,temp_path,final_path,status,mime_type,extension,supports_range,max_connections,max_parallel_downloads,speed_limit_download,etag,last_modified,total_downloaded,speed_current,speed_average,created_at,updated_at,completed_at,delete_archive_after_extract,download_type,info_hash,seeds,peers,upload_speed,total_uploaded";
 
 fn map_task(row: &rusqlite::Row<'_>) -> Result<DownloadTask> {
     Ok(DownloadTask {
@@ -32,14 +32,20 @@ fn map_task(row: &rusqlite::Row<'_>) -> Result<DownloadTask> {
         updated_at: row.get(21)?,
         completed_at: row.get(22)?,
         delete_archive_after_extract: row.get::<_, i64>(23)? != 0,
+        download_type: row.get(24).unwrap_or_else(|_| "http".into()),
+        info_hash: row.get(25).ok(),
+        seeds: row.get(26).unwrap_or(0),
+        peers: row.get(27).unwrap_or(0),
+        upload_speed: row.get(28).unwrap_or(0.0),
+        total_uploaded: row.get(29).unwrap_or(0),
     })
 }
 
 pub fn create(connection: &Connection, input: CreateDownloadInput) -> Result<DownloadTask> {
     let id = Uuid::new_v4().to_string();
     connection.execute(
-        "INSERT INTO download_tasks(id,file_name,file_size,original_url,current_url,save_path,temp_path,final_path,status,mime_type,extension,supports_range,max_connections,max_parallel_downloads,speed_limit_download,etag,last_modified,delete_archive_after_extract) VALUES(?1,?2,?3,?4,?4,?5,?6,?7,'pending',?8,?9,?10,?11,?12,?13,?14,?15,?16)",
-        params![id, input.file_name, input.file_size, input.original_url, input.save_path, input.temp_path, input.final_path, input.mime_type, input.extension, input.supports_range, input.max_connections, input.max_parallel_downloads, input.speed_limit_download, input.etag, input.last_modified, input.delete_archive_after_extract],
+        "INSERT INTO download_tasks(id,file_name,file_size,original_url,current_url,save_path,temp_path,final_path,status,mime_type,extension,supports_range,max_connections,max_parallel_downloads,speed_limit_download,etag,last_modified,delete_archive_after_extract,download_type,info_hash) VALUES(?1,?2,?3,?4,?4,?5,?6,?7,'pending',?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18)",
+        params![id, input.file_name, input.file_size, input.original_url, input.save_path, input.temp_path, input.final_path, input.mime_type, input.extension, input.supports_range, input.max_connections, input.max_parallel_downloads, input.speed_limit_download, input.etag, input.last_modified, input.delete_archive_after_extract, input.download_type, input.info_hash],
     )?;
     find(connection, &id)?.ok_or(rusqlite::Error::QueryReturnedNoRows)
 }
@@ -69,9 +75,13 @@ pub fn update(connection: &Connection, input: UpdateDownloadInput) -> Result<Dow
 
 pub fn update_progress(connection: &Connection, input: &UpdateDownloadInput) -> Result<()> {
     let completed = matches!(input.status, DownloadStatus::Completed);
+    let seeds = input.seeds.unwrap_or(0);
+    let peers = input.peers.unwrap_or(0);
+    let upload_speed = input.upload_speed.unwrap_or(0.0);
+    let total_uploaded = input.total_uploaded.unwrap_or(0);
     let affected = connection.execute(
-        "UPDATE download_tasks SET status=?2,total_downloaded=?3,speed_current=?4,speed_average=?5,updated_at=CURRENT_TIMESTAMP,completed_at=CASE WHEN ?6 THEN CURRENT_TIMESTAMP ELSE completed_at END WHERE id=?1",
-        params![input.id, input.status.as_str(), input.total_downloaded, input.speed_current, input.speed_average, completed],
+        "UPDATE download_tasks SET status=?2,total_downloaded=?3,speed_current=?4,speed_average=?5,seeds=?7,peers=?8,upload_speed=?9,total_uploaded=?10,updated_at=CURRENT_TIMESTAMP,completed_at=CASE WHEN ?6 THEN CURRENT_TIMESTAMP ELSE completed_at END WHERE id=?1",
+        params![input.id, input.status.as_str(), input.total_downloaded, input.speed_current, input.speed_average, completed, seeds, peers, upload_speed, total_uploaded],
     )?;
     if affected == 0 {
         return Err(rusqlite::Error::QueryReturnedNoRows);
