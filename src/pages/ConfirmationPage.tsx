@@ -54,6 +54,9 @@ const shortHost = (value: string) => {
 
 const baseName = (value: string) => value.split(/[\\/]/).pop() || value;
 
+const stripFileName = (message: string) =>
+  message.replace(/^[^:]+:\s*/, "");
+
 export function ConfirmationPage({ token }: { token: string }) {
   const storageKey = `sf-downloader.confirmation-${token}`;
   const payload = useMemo(() => {
@@ -257,7 +260,7 @@ export function ConfirmationPage({ token }: { token: string }) {
             {fileNameText}
           </span>
         </div>
-        {error && <span className="confirm-header-error" title={error}>{error}</span>}
+        {error && <span className="confirm-header-error" title={error}>{stripFileName(error)}</span>}
         <div className="confirm-window-controls nodrag">
           <button onClick={() => void appWindow.minimize()} title="Minimizar">
             <Minus size={16} />
