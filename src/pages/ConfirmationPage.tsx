@@ -13,6 +13,8 @@ import {
   X,
   AlertTriangle,
   RotateCcw,
+  Ban,
+  Info,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -55,6 +57,20 @@ const baseName = (value: string) => value.split(/[\\/]/).pop() || value;
 
 const stripFileName = (message: string) =>
   message.replace(/^[^:]+:\s*/, "");
+
+const getFormattedErrorMessage = (raw: string) => {
+  const msg = stripFileName(raw);
+  if (/já está em andamento ou pausado/i.test(msg)) {
+    return "Não foi possível iniciar o download porque já existe outra instância deste arquivo ativa ou pausada.";
+  }
+  if (/já foi baixado/i.test(msg)) {
+    return "Não foi possível iniciar o download porque este arquivo já foi baixado anteriormente.";
+  }
+  if (!msg) {
+    return "Ocorreu um erro inesperado ao tentar iniciar o download.";
+  }
+  return msg.charAt(0).toUpperCase() + msg.slice(1);
+};
 
 export function ConfirmationPage({ token }: { token: string }) {
   const storageKey = `sf-downloader.confirmation-${token}`;
@@ -144,7 +160,7 @@ export function ConfirmationPage({ token }: { token: string }) {
       if (!active) return;
       if (error) {
         void appWindow
-          .setSize(new LogicalSize(600, 280))
+          .setSize(new LogicalSize(640, 315))
           .catch(() => {});
         return;
       }
@@ -443,14 +459,63 @@ export function ConfirmationPage({ token }: { token: string }) {
 
       {error && (
         <div className="confirm-error-sheet">
-          <div className="confirm-error-icon">
-            <AlertTriangle />
+          <div className="confirm-error-body">
+            <div className="confirm-error-left">
+              <div className="confirm-error-glow-icon">
+                <AlertTriangle size={76} strokeWidth={1.8} />
+              </div>
+            </div>
+
+            <div className="confirm-error-right">
+              <h2 className="confirm-error-title">Erro ao iniciar download</h2>
+
+              <div className="confirm-error-info-card">
+                <div className="confirm-error-info-icon">
+                  <Info size={22} />
+                </div>
+                <div className="confirm-error-info-content">
+                  <p className="confirm-error-info-primary">
+                    {getFormattedErrorMessage(error)}
+                  </p>
+                  <p className="confirm-error-info-secondary">
+                    Siga as sugestões abaixo para resolver o problema e tentar novamente.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <h2 className="confirm-error-title">Erro ao iniciar download</h2>
-          <p className="confirm-error-msg">{stripFileName(error)}</p>
+
           <div className="confirm-error-sep" />
-          <div className="confirm-error-actions">
-            <button className="confirm-error-btn" onClick={() => setError(null)}>
+
+          <div className="confirm-error-footer-row">
+            <div className="confirm-error-suggestions">
+              <div className="confirm-suggestion-item">
+                <div className="confirm-suggestion-badge badge-green">
+                  <Globe size={18} />
+                </div>
+                <span>Verifique se a fonte de download ainda está disponível</span>
+              </div>
+
+              <div className="confirm-suggestion-divider" />
+
+              <div className="confirm-suggestion-item">
+                <div className="confirm-suggestion-badge badge-blue">
+                  <Ban size={18} />
+                </div>
+                <span>Cancele outra instância do arquivo em download</span>
+              </div>
+
+              <div className="confirm-suggestion-divider" />
+
+              <div className="confirm-suggestion-item">
+                <div className="confirm-suggestion-badge badge-purple">
+                  <FolderOpen size={18} />
+                </div>
+                <span>Troque a pasta de download do arquivo</span>
+              </div>
+            </div>
+
+            <button className="confirm-error-btn-primary" onClick={() => setError(null)}>
               Voltar
             </button>
           </div>

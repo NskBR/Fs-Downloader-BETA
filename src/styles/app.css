@@ -1265,68 +1265,183 @@ input::-ms-clear {
 .confirm-error-sheet {
   position: absolute;
   left: 0; right: 0; top: 46px; bottom: 0;
-  background: var(--bg-fill, #16171a);
-  padding: 0 28px;
+  background: var(--bg-fill, #111318);
+  padding: 20px 24px 18px 24px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  justify-content: space-between;
   z-index: 20;
   animation: dw-fade 0.18s ease;
+  box-sizing: border-box;
 }
-.confirm-error-icon {
-  color: var(--ember, #f0a030);
-  width: 48px;
-  height: 48px;
+
+.confirm-error-body {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 22px;
+  width: 100%;
 }
-.confirm-error-icon svg {
-  width: 44px;
-  height: 44px;
+
+.confirm-error-left {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 90px;
+  height: 90px;
 }
+
+.confirm-error-glow-icon {
+  color: #ff453a;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 0 18px rgba(255, 69, 58, 0.45));
+  animation: error-pulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes error-pulse {
+  from { filter: drop-shadow(0 0 12px rgba(255, 69, 58, 0.35)); }
+  to { filter: drop-shadow(0 0 22px rgba(255, 69, 58, 0.65)); }
+}
+
+.confirm-error-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .confirm-error-title {
   margin: 0;
-  font-size: 14px;
+  font-size: 21px;
   font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.confirm-error-info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.confirm-error-info-icon {
+  color: #3b82f6;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.confirm-error-info-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.confirm-error-info-primary {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text, #f2f3f5);
-  text-align: center;
-}
-.confirm-error-msg {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--text-2, #b6b9bf);
-  text-align: center;
   line-height: 1.4;
-  max-width: 340px;
 }
+
+.confirm-error-info-secondary {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-2, #8a92a3);
+  line-height: 1.35;
+}
+
 .confirm-error-sep {
   height: 1px;
-  background: var(--line, rgba(255,255,255,0.06));
+  background: rgba(255, 255, 255, 0.06);
   width: 100%;
-  margin: 20px 0 16px;
+  margin: 12px 0 14px;
 }
-.confirm-error-actions {
+
+.confirm-error-footer-row {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
 }
-.confirm-error-btn {
-  height: 34px;
-  padding: 0 24px;
+
+.confirm-error-suggestions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.confirm-suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.confirm-suggestion-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.confirm-suggestion-badge.badge-green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.confirm-suggestion-badge.badge-blue {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.confirm-suggestion-badge.badge-purple {
+  background: rgba(168, 85, 247, 0.12);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.confirm-suggestion-item span {
+  font-size: 11px;
+  color: var(--text-2, #8a92a3);
+  line-height: 1.35;
+}
+
+.confirm-suggestion-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.confirm-error-btn-primary {
+  height: 38px;
+  padding: 0 26px;
   border-radius: 8px;
   border: 0;
-  background: var(--surface, #26282d);
-  border: 1px solid var(--line, rgba(255,255,255,0.08));
-  color: var(--text, #f2f3f5);
-  font-size: 12.5px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.15s;
+  transition: background 0.15s;
+  flex-shrink: 0;
 }
-.confirm-error-btn:hover {
-  background: var(--surface-2, #2e3036);
-  border-color: rgba(255,255,255,0.15);
+
+.confirm-error-btn-primary:hover {
+  background: #1d4ed8;
 }
 
 /* 3. Rodapé Fixo */
