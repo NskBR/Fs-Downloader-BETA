@@ -1,4 +1,4 @@
-import { Dices, Pipette, Palette, Plus, RotateCcw, Sparkles, Trash2, X, Moon } from "lucide-react";
+import { Dices, Pipette, Palette, Plus, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import type { AppColor, GradientConfig } from "../../domain/settings";
 
@@ -73,9 +73,7 @@ export function DiscordThemeCustomizer({
     onSelectAppColor(color);
   };
 
-  const currentColor1 = config.stops[0]?.color || "#41010d";
-  const currentColor2 = config.stops[1]?.color || "#090204";
-  const hasSecondColor = config.stops.length >= 2;
+
 
   const updateColor = (index: number, color: string) => {
     const stops = [...config.stops];
@@ -91,23 +89,32 @@ export function DiscordThemeCustomizer({
     });
   };
 
-  const toggleSecondColor = () => {
-    if (hasSecondColor) {
-      onChangeGradient({
-        ...config,
-        enabled: true,
-        stops: [config.stops[0] || { color: "#41010d", position: 0 }],
-      });
-    } else {
-      onChangeGradient({
-        ...config,
-        enabled: true,
-        stops: [
-          config.stops[0] || { color: "#41010d", position: 0 },
-          { color: "#090204", position: 100 },
-        ],
-      });
-    }
+  const addStop = () => {
+    const darkColors = ["#090204", "#0a0308", "#050a1e", "#040714", "#040d08", "#0e0503"];
+    const newColor = darkColors[Math.floor(Math.random() * darkColors.length)];
+    const stops = [...config.stops];
+    // Distribute positions evenly
+    stops.push({ color: newColor, position: 100 });
+    const step = 100 / (stops.length - 1 || 1);
+    stops.forEach((s, i) => { s.position = Math.round(i * step); });
+    onChangeGradient({
+      ...config,
+      enabled: true,
+      stops,
+    });
+  };
+
+  const removeStop = (index: number) => {
+    if (config.stops.length <= 1) return;
+    const stops = config.stops.filter((_, i) => i !== index);
+    // Redistribute positions evenly
+    const step = 100 / (stops.length - 1 || 1);
+    stops.forEach((s, i) => { s.position = Math.round(i * step); });
+    onChangeGradient({
+      ...config,
+      enabled: true,
+      stops,
+    });
   };
 
   const updateIntensity = (intensity: number) => {
@@ -234,100 +241,60 @@ export function DiscordThemeCustomizer({
             </header>
 
             <div className="discord-modal-body">
-              {/* Seção Aparência */}
-              <div className="discord-custom-section">
-                <label className="discord-section-title">Aparência</label>
-                <div className="discord-theme-toggle-row">
-                  <div className="discord-theme-mode-card active">
-                    <Moon size={18} />
-                    <span>Escuro</span>
-                  </div>
-                </div>
-              </div>
-
               {/* Seção Cores */}
               <div className="discord-custom-section">
                 <label className="discord-section-title">Cores</label>
 
-                {/* Seletor Cor 1 */}
-                <div className="discord-color-row">
-                  <div
-                    className="discord-color-box"
-                    style={{ background: currentColor1 }}
-                  >
-                    <input
-                      type="color"
-                      value={currentColor1}
-                      onChange={(e) => updateColor(0, e.target.value)}
-                    />
-                  </div>
-                  <input
-                    type="text"
-                    className="discord-hex-input"
-                    value={currentColor1.toUpperCase()}
-                    onChange={(e) => updateColor(0, e.target.value)}
-                  />
-                  {"EyeDropper" in window && (
-                    <button
-                      type="button"
-                      className="discord-eyedrop-btn"
-                      onClick={() => void pickEyedropper(0)}
-                      title="Capturar cor da tela"
-                    >
-                      <Pipette size={16} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Seletor Cor 2 (opcional) */}
-                {hasSecondColor && (
-                  <div className="discord-color-row margin-top">
+                {/* Seletores dinâmicos de cor */}
+                {config.stops.map((stop, index) => (
+                  <div className={`discord-color-row${index > 0 ? " margin-top" : ""}`} key={index}>
                     <div
                       className="discord-color-box"
-                      style={{ background: currentColor2 }}
+                      style={{ background: stop.color }}
                     >
                       <input
                         type="color"
-                        value={currentColor2}
-                        onChange={(e) => updateColor(1, e.target.value)}
+                        value={stop.color}
+                        onChange={(e) => updateColor(index, e.target.value)}
                       />
                     </div>
                     <input
                       type="text"
                       className="discord-hex-input"
-                      value={currentColor2.toUpperCase()}
-                      onChange={(e) => updateColor(1, e.target.value)}
+                      value={stop.color.toUpperCase()}
+                      onChange={(e) => updateColor(index, e.target.value)}
                     />
                     {"EyeDropper" in window && (
                       <button
                         type="button"
                         className="discord-eyedrop-btn"
-                        onClick={() => void pickEyedropper(1)}
+                        onClick={() => void pickEyedropper(index)}
                         title="Capturar cor da tela"
                       >
                         <Pipette size={16} />
                       </button>
                     )}
+                    {config.stops.length > 1 && (
+                      <button
+                        type="button"
+                        className="discord-eyedrop-btn discord-remove-stop-btn"
+                        onClick={() => removeStop(index)}
+                        title="Remover esta cor"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
-                )}
+                ))}
 
-                {/* Botão Adicionar/Remover Cor */}
+                {/* Botão Adicionar Cor */}
                 <button
                   type="button"
                   className="discord-add-color-btn"
-                  onClick={toggleSecondColor}
+                  onClick={addStop}
                 >
-                  {hasSecondColor ? (
-                    <>
-                      <Trash2 size={16} />
-                      <span>Remover segunda cor</span>
-                    </>
-                  ) : (
-                    <>
-                      <Plus size={16} />
-                      <span>Adicionar cor</span>
-                    </>
-                  )}
+                  <Plus size={16} />
+                  <span>Adicionar cor</span>
                 </button>
               </div>
 
