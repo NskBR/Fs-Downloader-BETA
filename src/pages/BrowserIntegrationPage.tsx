@@ -83,8 +83,7 @@ export function BrowserIntegrationPage() {
               </div>
               <strong>Arraste para o navegador</strong>
               <span>
-                Segure e solte esta peça na página de extensões do seu navegador
-                Chromium, como no Xtreme Downloader.
+                Segure e solte esta peça na página de extensões do seu navegador Chromium.
               </span>
             </div>
 
