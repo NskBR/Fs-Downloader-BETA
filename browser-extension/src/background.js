@@ -21,7 +21,7 @@ const recentHeaders = new Map();
 const intercepted = new Set();
 const interceptedUrls = new Map();
 
-const validUrl = url => /^https?:\/\//i.test(url || "");
+const validUrl = url => /^(https?:\/\/|magnet:\?)/i.test(url || "") || (url || "").startsWith("magnet:");
 
 // Tracks URLs already taken over so a single browser download is not sent to
 // the app twice (once via onHeadersReceived, once via onDeterminingFilename).
@@ -105,6 +105,7 @@ function launchProtocol(url) {
 
 function shouldTakeOver(url, filename) {
   if (!bridge.connected || !validUrl(url)) return false;
+  if (url.startsWith("magnet:")) return true;
   const parsed = new URL(url);
   if ((bridge.blockedHosts || []).some(host => parsed.host.includes(host))) return false;
   const target = (filename || parsed.pathname).toUpperCase();

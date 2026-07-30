@@ -35,6 +35,19 @@ document.addEventListener("click", event => {
   if (!anchor || bypassedLinks.has(anchor)) return;
   
   const url = anchor.href;
+  if (url.startsWith("magnet:")) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    chrome.runtime.sendMessage({
+      type: "intercept-link",
+      url,
+      filename: null,
+      referrer: location.href
+    }).then(response => {
+      if (!response?.handled) resumeNavigation(anchor);
+    }).catch(() => resumeNavigation(anchor));
+    return;
+  }
   if (!/^https?:\/\//i.test(url)) return;
 
   // Ignora se o domínio do link estiver na lista de bloqueio

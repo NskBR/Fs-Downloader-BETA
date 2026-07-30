@@ -538,11 +538,7 @@ pub async fn start_download(
             return;
         };
         if spawned_task.download_type == "torrent" {
-            let torrent_engine = crate::download::torrent::TorrentEngine::new();
-            let save_dir = std::path::PathBuf::from(&spawned_task.save_path);
-            if let Ok(session) = torrent_engine.get_session(&save_dir).await {
-                let _ = torrent_engine.start_torrent(&session, &spawned_task.original_url, &save_dir).await;
-            }
+            crate::download::torrent::run_torrent(app, database.clone(), spawned_task, control).await;
         } else if segmented {
             drop(prepared.response);
             engine::run_segmented(

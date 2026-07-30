@@ -236,12 +236,15 @@ async fn download(State(state): State<BridgeState>, body: Bytes) -> impl IntoRes
         return (cors_headers, StatusCode::BAD_REQUEST);
     };
     if request.token != state.bridge.token
-        || !matches!(
-            reqwest::Url::parse(&request.url)
-                .ok()
-                .map(|u| u.scheme().to_string())
-                .as_deref(),
-            Some("http" | "https")
+        || (
+            !request.url.starts_with("magnet:")
+                && !matches!(
+                    reqwest::Url::parse(&request.url)
+                        .ok()
+                        .map(|u| u.scheme().to_string())
+                        .as_deref(),
+                    Some("http" | "https")
+                )
         )
     {
         return (cors_headers, StatusCode::FORBIDDEN);
