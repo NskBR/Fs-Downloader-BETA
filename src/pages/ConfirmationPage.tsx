@@ -165,6 +165,7 @@ export function ConfirmationPage({ token }: { token: string }) {
     ...downloadCategories.map((item) => item.name),
     ...settings.customCategories.map((item) => item.name),
   ];
+  const isCustomFolder = destination.trim() !== "" && destination !== settings.rootDownloadFolder;
 
   const chooseFolder = async () => {
     const path = await open({ directory: true });
@@ -190,13 +191,13 @@ export function ConfirmationPage({ token }: { token: string }) {
     try {
       const task = await service.startDownload(
         preview.url,
-        settings,
+        isCustomFolder ? { ...settings, autoOrganizeEnabled: false } : settings,
         destination,
         payload?.requestId,
         true,
         autoExtract,
         isArchive && password.trim() ? password : undefined,
-        selectedCategory,
+        isCustomFolder ? undefined : selectedCategory,
         force,
       );
       localStorage.removeItem(storageKey);
@@ -315,20 +316,25 @@ export function ConfirmationPage({ token }: { token: string }) {
             </div>
           </div>
 
-          <div className="confirm-field-col">
+          <div className={`confirm-field-col${isCustomFolder ? " confirm-field-disabled" : ""}`}>
             <span className="confirm-label">Categoria</span>
             <div className="confirm-control-box">
               <Archive className="field-icon" size={16} />
               <select
                 className="confirm-select"
-                value={selectedCategory}
+                value={isCustomFolder ? "" : selectedCategory}
                 onChange={(event) => setSelectedCategory(event.target.value)}
+                disabled={isCustomFolder}
               >
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
+                {isCustomFolder ? (
+                  <option value="">Pasta personalizada</option>
+                ) : (
+                  categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))
+                )}
               </select>
               <ChevronDown className="select-arrow" size={14} />
             </div>
