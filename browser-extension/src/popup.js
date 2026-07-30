@@ -2,6 +2,9 @@ const capture = document.querySelector("#capture");
 const status = document.querySelector("#status");
 const connection = document.querySelector("#connection");
 const fileTypesList = document.querySelector("#file-types-list");
+const trayToggle = document.querySelector("#tray-toggle");
+const trayBadge = document.querySelector("#tray-badge");
+const versionBadge = document.querySelector("#version-badge");
 
 const CAPTURED_TYPES = [
   ".JPG",
@@ -41,8 +44,7 @@ const CAPTURED_TYPES = [
 ];
 
 // Espelho de DEFAULT_DISABLED_EXTENSIONS (background.js): tipos que vêm
-// desativados de fábrica. Usado apenas para pré-popular o storage na primeira
-// abertura do popup, antes do background definir o default.
+// desativados de fábrica.
 const DEFAULT_DISABLED_EXTENSIONS = [
   ".JPG",
   ".JPEG",
@@ -53,9 +55,8 @@ const DEFAULT_DISABLED_EXTENSIONS = [
 ];
 
 const version = chrome.runtime.getManifest().version;
-const versionSpan = document.querySelector("header div span");
-if (versionSpan) {
-  versionSpan.textContent = `Integração do navegador v${version}`;
+if (versionBadge) {
+  versionBadge.textContent = `v${version}`;
 }
 
 function storageGet(keys) {
@@ -70,6 +71,21 @@ function renderCapture(enabled) {
   capture.setAttribute("aria-checked", String(enabled));
 }
 
+function renderTrayBadge(disabledCount = 0) {
+  if (!trayBadge) return;
+  if (disabledCount > 0) {
+    trayBadge.textContent = `${CAPTURED_TYPES.length} formatos • ${disabledCount} desativados`;
+  } else {
+    trayBadge.textContent = `${CAPTURED_TYPES.length} formatos ativos`;
+  }
+}
+
+function setTrayExpanded(expanded) {
+  if (trayToggle) {
+    trayToggle.setAttribute("aria-expanded", String(expanded));
+  }
+}
+
 function renderFileTypes(disabledExtensions = []) {
   const disabled = new Set(
     disabledExtensions.map(value => {
@@ -77,6 +93,9 @@ function renderFileTypes(disabledExtensions = []) {
       return cleaned.startsWith(".") ? cleaned : `.${cleaned}`;
     }),
   );
+
+  renderTrayBadge(disabled.size);
+
   fileTypesList.replaceChildren(
     ...CAPTURED_TYPES.map(extension => {
       const button = document.createElement("button");
@@ -86,9 +105,10 @@ function renderFileTypes(disabledExtensions = []) {
       button.textContent = extension.replace(".", "");
       button.setAttribute("aria-pressed", String(enabled));
       button.title = enabled
-        ? `Capturando ${extension}`
-        : `${extension} fica no navegador`;
-      button.addEventListener("click", async () => {
+        ? `Capturando ${extension} automaticamente`
+        : `${extension} será baixado nativamente pelo navegador`;
+      button.addEventListener("click", async (e) => {
+        e.stopPropagation();
         const nextDisabled = new Set(disabled);
         if (nextDisabled.has(extension)) nextDisabled.delete(extension);
         else nextDisabled.add(extension);
@@ -109,23 +129,23 @@ function checkConnection() {
   chrome.storage.local.get("captureEnabled", ({ captureEnabled = false }) => {
     if (!captureEnabled) {
       connection.classList.remove("connected");
-      connection.title = "Integração desativada";
-      status.textContent = "Ative a captura para conectar";
+      connection.title = "Integração desativada pelo usuário";
+      status.textContent = "Ative a captura automática para conectar";
       status.classList.remove("connected");
       return;
     }
     chrome.runtime.sendMessage({ type: "bridge-status" }, response => {
       const connected = !chrome.runtime.lastError && response?.connected;
       connection.classList.toggle("connected", Boolean(connected));
-      connection.title = connected ? "Aplicativo conectado" : "Aplicativo desconectado";
-      status.textContent = connected ? "Aplicativo conectado" : "Abra o SF Downloader para conectar";
+      connection.title = connected ? "SF Downloader conectado e ativo" : "SF Downloader desconectado";
+      status.textContent = connected ? "SF Downloader conectado e ativo" : "Abra o SF Downloader para conectar";
       status.classList.toggle("connected", Boolean(connected));
     });
   });
 }
 
-storageGet({ captureEnabled: false, disabledExtensions: null }).then(
-  ({ captureEnabled = false, disabledExtensions }) => {
+storageGet({ captureEnabled: false, disabledExtensions: null, trayOpen: false }).then(
+  ({ captureEnabled = false, disabledExtensions, trayOpen = false }) => {
     const disabled = Array.isArray(disabledExtensions)
       ? disabledExtensions
       : [...DEFAULT_DISABLED_EXTENSIONS];
@@ -134,8 +154,18 @@ storageGet({ captureEnabled: false, disabledExtensions: null }).then(
     }
     renderCapture(captureEnabled);
     renderFileTypes(disabled);
+    setTrayExpanded(Boolean(trayOpen));
   },
 );
+
+if (trayToggle) {
+  trayToggle.addEventListener("click", () => {
+    const current = trayToggle.getAttribute("aria-expanded") === "true";
+    const next = !current;
+    setTrayExpanded(next);
+    storageSet({ trayOpen: next });
+  });
+}
 
 capture.addEventListener("click", () => {
   const next = capture.getAttribute("aria-checked") !== "true";

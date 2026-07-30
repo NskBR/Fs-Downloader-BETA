@@ -7,24 +7,58 @@
   <title>SF Downloader</title>
 </head>
 <body>
-  <header>
-    <img src="icons/sf-small.png" alt="">
-    <div><strong>SF Downloader</strong><span>Integração do navegador</span></div>
-    <i id="connection" title="Aplicativo desconectado"></i>
-  </header>
-  <main>
-    <div class="setting">
-      <div><strong>Capturar downloads</strong><span>Enviar downloads automaticamente para o aplicativo.</span></div>
-      <button id="capture" role="switch" aria-checked="false" aria-label="Ativar integração"><i></i></button>
-    </div>
-    <section class="file-types" aria-labelledby="file-types-title">
-      <div>
-        <strong id="file-types-title">Tipos capturados</strong>
-        <span>Desative formatos que devem continuar no navegador.</span>
+  <header class="popup-header">
+    <div class="header-left">
+      <img src="icons/sf-small.png" alt="SF Downloader" class="app-logo">
+      <div class="header-titles">
+        <div class="title-row">
+          <strong>SF Downloader</strong>
+          <span id="version-badge" class="version-badge">v0.3.1</span>
+        </div>
+        <span class="subtitle">Integração do navegador</span>
       </div>
-      <div id="file-types-list"></div>
+    </div>
+    <i id="connection" class="connection-dot" title="Verificando conexão..."></i>
+  </header>
+
+  <main class="popup-main">
+    <!-- Card Principal: Ativar/Desativar Captura -->
+    <div class="setting-card">
+      <div class="setting-info">
+        <strong>Capturar downloads</strong>
+        <span>Redirecionar downloads automaticamente ao aplicativo desktop.</span>
+      </div>
+      <button id="capture" role="switch" aria-checked="false" aria-label="Ativar captura automática">
+        <i class="switch-thumb"></i>
+      </button>
+    </div>
+
+    <!-- Bandeja Expansível: Formatos Capturados -->
+    <section class="tray-section" id="tray-section">
+      <button type="button" id="tray-toggle" class="tray-header-btn" aria-expanded="false">
+        <div class="tray-info">
+          <div class="tray-title-row">
+            <strong>Formatos capturados</strong>
+            <span id="tray-badge" class="tray-badge">0 formatos</span>
+          </div>
+          <span>Clique para expandir e gerenciar as extensões.</span>
+        </div>
+        <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </button>
+      <div class="tray-content" id="tray-content">
+        <div class="tray-inner">
+          <div class="tray-tip">Desative extensões que devem continuar baixando nativamente pelo navegador:</div>
+          <div id="file-types-list" class="file-types-grid"></div>
+        </div>
+      </div>
     </section>
-    <p id="status" role="status">Verificando conexão...</p>
+
+    <!-- Footer de Status de Conexão -->
+    <footer class="status-footer">
+      <span id="status" class="status-text">Verificando conexão...</span>
+    </footer>
   </main>
   <script src="popup.js"></script>
 </body>
