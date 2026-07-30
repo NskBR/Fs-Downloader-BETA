@@ -285,9 +285,27 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
 
 #[tauri::command]
 pub async fn inspect_download(url: String) -> Result<DownloadPreview, String> {
+    if url.starts_with("magnet:") || url.to_lowercase().ends_with(".torrent") {
+        let engine = crate::download::torrent::TorrentEngine::new();
+        let meta = engine.parse_torrent(&url).await.unwrap_or(crate::download::torrent::ParsedTorrentMeta {
+            name: "Torrent Magnet".into(),
+            info_hash: "".into(),
+            total_size: 0,
+            files: vec![],
+        });
+        let file_name = if meta.name.is_empty() { "Torrent Magnet".to_string() } else { meta.name };
+        return Ok(DownloadPreview {
+            url,
+            file_name,
+            file_size: if meta.total_size > 0 { Some(meta.total_size as u64) } else { None },
+            mime_type: Some("application/x-bittorrent".into()),
+            extension: Some("torrent".into()),
+        });
+    }
+
     let parsed = Url::parse(&url).map_err(|_| "A URL informada é inválida.".to_string())?;
     if !matches!(parsed.scheme(), "http" | "https") {
-        return Err("Apenas URLs HTTP ou HTTPS são permitidas.".into());
+        return Err("Apenas URLs HTTP, HTTPS ou Magnet Links são permitidas.".into());
     }
     let client = reqwest::Client::builder()
         .user_agent("SF Downloader/0.1")
@@ -519,7 +537,13 @@ pub async fn start_download(
             runtime.remove(&id);
             return;
         };
-        if segmented {
+        if spawned_task.download_type == "torrent" {
+            let torrent_engine = crate::download::torrent::TorrentEngine::new();
+            let save_dir = std::path::PathBuf::from(&spawned_task.save_path);
+            if let Ok(session) = torrent_engine.get_session(&save_dir).await {
+                let _ = torrent_engine.start_torrent(&session, &spawned_task.original_url, &save_dir).await;
+            }
+        } else if segmented {
             drop(prepared.response);
             engine::run_segmented(
                 app,
@@ -530,12 +554,12 @@ pub async fn start_download(
                 headers,
             )
             .await;
-        } else {
+        } else if let Some(resp) = prepared.response {
             engine::run(
                 app,
                 database.clone(),
                 spawned_task,
-                prepared.response,
+                resp,
                 control,
                 0,
             )

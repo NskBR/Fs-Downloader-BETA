@@ -124,7 +124,7 @@ pub struct DownloadProgress {
 
 pub struct PreparedDownload {
     pub input: CreateDownloadInput,
-    pub response: Response,
+    pub response: Option<Response>,
 }
 
 pub async fn prepare_with_headers(
@@ -140,12 +140,67 @@ pub async fn prepare_with_headers(
     resume_support: bool,
     delete_archive_after_extract: bool,
 ) -> Result<PreparedDownload, String> {
+    if root.trim().is_empty() {
+        return Err("Configure uma pasta principal antes de baixar.".into());
+    }
+
+    if url.starts_with("magnet:") || url.to_lowercase().ends_with(".torrent") {
+        let engine = crate::download::torrent::TorrentEngine::new();
+        let meta = engine.parse_torrent(url).await.unwrap_or(crate::download::torrent::ParsedTorrentMeta {
+            name: "Torrent Magnet".into(),
+            info_hash: "".into(),
+            total_size: 0,
+            files: vec![],
+        });
+
+        let file_name = safe_file_name(if meta.name.is_empty() { "Torrent Magnet" } else { &meta.name });
+        let folder = if let Some(category) = selected_category.filter(|value| !value.trim().is_empty()) {
+            let category = category.trim();
+            if !valid_category_name(category) {
+                return Err("A categoria selecionada possui um nome inválido.".into());
+            }
+            PathBuf::from(root).join(category)
+        } else if auto_organize {
+            PathBuf::from(root).join("Torrents")
+        } else {
+            PathBuf::from(root)
+        };
+        tokio::fs::create_dir_all(&folder).await.map_err(|error| format!("Não foi possível criar a pasta de destino: {error}"))?;
+
+        let temp_folder = folder.join(".sf-temp");
+        tokio::fs::create_dir_all(&temp_folder).await.map_err(|error| format!("Não foi possível criar a pasta temporária: {error}"))?;
+
+        let final_path = available_path(&folder, &file_name, &taken_paths);
+        let temp_name = final_path.file_name().and_then(|v| v.to_str()).unwrap_or(&file_name);
+        let temp_path = temp_folder.join(format!("{}.part", temp_name));
+
+        return Ok(PreparedDownload {
+            input: CreateDownloadInput {
+                file_name,
+                file_size: if meta.total_size > 0 { Some(meta.total_size as i64) } else { None },
+                original_url: url.to_owned(),
+                save_path: folder.to_string_lossy().into_owned(),
+                temp_path: temp_path.to_string_lossy().into_owned(),
+                final_path: final_path.to_string_lossy().into_owned(),
+                mime_type: Some("application/x-bittorrent".into()),
+                extension: Some("torrent".into()),
+                supports_range: false,
+                max_connections: 1,
+                max_parallel_downloads: max_parallel_downloads.clamp(1, 50) as i64,
+                speed_limit_download: speed_limit_download.min(i64::MAX as u64) as i64,
+                etag: None,
+                last_modified: None,
+                delete_archive_after_extract: false,
+                download_type: "torrent".into(),
+                info_hash: if meta.info_hash.is_empty() { None } else { Some(meta.info_hash) },
+            },
+            response: None,
+        });
+    }
+
     let parsed = Url::parse(url).map_err(|_| "A URL informada é inválida.".to_string())?;
     if !matches!(parsed.scheme(), "http" | "https") {
         return Err("Apenas URLs HTTP ou HTTPS são permitidas.".into());
-    }
-    if root.trim().is_empty() {
-        return Err("Configure uma pasta principal antes de baixar.".into());
     }
     let client = Client::builder()
         .user_agent("SF Downloader/0.1")
@@ -269,7 +324,7 @@ pub async fn prepare_with_headers(
             download_type: "http".into(),
             info_hash: None,
         },
-        response,
+        response: Some(response),
     })
 }
 

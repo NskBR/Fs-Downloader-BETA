@@ -356,12 +356,12 @@ export function DownloadsPage({
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 const value = search.trim();
-                if (/^https?:\/\//i.test(value)) void inspect(value);
+                if (/^(https?:\/\/|magnet:\?)/i.test(value) || value.toLowerCase().endsWith(".torrent")) void inspect(value);
               }
             }}
             onPaste={(event) => {
               const text = event.clipboardData.getData("text").trim();
-              if (/^https?:\/\//i.test(text)) {
+              if (/^(https?:\/\/|magnet:\?)/i.test(text) || text.toLowerCase().endsWith(".torrent")) {
                 event.preventDefault();
                 void inspect(text);
               }
