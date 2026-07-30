@@ -989,7 +989,7 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
   white-space: nowrap;
   max-width: 200px;
   flex-shrink: 0;
-  pointer-events: none;
+  pointer-events: auto;
   margin-left: 6px;
 }
 
