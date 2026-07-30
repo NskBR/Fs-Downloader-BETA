@@ -141,6 +141,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedError, setCopiedError] = useState(false);
   const [extraction, setExtraction] = useState<string | null>(null);
   const appWindow = getCurrentWindow();
   const mainRef = useRef<HTMLElement>(null);
@@ -192,7 +193,9 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
             }
           : current,
       );
-      setError(payload.error);
+      if (payload.error) {
+        setError(payload.error);
+      }
     });
     return () => void listener.then((dispose) => dispose());
   }, [downloadId]);
@@ -232,6 +235,13 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
     void navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
+    });
+  };
+
+  const copyError = (text: string) => {
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopiedError(true);
+      window.setTimeout(() => setCopiedError(false), 1600);
     });
   };
 
@@ -325,9 +335,35 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
 
           {!isCompleted && (
             <p className="dw-meta">
-              Velocidade: {isActive ? `${bytes(speed)}/s` : "—"}
-              <span className="dw-dot">•</span>
-              Tempo restante: {eta(remaining)}
+              {error ? (
+                <span className="dw-meta-error">
+                  <span
+                    className="dw-meta-error-text"
+                    title="Clique para copiar a mensagem de erro"
+                    onClick={() => copyError(error)}
+                  >
+                    {copiedError ? <Check size={13} style={{ flexShrink: 0 }} /> : <AlertTriangle size={13} style={{ flexShrink: 0 }} />}
+                    <span>{copiedError ? "Copiado!" : error}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="dw-meta-error-close"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setError(null);
+                    }}
+                    title="Fechar aviso de erro"
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ) : (
+                <>
+                  Velocidade: {isActive ? `${bytes(speed)}/s` : "—"}
+                  <span className="dw-dot">•</span>
+                  Tempo restante: {eta(remaining)}
+                </>
+              )}
             </p>
           )}
 
@@ -432,33 +468,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
         </div>
       )}
 
-      {error && (
-        <div className="dw-cancel-overlay">
-          <section className="dw-cancel-dialog dw-error-dialog">
-            <header>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                <AlertTriangle size={15} style={{ color: "var(--st-failed)" }} />
-                <span>Aviso do sistema</span>
-              </span>
-              <button onClick={() => setError(null)} title="Fechar aviso">
-                <X size={14} />
-              </button>
-            </header>
-            <div>
-              <i style={{ background: "var(--st-failed)", color: "#ffffff" }}>!</i>
-              <p>
-                <strong>Não foi possível concluir a ação</strong>
-                <span>{error}</span>
-              </p>
-            </div>
-            <footer>
-              <button className="delete" onClick={() => setError(null)}>
-                Entendi
-              </button>
-            </footer>
-          </section>
-        </div>
-      )}
+
 
       {cancelOpen && (
         <div className="dw-cancel-overlay">
