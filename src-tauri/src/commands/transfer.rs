@@ -913,8 +913,8 @@ pub async fn open_browser_integration_window(app: AppHandle) -> Result<(), Strin
 
     let build_result = WebviewWindowBuilder::new(&app, label, url)
         .title("Integração do Navegador")
-        .inner_size(700.0, 560.0)
-        .min_inner_size(700.0, 560.0)
+        .inner_size(700.0, 510.0)
+        .min_inner_size(700.0, 510.0)
         .resizable(false)
         .decorations(false)
         .visible(false)
@@ -940,32 +940,64 @@ pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, Stri
     std::fs::create_dir_all(&ext_dir).map_err(|e| e.to_string())?;
     std::fs::create_dir_all(ext_dir.join("icons")).map_err(|e| e.to_string())?;
 
+    let project_dist = app_data
+        .join("..")
+        .join("..")
+        .join("browser-extension")
+        .join("dist")
+        .join(&browser);
+
     if browser == "chromium" {
-        std::fs::write(ext_dir.join("manifest.json"), include_bytes!("../../../browser-extension/dist/chromium/manifest.json")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("background.js"), include_bytes!("../../../browser-extension/dist/chromium/background.js")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("content.js"), include_bytes!("../../../browser-extension/dist/chromium/content.js")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("popup.html"), include_bytes!("../../../browser-extension/dist/chromium/popup.html")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("popup.css"), include_bytes!("../../../browser-extension/dist/chromium/popup.css")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("popup.js"), include_bytes!("../../../browser-extension/dist/chromium/popup.js")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("icons/sf-small.png"), include_bytes!("../../../browser-extension/dist/chromium/icons/sf-small.png")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("icons/sf-large.png"), include_bytes!("../../../browser-extension/dist/chromium/icons/sf-large.png")).map_err(|e| e.to_string())?;
+        let files = ["manifest.json", "background.js", "content.js", "popup.html", "popup.css", "popup.js", "icons/sf-small.png", "icons/sf-large.png"];
+        for file in files {
+            let src_file = project_dist.join(file);
+            let dest_file = ext_dir.join(file);
+            if let Ok(bytes) = std::fs::read(&src_file) {
+                let _ = std::fs::write(&dest_file, bytes);
+            } else {
+                let embedded_bytes: &[u8] = match file {
+                    "manifest.json" => include_bytes!("../../../browser-extension/dist/chromium/manifest.json"),
+                    "background.js" => include_bytes!("../../../browser-extension/dist/chromium/background.js"),
+                    "content.js" => include_bytes!("../../../browser-extension/dist/chromium/content.js"),
+                    "popup.html" => include_bytes!("../../../browser-extension/dist/chromium/popup.html"),
+                    "popup.css" => include_bytes!("../../../browser-extension/dist/chromium/popup.css"),
+                    "popup.js" => include_bytes!("../../../browser-extension/dist/chromium/popup.js"),
+                    "icons/sf-small.png" => include_bytes!("../../../browser-extension/dist/chromium/icons/sf-small.png"),
+                    "icons/sf-large.png" => include_bytes!("../../../browser-extension/dist/chromium/icons/sf-large.png"),
+                    _ => &[],
+                };
+                if !embedded_bytes.is_empty() {
+                    let _ = std::fs::write(&dest_file, embedded_bytes);
+                }
+            }
+        }
     } else if browser == "firefox" {
-        std::fs::write(ext_dir.join("manifest.json"), include_bytes!("../../../browser-extension/dist/firefox/manifest.json")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("background.js"), include_bytes!("../../../browser-extension/dist/firefox/background.js")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("content.js"), include_bytes!("../../../browser-extension/dist/firefox/content.js")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("popup.html"), include_bytes!("../../../browser-extension/dist/firefox/popup.html")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("popup.css"), include_bytes!("../../../browser-extension/dist/firefox/popup.css")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("popup.js"), include_bytes!("../../../browser-extension/dist/firefox/popup.js")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("icons/sf-small.png"), include_bytes!("../../../browser-extension/dist/firefox/icons/sf-small.png")).map_err(|e| e.to_string())?;
-        std::fs::write(ext_dir.join("icons/sf-large.png"), include_bytes!("../../../browser-extension/dist/firefox/icons/sf-large.png")).map_err(|e| e.to_string())?;
+        let files = ["manifest.json", "background.js", "content.js", "popup.html", "popup.css", "popup.js", "icons/sf-small.png", "icons/sf-large.png"];
+        for file in files {
+            let src_file = project_dist.join(file);
+            let dest_file = ext_dir.join(file);
+            if let Ok(bytes) = std::fs::read(&src_file) {
+                let _ = std::fs::write(&dest_file, bytes);
+            } else {
+                let embedded_bytes: &[u8] = match file {
+                    "manifest.json" => include_bytes!("../../../browser-extension/dist/firefox/manifest.json"),
+                    "background.js" => include_bytes!("../../../browser-extension/dist/firefox/background.js"),
+                    "content.js" => include_bytes!("../../../browser-extension/dist/firefox/content.js"),
+                    "popup.html" => include_bytes!("../../../browser-extension/dist/firefox/popup.html"),
+                    "popup.css" => include_bytes!("../../../browser-extension/dist/firefox/popup.css"),
+                    "popup.js" => include_bytes!("../../../browser-extension/dist/firefox/popup.js"),
+                    "icons/sf-small.png" => include_bytes!("../../../browser-extension/dist/firefox/icons/sf-small.png"),
+                    "icons/sf-large.png" => include_bytes!("../../../browser-extension/dist/firefox/icons/sf-large.png"),
+                    _ => &[],
+                };
+                if !embedded_bytes.is_empty() {
+                    let _ = std::fs::write(&dest_file, embedded_bytes);
+                }
+            }
+        }
         
-        // Copia o arquivo XPI para instalação direta ou manual. Prioriza o XPI
-        // mais recente em browser-extension/release/ (basta jogar o novo .xpi lá
-        // e removê-lo antigo); se não houver, usa o XPI embutido no binário.
-        let release_dir = app
-            .path()
-            .app_data_dir()
-            .map_err(|e| e.to_string())?
+        // Copia o arquivo XPI para instalação direta ou manual.
+        let release_dir = app_data
             .join("..")
             .join("..")
             .join("browser-extension")
