@@ -16,16 +16,19 @@ type Tab = "chromium" | "firefox";
 
 export function BrowserIntegrationPage() {
   const [tab, setTab] = useState<Tab>("chromium");
-  const [folder, setFolder] = useState("");
+  const [chromiumFolder, setChromiumFolder] = useState("");
+  const [firefoxFolder, setFirefoxFolder] = useState("");
   const [copied, setCopied] = useState(false);
   const appWindow = getCurrentWindow();
 
   useEffect(() => {
-    const target = tab === "chromium" ? "chromium" : "firefox";
-    invoke<string>("get_extension_dir", { browser: target })
-      .then(setFolder)
+    invoke<string>("get_extension_dir", { browser: "chromium" })
+      .then(setChromiumFolder)
       .catch(console.error);
-  }, [tab]);
+    invoke<string>("get_extension_dir", { browser: "firefox" })
+      .then(setFirefoxFolder)
+      .catch(console.error);
+  }, []);
 
   const copy = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -34,7 +37,7 @@ export function BrowserIntegrationPage() {
     });
   };
   const openXpi = () =>
-    folder && void service.openFile(`${folder}/integration.xpi`).catch(console.error);
+    firefoxFolder && void service.openFile(`${firefoxFolder}/integration.xpi`).catch(console.error);
   const close = () => void appWindow.close();
 
   return (
@@ -74,7 +77,7 @@ export function BrowserIntegrationPage() {
       <main className="integr-body">
         {tab === "chromium" ? (
           <div className="integr-install">
-            <div className="integr-drop" onMouseDown={(e) => { e.preventDefault(); folder && void invoke("start_drag_folder", { path: folder }).catch(console.error); }} title="Arraste para a página de extensões do navegador">
+            <div className="integr-drop" onMouseDown={(e) => { e.preventDefault(); chromiumFolder && void invoke("start_drag_folder", { path: chromiumFolder }).catch(console.error); }} title="Arraste para a página de extensões do navegador">
               <div className="integr-drop-icon">
                 <Package size={26} />
               </div>
@@ -111,7 +114,7 @@ export function BrowserIntegrationPage() {
               onClick={openXpi}
               onMouseDown={(e) => {
                 e.preventDefault();
-                folder && void invoke("start_drag_folder", { path: `${folder}/integration.xpi` }).catch(console.error);
+                firefoxFolder && void invoke("start_drag_folder", { path: `${firefoxFolder}/integration.xpi` }).catch(console.error);
               }}
               title="Clique para abrir/instalar no Firefox ou arraste para a aba do navegador"
             >
@@ -129,7 +132,7 @@ export function BrowserIntegrationPage() {
                 Clique no card acima para abrir o instalador no Firefox, ou arraste-o direto para o navegador.
               </li>
               <li>
-                Ou <button className="integr-link-btn" onClick={() => folder && void service.revealInFolder(`${folder}/integration.xpi`)}>abrir pasta no Explorer</button> para selecionar em <code>about:addons</code>.
+                Ou <button className="integr-link-btn" onClick={() => firefoxFolder && void service.revealInFolder(`${firefoxFolder}/integration.xpi`)}>abrir pasta no Explorer</button> para selecionar em <code>about:addons</code>.
               </li>
               <li>
                 Para testes em desenvolvimento: <code>about:debugging#/runtime/this-firefox</code>.
