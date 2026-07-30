@@ -146,7 +146,7 @@ export function ConfirmationPage({ token }: { token: string }) {
       if (!active) return;
       if (error) {
         void appWindow
-          .setSize(new LogicalSize(600, 380))
+          .setSize(new LogicalSize(600, 420))
           .catch(() => {});
         return;
       }
