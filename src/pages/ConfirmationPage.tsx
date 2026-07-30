@@ -379,29 +379,31 @@ export function ConfirmationPage({ token }: { token: string }) {
       </div>
 
       {/* 3. Rodapé Fixo */}
-      <footer className="confirm-footer">
-        <button
-          className="confirm-details-toggle"
-          onClick={() => setDetailsOpen((v) => !v)}
-        >
-          <ChevronDown className={detailsOpen ? "is-open" : ""} size={16} />
-          <span>Mais detalhes</span>
-        </button>
-
-        <div className="confirm-footer-actions">
-          <button className="confirm-btn-cancel" onClick={close}>
-            Cancelar
-          </button>
+      {!error && (
+        <footer className="confirm-footer">
           <button
-            className="confirm-btn-start"
-            disabled={busy || loading || !preview}
-            onClick={() => void finish()}
+            className="confirm-details-toggle"
+            onClick={() => setDetailsOpen((v) => !v)}
           >
-            <Download size={18} />
-            <span>{busy ? "Iniciando..." : "Iniciar download"}</span>
+            <ChevronDown className={detailsOpen ? "is-open" : ""} size={16} />
+            <span>Mais detalhes</span>
           </button>
-        </div>
-      </footer>
+
+          <div className="confirm-footer-actions">
+            <button className="confirm-btn-cancel" onClick={close}>
+              Cancelar
+            </button>
+            <button
+              className="confirm-btn-start"
+              disabled={busy || loading || !preview}
+              onClick={() => void finish()}
+            >
+              <Download size={18} />
+              <span>{busy ? "Iniciando..." : "Iniciar download"}</span>
+            </button>
+          </div>
+        </footer>
+      )}
 
       {/* Painel Deslizante de Mais Detalhes (Idêntico às outras janelas) */}
       {detailsOpen && (
@@ -437,13 +439,20 @@ export function ConfirmationPage({ token }: { token: string }) {
       {error && (
         <div className="confirm-error-sheet">
           <div className="confirm-error-header">
-            <AlertTriangle size={16} />
-            <span>Erro ao iniciar download</span>
-            <button className="confirm-error-close" onClick={() => setError(null)}>
-              <X size={14} />
+            <div className="confirm-error-icon">
+              <AlertTriangle />
+            </div>
+            <div className="confirm-error-text">
+              <p className="confirm-error-title">Erro ao iniciar download</p>
+              <p className="confirm-error-message">{stripFileName(error)}</p>
+            </div>
+          </div>
+          <div className="confirm-error-sep" />
+          <div className="confirm-error-actions">
+            <button className="confirm-error-btn" onClick={() => setError(null)}>
+              Voltar
             </button>
           </div>
-          <p className="confirm-error-message">{stripFileName(error)}</p>
         </div>
       )}
 
