@@ -1,5 +1,6 @@
 import {
   Archive,
+  Ban,
   ChevronDown,
   Download,
   Eye,
@@ -438,15 +439,45 @@ export function ConfirmationPage({ token }: { token: string }) {
 
       {error && (
         <div className="confirm-error-sheet">
-          <div className="confirm-error-header">
+          <div className="confirm-error-hero">
             <div className="confirm-error-icon">
               <AlertTriangle />
             </div>
-            <div className="confirm-error-text">
-              <p className="confirm-error-title">Erro ao iniciar download</p>
-              <p className="confirm-error-message">{stripFileName(error)}</p>
+            <div className="confirm-error-hero-text">
+              <h2 className="confirm-error-title">Erro ao iniciar download</h2>
+              <div className="confirm-error-info-box">
+                <div className="confirm-error-info-icon">
+                  <Info size={18} />
+                </div>
+                <div className="confirm-error-info-text">
+                  <p>{stripFileName(error)}</p>
+                  <p className="confirm-error-hint">Siga as sugestões abaixo para resolver o problema e tentar novamente.</p>
+                </div>
+              </div>
             </div>
           </div>
+
+          <div className="confirm-error-suggestions">
+            <div className="confirm-error-suggestion">
+              <div className="confirm-error-suggestion-icon suggestion-green">
+                <Globe size={20} />
+              </div>
+              <span>Verifique se a fonte de download ainda está disponível</span>
+            </div>
+            <div className="confirm-error-suggestion">
+              <div className="confirm-error-suggestion-icon suggestion-blue">
+                <Ban size={20} />
+              </div>
+              <span>Cancele outra instância do arquivo em download</span>
+            </div>
+            <div className="confirm-error-suggestion">
+              <div className="confirm-error-suggestion-icon suggestion-purple">
+                <FolderOpen size={20} />
+              </div>
+              <span>Troque a pasta de download do arquivo</span>
+            </div>
+          </div>
+
           <div className="confirm-error-sep" />
           <div className="confirm-error-actions">
             <button className="confirm-error-btn" onClick={() => setError(null)}>
