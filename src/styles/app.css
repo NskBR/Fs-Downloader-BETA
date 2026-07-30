@@ -981,17 +981,6 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.confirm-header-error {
-  font-size: 10px;
-  color: var(--st-failed, #ff5a5f);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 200px;
-  flex-shrink: 0;
-  pointer-events: auto;
-  margin-left: 6px;
-}
 
 .confirm-window-controls { display: flex; align-items: center; gap: 6px; pointer-events: auto; }
 .confirm-window-controls button {
@@ -1272,6 +1261,37 @@ input::-ms-clear {
   animation: dw-fade 0.18s ease !important;
 }
 .confirm-details-sheet::-webkit-scrollbar { display: none; }
+
+.confirm-error-sheet {
+  position: absolute;
+  left: 0; right: 0; top: 46px; bottom: 50px;
+  background: var(--bg-fill, #16171a);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 20;
+  animation: dw-fade 0.18s ease;
+}
+.confirm-error-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--st-failed, #ff5a5f);
+  font-size: 13px;
+  font-weight: 600;
+}
+.confirm-error-header span { flex: 1; }
+.confirm-error-close {
+  display: grid; place-items: center; width: 24px; height: 24px;
+  border-radius: 6px; color: var(--muted); background: transparent;
+  border: none; cursor: pointer; transition: 0.15s;
+}
+.confirm-error-close:hover { color: var(--text); background: var(--surface); }
+.confirm-error-message {
+  margin: 0; font-size: 12px; color: var(--text-2);
+  line-height: 1.5; word-break: break-word;
+}
 
 /* 3. Rodapé Fixo */
 .confirm-footer {

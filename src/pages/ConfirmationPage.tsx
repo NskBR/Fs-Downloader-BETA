@@ -260,7 +260,6 @@ export function ConfirmationPage({ token }: { token: string }) {
             {fileNameText}
           </span>
         </div>
-        {error && <span className="confirm-header-error" title={error}>{stripFileName(error)}</span>}
         <div className="confirm-window-controls nodrag">
           <button onClick={() => void appWindow.minimize()} title="Minimizar">
             <Minus size={16} />
@@ -432,6 +431,19 @@ export function ConfirmationPage({ token }: { token: string }) {
             <span>Pasta de Destino</span>
             <b title={destination}>{destination || "—"}</b>
           </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="confirm-error-sheet">
+          <div className="confirm-error-header">
+            <AlertTriangle size={16} />
+            <span>Erro ao iniciar download</span>
+            <button className="confirm-error-close" onClick={() => setError(null)}>
+              <X size={14} />
+            </button>
+          </div>
+          <p className="confirm-error-message">{stripFileName(error)}</p>
         </div>
       )}
 
