@@ -160,7 +160,7 @@ export function ConfirmationPage({ token }: { token: string }) {
       if (!active) return;
       if (error) {
         void appWindow
-          .setSize(new LogicalSize(640, 315))
+          .setSize(new LogicalSize(640, 350))
           .catch(() => {});
         return;
       }
@@ -462,7 +462,7 @@ export function ConfirmationPage({ token }: { token: string }) {
           <div className="confirm-error-body">
             <div className="confirm-error-left">
               <div className="confirm-error-glow-icon">
-                <AlertTriangle size={76} strokeWidth={1.8} />
+                <AlertTriangle size={68} strokeWidth={1.8} />
               </div>
             </div>
 
