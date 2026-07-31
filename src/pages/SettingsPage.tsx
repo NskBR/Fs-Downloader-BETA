@@ -45,7 +45,6 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [categoryName, setCategoryName] = useState("");
   const [categoryExtensions, setCategoryExtensions] = useState("");
-  const [customizerOpen, setCustomizerOpen] = useState(false);
 
   const appThemes = [
     {
@@ -418,21 +417,13 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
         {/* ABA: PERSONALIZAÇÃO */}
         {activeTab === "personalizacao" && (
           <div className="cfg-tab-view">
-            {/* Card 1: Tema do aplicativo (6 Temas + Botão Personalizar cor) */}
+            {/* Card 1: Tema do aplicativo (6 Temas) */}
             <div className="cfg-card">
               <div className="cfg-card-header cfg-theme-header">
                 <div>
                   <h3 className="cfg-card-title">Tema do aplicativo</h3>
                   <p className="cfg-card-subtitle">Escolha o tema que define a aparência geral do app.</p>
                 </div>
-                <button
-                  type="button"
-                  className="cfg-btn-personalizar-cor"
-                  onClick={() => setCustomizerOpen(true)}
-                >
-                  <Pencil size={14} />
-                  <span>Personalizar cor</span>
-                </button>
               </div>
 
               <div className="cfg-card-content">
@@ -552,32 +543,6 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                 </div>
               </div>
             </div>
-
-            {/* Modal de Personalizar Cor Flutuante */}
-            {customizerOpen && (
-              <div className="discord-drawer-wrapper" onClick={() => setCustomizerOpen(false)}>
-                <div onClick={(e) => e.stopPropagation()}>
-                  <DiscordThemeCustomizer
-                    config={draft.interfaceGradient}
-                    appColor={draft.appColor}
-                    onChangeGradient={(value) => {
-                      const next = { ...draft, interfaceGradient: value };
-                      setDraft(next);
-                      onSave(next);
-                    }}
-                    onSelectAppColor={(color) => {
-                      const next = {
-                        ...draft,
-                        appColor: color,
-                        interfaceGradient: { ...draft.interfaceGradient, enabled: false },
-                      };
-                      setDraft(next);
-                      onSave(next);
-                    }}
-                  />
-                </div>
-              </div>
-            )}
           </div>
         )}
 
