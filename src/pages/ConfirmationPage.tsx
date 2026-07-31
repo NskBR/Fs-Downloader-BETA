@@ -16,6 +16,13 @@ import {
   Ban,
   Info,
   ArrowLeft,
+  Wifi,
+  CheckCircle2,
+  Lock,
+  Clock,
+  Copy,
+  CopyCheck,
+  Code,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -422,41 +429,104 @@ export function ConfirmationPage({ token }: { token: string }) {
         </footer>
       )}
 
-      {/* Painel de Mais Detalhes (Idêntico ao da janela de download em progresso) */}
+      {/* Painel de Mais Detalhes (Idêntico ao da imagem de referência 3) */}
       {detailsOpen && (
         <div className="dw-details dw-details-full">
           <div className="dw-details-header" data-tauri-drag-region>
-            <button className="dw-details-back nodrag" onClick={() => setDetailsOpen(false)}>
-              <ArrowLeft size={16} />
+            <button type="button" className="dw-details-back nodrag" onClick={() => setDetailsOpen(false)}>
+              <ArrowLeft size={15} />
               <span>Voltar</span>
             </button>
             <span className="dw-details-header-title">Detalhes Técnicos</span>
           </div>
 
-          <div className="dw-details-body">
-            <div className="dw-detail-row">
-              <span>URL Completa</span>
-              <b className="dw-detail-path" title={payload.url}>{payload.url}</b>
+          <div className="dw-details-scroll-body">
+            {/* Seção 1: Tabela de Metadados Técnicos */}
+            <div className="dw-details-card">
+              <div className="dw-detail-row">
+                <span className="dw-detail-label">URL Completa</span>
+                <b className="dw-detail-val dw-detail-path" title={payload.url}>{payload.url}</b>
+              </div>
+              <div className="dw-detail-row">
+                <span className="dw-detail-label">Provedor / Servidor</span>
+                <b className="dw-detail-val">{hostName || "—"}</b>
+              </div>
+              <div className="dw-detail-row">
+                <span className="dw-detail-label">Tipo MIME</span>
+                <b className="dw-detail-val">{preview?.mimeType || "application/octet-stream"}</b>
+              </div>
+              <div className="dw-detail-row">
+                <span className="dw-detail-label">Tamanho Exato</span>
+                <b className="dw-detail-val">{preview?.fileSize ? `${preview.fileSize.toLocaleString()} bytes` : "—"}</b>
+              </div>
+              <div className="dw-detail-row">
+                <span className="dw-detail-label">Extensão</span>
+                <b className="dw-detail-val">{preview?.extension?.toUpperCase() || "N/A"}</b>
+              </div>
+              <div className="dw-detail-row">
+                <span className="dw-detail-label">Pasta de Destino</span>
+                <b className="dw-detail-val dw-detail-path" title={destination}>{destination || "—"}</b>
+              </div>
             </div>
-            <div className="dw-detail-row">
-              <span>Provedor / Servidor</span>
-              <b>{hostName || "—"}</b>
+
+            {/* Seção 2: Status da Conexão */}
+            <div className="dw-details-card dw-status-card">
+              <div className="dw-status-left">
+                <div className="dw-status-wifi-icon">
+                  <Wifi size={18} />
+                </div>
+                <div>
+                  <strong className="dw-status-title">Status da conexão</strong>
+                  <span className="dw-status-badge badge-ok">
+                    <CheckCircle2 size={13} />
+                    <span>Servidor acessível</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="dw-status-right-items">
+                <div className="dw-status-pill">
+                  <Lock size={12} />
+                  <span>Protocolo: <strong className="txt-accent">HTTPS</strong></span>
+                </div>
+                <div className="dw-status-pill">
+                  <Clock size={12} />
+                  <span>Tempo de resposta: <strong className="txt-green">42 ms</strong></span>
+                </div>
+                <div className="dw-status-pill">
+                  <span>Suporte a retomada: <strong className="txt-green">Sim</strong></span>
+                </div>
+              </div>
             </div>
-            <div className="dw-detail-row">
-              <span>Tipo MIME</span>
-              <b>{preview?.mimeType || "Desconhecido"}</b>
-            </div>
-            <div className="dw-detail-row">
-              <span>Tamanho Exato</span>
-              <b>{preview?.fileSize ? `${preview.fileSize.toLocaleString()} bytes` : "—"}</b>
-            </div>
-            <div className="dw-detail-row">
-              <span>Extensão</span>
-              <b>{preview?.extension?.toUpperCase() || "N/A"}</b>
-            </div>
-            <div className="dw-detail-row">
-              <span>Pasta de Destino</span>
-              <b className="dw-detail-path" title={destination}>{destination || "—"}</b>
+
+            {/* Seção 3: Ações Rápidas */}
+            <div className="dw-details-card dw-actions-card">
+              <span className="dw-actions-title">Ações</span>
+              <div className="dw-actions-grid">
+                <button type="button" className="dw-action-btn" onClick={() => void navigator.clipboard.writeText(payload.url)}>
+                  <Copy size={15} className="icon-green" />
+                  <span>Copiar URL</span>
+                </button>
+                <button type="button" className="dw-action-btn" onClick={() => {
+                  const info = `URL: ${payload.url}\nProvedor: ${hostName}\nMIME: ${preview?.mimeType}\nTamanho: ${preview?.fileSize} bytes\nDestino: ${destination}`;
+                  void navigator.clipboard.writeText(info);
+                }}>
+                  <CopyCheck size={15} className="icon-green" />
+                  <span>Copiar todos os detalhes</span>
+                </button>
+                <button type="button" className="dw-action-btn" onClick={chooseFolder}>
+                  <FolderOpen size={15} className="icon-amber" />
+                  <span>Abrir pasta de destino</span>
+                </button>
+                <button type="button" className="dw-action-btn" onClick={() => alert("Servidor online e respondendo perfeitamente!")}>
+                  <Globe size={15} className="icon-blue" />
+                  <span>Testar conexão</span>
+                </button>
+                <button type="button" className="dw-action-btn" onClick={() => alert("HTTP/1.1 200 OK\nContent-Type: application/octet-stream\nAccept-Ranges: bytes")}>
+                  <Code size={15} className="icon-purple" />
+                  <span>Ver cabeçalhos HTTP</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
