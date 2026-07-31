@@ -4185,6 +4185,19 @@ html, body, #root, .window-frame {
   flex-shrink: 0;
 }
 
+.cfg-mini-custom-overlay {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--ember-solid, #06b6d4);
+  background: radial-gradient(circle at center, rgba(6, 182, 212, 0.2), transparent 75%);
+}
+
+.cfg-custom-mini-icon {
+  filter: drop-shadow(0 2px 8px rgba(6, 182, 212, 0.5));
+}
+
 .cfg-mini-sidebar {
   width: 14px;
   display: flex;

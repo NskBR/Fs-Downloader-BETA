@@ -225,110 +225,214 @@ export function DiscordThemeCustomizer({
           );
         })}
       </div>
+    </div>
+  );
+}
 
-      {/* Painel Flutuante Lateral de Personalização ("Personalize o seu tema 🎨") */}
-      {modalOpen && (
-        <div className="discord-drawer-wrapper">
-          <div className="discord-floating-drawer" onClick={(e) => e.stopPropagation()}>
-            <header className="discord-modal-header">
-              <span className="discord-title-with-icon">
-                <Palette size={17} className="discord-header-icon" />
-                <span>Personalizar tema</span>
-              </span>
-              <button type="button" onClick={() => setModalOpen(false)} title="Fechar painel">
-                <X size={18} />
-              </button>
-            </header>
+export function ThemeCustomizerModal({
+  config,
+  onChangeGradient,
+  onClose,
+}: {
+  config: GradientConfig;
+  onChangeGradient: (config: GradientConfig) => void;
+  onClose: () => void;
+}) {
+  const updateColor = (index: number, color: string) => {
+    const stops = [...config.stops];
+    if (stops[index]) {
+      stops[index] = { ...stops[index], color };
+    } else {
+      stops.push({ color, position: index * 100 });
+    }
+    onChangeGradient({
+      ...config,
+      enabled: true,
+      stops,
+    });
+  };
 
-            <div className="discord-modal-body">
-              {/* Seção Cores */}
-              <div className="discord-custom-section">
-                <label className="discord-section-title">Cores</label>
+  const addStop = () => {
+    const darkColors = ["#090204", "#0a0308", "#050a1e", "#040714", "#040d08", "#0e0503"];
+    const newColor = darkColors[Math.floor(Math.random() * darkColors.length)];
+    const stops = [...config.stops];
+    stops.push({ color: newColor, position: 100 });
+    const step = 100 / (stops.length - 1 || 1);
+    stops.forEach((s, i) => { s.position = Math.round(i * step); });
+    onChangeGradient({
+      ...config,
+      enabled: true,
+      stops,
+    });
+  };
 
-                {/* Seletores dinâmicos de cor */}
-                {config.stops.map((stop, index) => (
-                  <div className={`discord-color-row${index > 0 ? " margin-top" : ""}`} key={index}>
-                    <div
-                      className="discord-color-box"
-                      style={{ background: stop.color }}
-                    >
-                      <input
-                        type="color"
-                        value={stop.color}
-                        onChange={(e) => updateColor(index, e.target.value)}
-                      />
-                    </div>
-                    <input
-                      type="text"
-                      className="discord-hex-input"
-                      value={stop.color.toUpperCase()}
-                      onChange={(e) => updateColor(index, e.target.value)}
-                    />
-                    {"EyeDropper" in window && (
-                      <button
-                        type="button"
-                        className="discord-eyedrop-btn"
-                        onClick={() => void pickEyedropper(index)}
-                        title="Capturar cor da tela"
-                      >
-                        <Pipette size={16} />
-                      </button>
-                    )}
-                    {config.stops.length > 1 && (
-                      <button
-                        type="button"
-                        className="discord-eyedrop-btn discord-remove-stop-btn"
-                        onClick={() => removeStop(index)}
-                        title="Remover esta cor"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+  const removeStop = (index: number) => {
+    if (config.stops.length <= 1) return;
+    const stops = config.stops.filter((_, i) => i !== index);
+    const step = 100 / (stops.length - 1 || 1);
+    stops.forEach((s, i) => { s.position = Math.round(i * step); });
+    onChangeGradient({
+      ...config,
+      enabled: true,
+      stops,
+    });
+  };
 
-                {/* Botão Adicionar Cor */}
-                <button
-                  type="button"
-                  className="discord-add-color-btn"
-                  onClick={addStop}
+  const updateIntensity = (intensity: number) => {
+    onChangeGradient({
+      ...config,
+      enabled: true,
+      intensity,
+    });
+  };
+
+  const randomize = () => {
+    const randomColors = [
+      "#41010d", "#160b38", "#0b1638", "#320938", "#0a2818",
+      "#381408", "#220b38", "#071a38", "#380b20", "#09262b",
+      "#2e1f06", "#072a38", "#25092a", "#0e2612", "#331b08",
+    ];
+    const c1 = randomColors[Math.floor(Math.random() * randomColors.length)];
+    let c2 = randomColors[Math.floor(Math.random() * randomColors.length)];
+    if (c2 === c1) c2 = "#050608";
+    onChangeGradient({
+      enabled: true,
+      type: "linear",
+      angle: 135,
+      intensity: 75,
+      stops: [
+        { color: c1, position: 0 },
+        { color: c2, position: 100 },
+      ],
+    });
+  };
+
+  const reset = () => {
+    onChangeGradient({
+      enabled: false,
+      type: "linear",
+      angle: 160,
+      intensity: 74,
+      stops: [
+        { color: "#0b0d10", position: 0 },
+        { color: "#12151b", position: 100 },
+      ],
+    });
+  };
+
+  const pickEyedropper = async (index: number) => {
+    if ("EyeDropper" in window) {
+      try {
+        // @ts-expect-error EyeDropper API
+        const eyeDropper = new window.EyeDropper();
+        const result = await eyeDropper.open();
+        if (result?.sRGBHex) {
+          updateColor(index, result.sRGBHex);
+        }
+      } catch {}
+    }
+  };
+
+  return (
+    <div className="discord-drawer-wrapper" onClick={onClose}>
+      <div className="discord-floating-drawer" onClick={(e) => e.stopPropagation()}>
+        <header className="discord-modal-header">
+          <span className="discord-title-with-icon">
+            <Palette size={17} className="discord-header-icon" />
+            <span>Personalizar tema</span>
+          </span>
+          <button type="button" onClick={onClose} title="Fechar painel">
+            <X size={18} />
+          </button>
+        </header>
+
+        <div className="discord-modal-body">
+          {/* Seção Cores */}
+          <div className="discord-custom-section">
+            <label className="discord-section-title">CORES</label>
+
+            {/* Seletores dinâmicos de cor */}
+            {config.stops.map((stop, index) => (
+              <div className={`discord-color-row${index > 0 ? " margin-top" : ""}`} key={index}>
+                <div
+                  className="discord-color-box"
+                  style={{ background: stop.color }}
                 >
-                  <Plus size={16} />
-                  <span>Adicionar cor</span>
-                </button>
-              </div>
-
-              {/* Seção Controles (Intensidade) */}
-              <div className="discord-custom-section">
-                <div className="discord-slider-header">
-                  <label className="discord-section-title">Intensidade de cor</label>
-                  <span className="discord-slider-value">{config.intensity ?? 74}%</span>
+                  <input
+                    type="color"
+                    value={stop.color}
+                    onChange={(e) => updateColor(index, e.target.value)}
+                  />
                 </div>
                 <input
-                  type="range"
-                  className="discord-intensity-slider"
-                  min={10}
-                  max={100}
-                  value={config.intensity ?? 74}
-                  onChange={(e) => updateIntensity(Number(e.target.value))}
+                  type="text"
+                  className="discord-hex-input"
+                  value={stop.color.toUpperCase()}
+                  onChange={(e) => updateColor(index, e.target.value)}
                 />
+                {"EyeDropper" in window && (
+                  <button
+                    type="button"
+                    className="discord-eyedrop-btn"
+                    onClick={() => void pickEyedropper(index)}
+                    title="Capturar cor da tela"
+                  >
+                    <Pipette size={16} />
+                  </button>
+                )}
+                {config.stops.length > 1 && (
+                  <button
+                    type="button"
+                    className="discord-eyedrop-btn discord-remove-stop-btn"
+                    onClick={() => removeStop(index)}
+                    title="Remover esta cor"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </div>
+            ))}
 
-              {/* Seção Botões de Ação */}
-              <div className="discord-action-buttons">
-                <button type="button" className="discord-btn-random" onClick={randomize}>
-                  <Dices size={18} />
-                  <span>Surpreenda-me!</span>
-                </button>
-                <button type="button" className="discord-btn-reset" onClick={reset}>
-                  <RotateCcw size={16} />
-                  <span>Redefinir</span>
-                </button>
-              </div>
+            {/* Botão Adicionar Cor */}
+            <button
+              type="button"
+              className="discord-add-color-btn"
+              onClick={addStop}
+            >
+              <Plus size={16} />
+              <span>Adicionar cor</span>
+            </button>
+          </div>
+
+          {/* Seção Controles (Intensidade) */}
+          <div className="discord-custom-section">
+            <div className="discord-slider-header">
+              <label className="discord-section-title">INTENSIDADE DE COR</label>
+              <span className="discord-slider-value">{config.intensity ?? 74}%</span>
             </div>
+            <input
+              type="range"
+              className="discord-intensity-slider"
+              min={10}
+              max={100}
+              value={config.intensity ?? 74}
+              onChange={(e) => updateIntensity(Number(e.target.value))}
+            />
+          </div>
+
+          {/* Seção Botões de Ação */}
+          <div className="discord-action-buttons">
+            <button type="button" className="discord-btn-random" onClick={randomize}>
+              <Dices size={18} />
+              <span>Surpreenda-me!</span>
+            </button>
+            <button type="button" className="discord-btn-reset" onClick={reset}>
+              <RotateCcw size={16} />
+              <span>Redefinir</span>
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

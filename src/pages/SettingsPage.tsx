@@ -30,7 +30,7 @@ import {
 import { isLaunchOnStartup, setLaunchOnStartup } from "../services/downloadService";
 import { Toggle } from "../components/ui/Toggle";
 import { CustomSelect } from "../components/ui/CustomSelect";
-import { DiscordThemeCustomizer } from "../components/ui/DiscordThemeCustomizer";
+import { ThemeCustomizerModal } from "../components/ui/DiscordThemeCustomizer";
 
 type SettingsTab = "personalizacao" | "downloads" | "arquivos" | "idioma" | "avancado";
 
@@ -47,39 +47,16 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [categoryName, setCategoryName] = useState("");
   const [categoryExtensions, setCategoryExtensions] = useState("");
-  const [customColor1, setCustomColor1] = useState(
-    draft.interfaceGradient.stops[0]?.color || "#160b38"
-  );
-  const [customColor2, setCustomColor2] = useState(
-    draft.interfaceGradient.stops[1]?.color || "#05020d"
-  );
-  const [showCustomPanel, setShowCustomPanel] = useState(false);
-
-  const applyCustomTheme = (c1: string, c2: string) => {
-    const next = {
-      ...draft,
-      interfaceGradient: {
-        enabled: true,
-        type: "linear" as const,
-        angle: 135,
-        intensity: 75,
-        stops: [
-          { color: c1, position: 0 },
-          { color: c2, position: 100 },
-        ],
-      },
-    };
-    setDraft(next);
-    onSave(next);
-  };
+  const [customizerModalOpen, setCustomizerModalOpen] = useState(false);
 
   const appThemes = [
     {
-      id: "slate",
-      name: "Escuro padrão",
-      bg: "linear-gradient(135deg, #12151b, #181c24)",
+      id: "custom",
+      name: "Personalizado",
+      bg: "linear-gradient(135deg, #1d2028, #111319)",
       accent: "#06b6d4",
-      isGradient: false,
+      isGradient: true,
+      stops: null,
     },
     {
       id: "midnight-sapphire",
@@ -444,24 +421,13 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
         {/* ABA: PERSONALIZAÇÃO */}
         {activeTab === "personalizacao" && (
           <div className="cfg-tab-view">
-            {/* Card 1: Tema do aplicativo (6 Temas + Criador de Tema) */}
+            {/* Card 1: Tema do aplicativo (6 Temas) */}
             <div className="cfg-card">
               <div className="cfg-card-header cfg-theme-header">
                 <div>
                   <h3 className="cfg-card-title">Tema do aplicativo</h3>
-                  <p className="cfg-card-subtitle">Escolha um tema pronto ou crie sua própria combinação de cores.</p>
+                  <p className="cfg-card-subtitle">Escolha o tema que define a aparência geral do app.</p>
                 </div>
-                <button
-                  type="button"
-                  className={`cfg-btn-personalizar-cor ${showCustomPanel ? "active" : ""}`}
-                  onClick={() => {
-                    setShowCustomPanel(!showCustomPanel);
-                    applyCustomTheme(customColor1, customColor2);
-                  }}
-                >
-                  <Sparkles size={14} />
-                  <span>{showCustomPanel ? "Ocultar Criador" : "+ Criar Tema"}</span>
-                </button>
               </div>
 
               <div className="cfg-card-content">
@@ -475,7 +441,9 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                         type="button"
                         className={`cfg-theme-tile ${isSelected ? "is-selected" : ""}`}
                         onClick={() => {
-                          if (theme.isGradient && theme.stops) {
+                          if (theme.id === "custom") {
+                            setCustomizerModalOpen(true);
+                          } else if (theme.isGradient && theme.stops) {
                             const next = {
                               ...draft,
                               interfaceGradient: {
@@ -491,14 +459,6 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                             };
                             setDraft(next);
                             onSave(next);
-                          } else {
-                            const next = {
-                              ...draft,
-                              appColor: "slate" as AppColor,
-                              interfaceGradient: { ...draft.interfaceGradient, enabled: false },
-                            };
-                            setDraft(next);
-                            onSave(next);
                           }
                         }}
                       >
@@ -510,24 +470,32 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
 
                         {/* Mini UI Mockup Graphic */}
                         <div className="cfg-theme-preview" style={{ background: theme.bg }}>
-                          <div className="cfg-mini-sidebar">
-                            <div className="cfg-mini-logo" style={{ color: theme.accent }} />
-                            <div className="cfg-mini-icon" />
-                            <div className="cfg-mini-icon" />
-                            <div className="cfg-mini-icon" />
-                          </div>
-                          <div className="cfg-mini-main">
-                            <div className="cfg-mini-topbar" style={{ background: theme.accent }} />
-                            <div className="cfg-mini-card">
-                              <div className="cfg-mini-line long" />
-                              <div className="cfg-mini-line short" />
+                          {theme.id === "custom" ? (
+                            <div className="cfg-mini-custom-overlay">
+                              <Pencil size={18} className="cfg-custom-mini-icon" />
                             </div>
-                            <div className="cfg-mini-card">
-                              <div className="cfg-mini-line long" />
-                              <div className="cfg-mini-line short" />
-                            </div>
-                          </div>
-                          <div className="cfg-mini-bottom-glow" style={{ background: theme.accent }} />
+                          ) : (
+                            <>
+                              <div className="cfg-mini-sidebar">
+                                <div className="cfg-mini-logo" style={{ color: theme.accent }} />
+                                <div className="cfg-mini-icon" />
+                                <div className="cfg-mini-icon" />
+                                <div className="cfg-mini-icon" />
+                              </div>
+                              <div className="cfg-mini-main">
+                                <div className="cfg-mini-topbar" style={{ background: theme.accent }} />
+                                <div className="cfg-mini-card">
+                                  <div className="cfg-mini-line long" />
+                                  <div className="cfg-mini-line short" />
+                                </div>
+                                <div className="cfg-mini-card">
+                                  <div className="cfg-mini-line long" />
+                                  <div className="cfg-mini-line short" />
+                                </div>
+                              </div>
+                              <div className="cfg-mini-bottom-glow" style={{ background: theme.accent }} />
+                            </>
+                          )}
                         </div>
 
                         <div className="cfg-theme-info">
@@ -538,93 +506,6 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                     );
                   })}
                 </div>
-
-                {/* Painel Inline de Criação de Tema Personalizado */}
-                {showCustomPanel && (
-                  <div className="cfg-custom-theme-creator">
-                    <div className="cfg-custom-theme-header">
-                      <Sparkles size={16} className="cfg-custom-icon" />
-                      <strong className="cfg-custom-theme-title">Criador de Tema Personalizado</strong>
-                    </div>
-
-                    <div className="cfg-custom-theme-row">
-                      <div className="cfg-color-picker-item">
-                        <label>Cor do Topo</label>
-                        <div className="cfg-color-picker-input-group">
-                          <div className="cfg-color-swatch-box" style={{ background: customColor1 }}>
-                            <input
-                              type="color"
-                              value={customColor1}
-                              onChange={(e) => {
-                                const c1 = e.target.value;
-                                setCustomColor1(c1);
-                                applyCustomTheme(c1, customColor2);
-                              }}
-                            />
-                          </div>
-                          <input
-                            type="text"
-                            className="cfg-color-hex-text"
-                            value={customColor1.toUpperCase()}
-                            onChange={(e) => {
-                              const c1 = e.target.value;
-                              setCustomColor1(c1);
-                              if (/^#[0-9A-F]{6}$/i.test(c1)) applyCustomTheme(c1, customColor2);
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="cfg-color-picker-item">
-                        <label>Cor do Fundo</label>
-                        <div className="cfg-color-picker-input-group">
-                          <div className="cfg-color-swatch-box" style={{ background: customColor2 }}>
-                            <input
-                              type="color"
-                              value={customColor2}
-                              onChange={(e) => {
-                                const c2 = e.target.value;
-                                setCustomColor2(c2);
-                                applyCustomTheme(customColor1, c2);
-                              }}
-                            />
-                          </div>
-                          <input
-                            type="text"
-                            className="cfg-color-hex-text"
-                            value={customColor2.toUpperCase()}
-                            onChange={(e) => {
-                              const c2 = e.target.value;
-                              setCustomColor2(c2);
-                              if (/^#[0-9A-F]{6}$/i.test(c2)) applyCustomTheme(customColor1, c2);
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="cfg-btn-randomize"
-                        onClick={() => {
-                          const randomColors = [
-                            "#41010d", "#160b38", "#0b1638", "#320938", "#0a2818",
-                            "#381408", "#220b38", "#071a38", "#380b20", "#09262b",
-                            "#2e1f06", "#072a38", "#25092a", "#0e2612", "#331b08"
-                          ];
-                          const c1 = randomColors[Math.floor(Math.random() * randomColors.length)];
-                          let c2 = randomColors[Math.floor(Math.random() * randomColors.length)];
-                          if (c2 === c1) c2 = "#050608";
-                          setCustomColor1(c1);
-                          setCustomColor2(c2);
-                          applyCustomTheme(c1, c2);
-                        }}
-                      >
-                        <Dices size={15} />
-                        <span>Surpreenda-me</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -668,6 +549,19 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                 </div>
               </div>
             </div>
+
+            {/* Modal Drawer: Personalizar Tema (Do print do usuario) */}
+            {customizerModalOpen && (
+              <ThemeCustomizerModal
+                config={draft.interfaceGradient}
+                onChangeGradient={(val) => {
+                  const next = { ...draft, interfaceGradient: val };
+                  setDraft(next);
+                  onSave(next);
+                }}
+                onClose={() => setCustomizerModalOpen(false)}
+              />
+            )}
           </div>
         )}
 
