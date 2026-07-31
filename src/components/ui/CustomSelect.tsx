@@ -15,6 +15,7 @@ interface CustomSelectProps<T extends string = string> {
   placeholder?: string;
   className?: string;
   icon?: React.ReactNode;
+  direction?: "auto" | "up" | "down";
 }
 
 export function CustomSelect<T extends string = string>({
@@ -25,14 +26,27 @@ export function CustomSelect<T extends string = string>({
   placeholder = "Selecione...",
   className = "",
   icon,
+  direction = "auto",
 }: CustomSelectProps<T>) {
   const [open, setOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
   useEffect(() => {
     if (!open) return;
+
+    if (direction === "up") {
+      setDropUp(true);
+    } else if (direction === "down") {
+      setDropUp(false);
+    } else if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setDropUp(spaceBelow < 180);
+    }
+
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
@@ -40,7 +54,7 @@ export function CustomSelect<T extends string = string>({
     };
     window.addEventListener("mousedown", handleClickOutside);
     return () => window.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
+  }, [open, direction]);
 
   return (
     <div
@@ -61,7 +75,7 @@ export function CustomSelect<T extends string = string>({
       </button>
 
       {open && !disabled && (
-        <div className="custom-select-dropdown">
+        <div className={`custom-select-dropdown ${dropUp ? "drop-up" : ""}`}>
           {options.map((opt) => {
             const isSelected = opt.value === value;
             return (
