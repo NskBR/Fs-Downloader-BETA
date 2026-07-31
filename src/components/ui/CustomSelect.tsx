@@ -75,7 +75,10 @@ export function CustomSelect<T extends string = string>({
       </button>
 
       {open && !disabled && (
-        <div className={`custom-select-dropdown ${dropUp ? "drop-up" : ""}`}>
+        <div
+          className={`custom-select-dropdown ${dropUp ? "drop-up" : ""}`}
+          style={{ backgroundColor: "#181a20", opacity: 1, backdropFilter: "none", WebkitBackdropFilter: "none" }}
+        >
           {options.map((opt) => {
             const isSelected = opt.value === value;
             return (
