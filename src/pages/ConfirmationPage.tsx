@@ -425,8 +425,8 @@ export function ConfirmationPage({ token }: { token: string }) {
       {/* Painel de Mais Detalhes (Idêntico ao da janela de download em progresso) */}
       {detailsOpen && (
         <div className="dw-details dw-details-full">
-          <div className="dw-details-header">
-            <button className="dw-details-back" onClick={() => setDetailsOpen(false)}>
+          <div className="dw-details-header" data-tauri-drag-region>
+            <button className="dw-details-back nodrag" onClick={() => setDetailsOpen(false)}>
               <ArrowLeft size={16} />
               <span>Voltar</span>
             </button>

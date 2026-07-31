@@ -445,8 +445,8 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
 
       {detailsOpen && !cancelOpen && (
         <div className="dw-details dw-details-full">
-          <div className="dw-details-header">
-            <button className="dw-details-back" onClick={() => setDetailsOpen(false)}>
+          <div className="dw-details-header" data-tauri-drag-region>
+            <button className="dw-details-back nodrag" onClick={() => setDetailsOpen(false)}>
               <ArrowLeft size={16} />
               <span>Voltar</span>
             </button>

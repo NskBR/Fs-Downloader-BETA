@@ -3308,7 +3308,7 @@ html, body, #root, .window-frame {
   bottom: auto !important;
   left: 0 !important;
   right: 0 !important;
-  max-height: 120px !important;
+  max-height: 84px !important;
   overflow-y: auto !important;
   scrollbar-width: thin !important;
   z-index: 999999 !important;
