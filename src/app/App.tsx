@@ -37,7 +37,7 @@ export function App() {
    return (
      <>
        <AppShell activePage={activePage} onNavigate={navigate} sidebarAnimation={settings.sidebarAnimation}>{content}</AppShell>
-       <FloatingAiWidget />
+       {!["settings", "metrics", "profile"].includes(activePage) && <FloatingAiWidget />}
      </>
    );
 }
