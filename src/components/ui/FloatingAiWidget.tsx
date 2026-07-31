@@ -1,90 +1,17 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Sparkles, Bot, X, Send, Wand2, Zap, MessageSquare } from "lucide-react";
 
 export function FloatingAiWidget() {
   const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState({ x: window.innerWidth - 80, y: window.innerHeight - 80 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef<{ startX: number; startY: number; posX: number; posY: number }>({
-    startX: 0,
-    startY: 0,
-    posX: 0,
-    posY: 0,
-  });
-  const hasMovedRef = useRef(false);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setPosition((prev) => ({
-        x: Math.min(prev.x, window.innerWidth - 70),
-        y: Math.min(prev.y, window.innerHeight - 70),
-      }));
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return; // Only left click
-    setIsDragging(true);
-    hasMovedRef.current = false;
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      posX: position.x,
-      posY: position.y,
-    };
-  };
-
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const dx = e.clientX - dragRef.current.startX;
-      const dy = e.clientY - dragRef.current.startY;
-      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-        hasMovedRef.current = true;
-      }
-      const newX = Math.max(20, Math.min(window.innerWidth - 70, dragRef.current.posX + dx));
-      const newY = Math.max(60, Math.min(window.innerHeight - 70, dragRef.current.posY + dy));
-      setPosition({ x: newX, y: newY });
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging]);
-
-  const handleClick = () => {
-    if (!hasMovedRef.current) {
-      setOpen((prev) => !prev);
-    }
-  };
 
   return (
-    <div
-      className="ai-widget-root"
-      style={{
-        position: "fixed",
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        zIndex: 9999,
-      }}
-    >
-      {/* Draggable Bubble */}
+    <div className="ai-widget-root">
+      {/* Fixed Bubble Button */}
       <button
         type="button"
-        className={`ai-widget-bubble ${isDragging ? "is-dragging" : ""}`}
-        onMouseDown={handleMouseDown}
-        onClick={handleClick}
-        title="Assistente de IA SF Downloader (Arraste para mover)"
+        className="ai-widget-bubble"
+        onClick={() => setOpen((prev) => !prev)}
+        title="Assistente de IA SF Downloader (Preview)"
       >
         <div className="ai-widget-glow" />
         <div className="ai-widget-icon">
