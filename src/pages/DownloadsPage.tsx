@@ -456,7 +456,7 @@ export function DownloadsPage({
           {loading ? (
             <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px" }}>Carregando...</div>
           ) : visible.length === 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: "16px", color: "var(--muted)" }}>
+            <div className="empty-downloads-state">
               <FolderOpen size={48} />
               <strong>Nenhum download encontrado</strong>
             </div>

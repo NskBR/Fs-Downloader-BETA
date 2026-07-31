@@ -12,7 +12,7 @@ import { isPageId, type PageId } from "./navigation";
 import * as downloadService from "../services/downloadService";
 import { applyThemeSettings } from "../services/theme";
 interface BrowserDownloadRequest { requestId:string;url:string;fileName:string|null;fileSize:number|null;mimeType:string|null }
-const categoryPages:PageId[]=["downloads","active","completed","documents","music","videos","archives","applications","calculator"];
+const categoryPages:PageId[]=["downloads","active","completed","documents","music","videos","archives","applications","torrents","calculator"];
 const normalizePage=(page:PageId):PageId=>({home:"downloads",organization:"settings",active:"downloads",completed:"downloads"} as Partial<Record<PageId,PageId>>)[page]??page;
 const pageFromHash = (): PageId => { const hash = location.hash.slice(1); if(isPageId(hash))return normalizePage(hash); const saved=localStorage.getItem("sf-downloader.last-page")??""; return isPageId(saved)?normalizePage(saved):"active"; };
 export function App() {

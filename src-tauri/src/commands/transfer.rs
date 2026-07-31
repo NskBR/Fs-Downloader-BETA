@@ -308,7 +308,7 @@ pub async fn inspect_download(url: String) -> Result<DownloadPreview, String> {
         return Err("Apenas URLs HTTP, HTTPS ou Magnet Links são permitidas.".into());
     }
     let client = reqwest::Client::builder()
-        .user_agent("SF Downloader/0.1")
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
         .redirect(reqwest::redirect::Policy::limited(10))
         .build()
         .map_err(|e| e.to_string())?;
