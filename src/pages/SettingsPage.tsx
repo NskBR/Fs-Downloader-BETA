@@ -469,10 +469,21 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                         )}
 
                         {/* Mini UI Mockup Graphic */}
-                        <div className="cfg-theme-preview" style={{ background: theme.bg }}>
+                        <div
+                          className="cfg-theme-preview"
+                          style={{
+                            background:
+                              theme.id === "custom" && draft.interfaceGradient.enabled
+                                ? `linear-gradient(135deg, ${draft.interfaceGradient.stops[0]?.color || "#160b38"}, ${draft.interfaceGradient.stops[1]?.color || "#05020d"})`
+                                : theme.bg,
+                          }}
+                        >
                           {theme.id === "custom" ? (
                             <div className="cfg-mini-custom-overlay">
-                              <Pencil size={18} className="cfg-custom-mini-icon" />
+                              <div className="cfg-custom-icon-wrapper">
+                                <Palette size={20} className="cfg-custom-mini-icon" />
+                                <Sparkles size={11} className="cfg-custom-mini-sparkle" />
+                              </div>
                             </div>
                           ) : (
                             <>
