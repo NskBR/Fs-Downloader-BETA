@@ -15,6 +15,7 @@ import {
   Play,
   Trash2,
   X,
+  ArrowLeft,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -427,48 +428,63 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
       )}
 
       {detailsOpen && !cancelOpen && (
-        <div className="dw-details">
-          <p className="dw-details-title">Detalhes</p>
-          <div className="dw-detail-row">
-            <span>Tamanho</span>
-            <b>{bytes(task.fileSize)}</b>
+        <div className="dw-details dw-details-full">
+          <div className="dw-details-header">
+            <button className="dw-details-back" onClick={() => setDetailsOpen(false)}>
+              <ArrowLeft size={16} />
+              <span>Voltar</span>
+            </button>
+            <span className="dw-details-header-title">Detalhes do Download</span>
           </div>
-          <div className="dw-detail-row">
-            <span>Vel. média</span>
-            <b>{avgSpeed}</b>
-          </div>
-          <div className="dw-detail-row">
-            <span>Tempo total</span>
-            <b>{totalTime}</b>
-          </div>
-          <div className="dw-detail-row">
-            <span>Origem</span>
-            <b className="dw-detail-link" title={source}>
-              <Link2 size={12} />
-              {domain}
-              <ExternalLink size={11} />
-            </b>
-          </div>
-          <div className="dw-detail-row">
-            <span>Salvo em</span>
-            <b className="dw-detail-path" title={task.finalPath}>
-              {task.finalPath}
-            </b>
-          </div>
-          <div className="dw-detail-row">
-            <span>ETag</span>
-            <b className="dw-detail-path">{task.etag ?? "—"}</b>
-          </div>
-          <div className="dw-detail-row">
-            <span>Retomada</span>
-            <b>{task.supportsRange ? "Suportada" : "Não suportada"}</b>
-          </div>
-          {extraction && (
+
+          <div className="dw-details-body">
             <div className="dw-detail-row">
-              <span>Extração</span>
-              <b>{extraction}</b>
+              <span>Tamanho</span>
+              <b>{bytes(task.fileSize)}</b>
             </div>
-          )}
+            <div className="dw-detail-row">
+              <span>Vel. média</span>
+              <b>{avgSpeed}</b>
+            </div>
+            <div className="dw-detail-row">
+              <span>Tempo total</span>
+              <b>{totalTime}</b>
+            </div>
+            <div className="dw-detail-row">
+              <span>Origem</span>
+              <b className="dw-detail-link" title={source}>
+                <Link2 size={12} />
+                {domain}
+                <ExternalLink size={11} />
+              </b>
+            </div>
+            <div className="dw-detail-row">
+              <span>Salvo em</span>
+              <b className="dw-detail-path" title={task.finalPath}>
+                {task.finalPath}
+              </b>
+            </div>
+            <div className="dw-detail-row">
+              <span>ETag</span>
+              <b className="dw-detail-path">{task.etag ?? "—"}</b>
+            </div>
+            <div className="dw-detail-row">
+              <span>Retomada</span>
+              <b>{task.supportsRange ? "Suportada" : "Não suportada"}</b>
+            </div>
+            {extraction && (
+              <div className="dw-detail-row">
+                <span>Extração</span>
+                <b>{extraction}</b>
+              </div>
+            )}
+          </div>
+
+          <div className="dw-details-footer">
+            <button className="dw-btn-primary dw-btn-back-main" onClick={() => setDetailsOpen(false)}>
+              Voltar
+            </button>
+          </div>
         </div>
       )}
 

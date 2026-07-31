@@ -18,5 +18,6 @@ export const navigationItems: NavigationItem[] = [
   ,{ id: "videos", label: "Vídeos", description: "Arquivos de vídeo", icon: FolderTree }
   ,{ id: "archives", label: "Compactados", description: "Arquivos compactados", icon: FolderTree }
   ,{ id: "applications", label: "Aplicativos", description: "Instaladores e programas", icon: FolderTree }
+  ,{ id: "torrents", label: "Torrents", description: "Downloads via Torrent e Magnet Links", icon: Download }
 ];
 export const isPageId = (value: string): value is PageId => navigationItems.some((item) => item.id === value);
