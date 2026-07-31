@@ -1,11 +1,25 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sparkles, Bot, X, Send, Wand2, Zap, MessageSquare } from "lucide-react";
 
 export function FloatingAiWidget() {
   const [open, setOpen] = useState(false);
+  const widgetRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (widgetRef.current && !widgetRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handleClickOutside);
+    return () => window.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
 
   return (
-    <div className="ai-widget-root">
+    <div ref={widgetRef} className="ai-widget-root">
       {/* Fixed Bubble Button */}
       <button
         type="button"
