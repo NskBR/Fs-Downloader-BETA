@@ -15,6 +15,7 @@ import {
   RotateCcw,
   Ban,
   Info,
+  ArrowLeft,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -421,33 +422,42 @@ export function ConfirmationPage({ token }: { token: string }) {
         </footer>
       )}
 
-      {/* Painel Deslizante de Mais Detalhes (Idêntico às outras janelas) */}
+      {/* Painel de Mais Detalhes (Idêntico ao da janela de download em progresso) */}
       {detailsOpen && (
-        <div className="dw-details confirm-details-sheet">
-          <p className="dw-details-title">Detalhes técnicos</p>
-          <div className="dw-detail-row">
-            <span>URL Completa</span>
-            <b title={payload.url}>{payload.url}</b>
+        <div className="dw-details dw-details-full">
+          <div className="dw-details-header">
+            <button className="dw-details-back" onClick={() => setDetailsOpen(false)}>
+              <ArrowLeft size={16} />
+              <span>Voltar</span>
+            </button>
+            <span className="dw-details-header-title">Detalhes Técnicos</span>
           </div>
-          <div className="dw-detail-row">
-            <span>Provedor / Servidor</span>
-            <b>{hostName || "—"}</b>
-          </div>
-          <div className="dw-detail-row">
-            <span>Tipo MIME</span>
-            <b>{preview?.mimeType || "Desconhecido"}</b>
-          </div>
-          <div className="dw-detail-row">
-            <span>Tamanho Exato</span>
-            <b>{preview?.fileSize ? `${preview.fileSize.toLocaleString()} bytes` : "—"}</b>
-          </div>
-          <div className="dw-detail-row">
-            <span>Extensão</span>
-            <b>{preview?.extension?.toUpperCase() || "N/A"}</b>
-          </div>
-          <div className="dw-detail-row">
-            <span>Pasta de Destino</span>
-            <b title={destination}>{destination || "—"}</b>
+
+          <div className="dw-details-body">
+            <div className="dw-detail-row">
+              <span>URL Completa</span>
+              <b className="dw-detail-path" title={payload.url}>{payload.url}</b>
+            </div>
+            <div className="dw-detail-row">
+              <span>Provedor / Servidor</span>
+              <b>{hostName || "—"}</b>
+            </div>
+            <div className="dw-detail-row">
+              <span>Tipo MIME</span>
+              <b>{preview?.mimeType || "Desconhecido"}</b>
+            </div>
+            <div className="dw-detail-row">
+              <span>Tamanho Exato</span>
+              <b>{preview?.fileSize ? `${preview.fileSize.toLocaleString()} bytes` : "—"}</b>
+            </div>
+            <div className="dw-detail-row">
+              <span>Extensão</span>
+              <b>{preview?.extension?.toUpperCase() || "N/A"}</b>
+            </div>
+            <div className="dw-detail-row">
+              <span>Pasta de Destino</span>
+              <b className="dw-detail-path" title={destination}>{destination || "—"}</b>
+            </div>
           </div>
         </div>
       )}
