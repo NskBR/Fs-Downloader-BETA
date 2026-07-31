@@ -429,19 +429,19 @@ export function ConfirmationPage({ token }: { token: string }) {
         </footer>
       )}
 
-      {/* Painel de Mais Detalhes (Idêntico ao da imagem de referência 3) */}
+      {/* Painel de Mais Detalhes (Compacto, sem scroll, 3 ações) */}
       {detailsOpen && (
         <div className="dw-details dw-details-full">
           <div className="dw-details-header" data-tauri-drag-region>
             <button type="button" className="dw-details-back nodrag" onClick={() => setDetailsOpen(false)}>
-              <ArrowLeft size={15} />
+              <ArrowLeft size={14} />
               <span>Voltar</span>
             </button>
             <span className="dw-details-header-title">Detalhes Técnicos</span>
           </div>
 
-          <div className="dw-details-scroll-body">
-            {/* Seção 1: Tabela de Metadados Técnicos */}
+          <div className="dw-details-compact-body">
+            {/* Tabela de Metadados Técnicos */}
             <div className="dw-details-card">
               <div className="dw-detail-row">
                 <span className="dw-detail-label">URL Completa</span>
@@ -469,40 +469,10 @@ export function ConfirmationPage({ token }: { token: string }) {
               </div>
             </div>
 
-            {/* Seção 2: Status da Conexão */}
-            <div className="dw-details-card dw-status-card">
-              <div className="dw-status-left">
-                <div className="dw-status-wifi-icon">
-                  <Wifi size={18} />
-                </div>
-                <div>
-                  <strong className="dw-status-title">Status da conexão</strong>
-                  <span className="dw-status-badge badge-ok">
-                    <CheckCircle2 size={13} />
-                    <span>Servidor acessível</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="dw-status-right-items">
-                <div className="dw-status-pill">
-                  <Lock size={12} />
-                  <span>Protocolo: <strong className="txt-accent">HTTPS</strong></span>
-                </div>
-                <div className="dw-status-pill">
-                  <Clock size={12} />
-                  <span>Tempo de resposta: <strong className="txt-green">42 ms</strong></span>
-                </div>
-                <div className="dw-status-pill">
-                  <span>Suporte a retomada: <strong className="txt-green">Sim</strong></span>
-                </div>
-              </div>
-            </div>
-
-            {/* Seção 3: Ações Rápidas */}
+            {/* Ações Rápidas (Apenas 3 botões compactos) */}
             <div className="dw-details-card dw-actions-card">
               <span className="dw-actions-title">Ações</span>
-              <div className="dw-actions-grid">
+              <div className="dw-actions-grid-3col">
                 <button type="button" className="dw-action-btn" onClick={() => void navigator.clipboard.writeText(payload.url)}>
                   <Copy size={15} className="icon-green" />
                   <span>Copiar URL</span>
@@ -512,19 +482,11 @@ export function ConfirmationPage({ token }: { token: string }) {
                   void navigator.clipboard.writeText(info);
                 }}>
                   <CopyCheck size={15} className="icon-green" />
-                  <span>Copiar todos os detalhes</span>
+                  <span>Copiar tudo</span>
                 </button>
                 <button type="button" className="dw-action-btn" onClick={chooseFolder}>
                   <FolderOpen size={15} className="icon-amber" />
-                  <span>Abrir pasta de destino</span>
-                </button>
-                <button type="button" className="dw-action-btn" onClick={() => alert("Servidor online e respondendo perfeitamente!")}>
-                  <Globe size={15} className="icon-blue" />
-                  <span>Testar conexão</span>
-                </button>
-                <button type="button" className="dw-action-btn" onClick={() => alert("HTTP/1.1 200 OK\nContent-Type: application/octet-stream\nAccept-Ranges: bytes")}>
-                  <Code size={15} className="icon-purple" />
-                  <span>Ver cabeçalhos HTTP</span>
+                  <span>Abrir pasta</span>
                 </button>
               </div>
             </div>
