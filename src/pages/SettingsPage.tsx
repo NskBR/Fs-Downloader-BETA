@@ -12,7 +12,6 @@ import {
   Play,
   Package,
   FileText,
-  ChevronsUp,
   Info,
   CheckCircle,
 } from "lucide-react";
@@ -168,7 +167,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
 
       {/* Conteúdo da Aba Ativa */}
       <div className="cfg-tab-content">
-        {/* ABA: DOWNLOADS (EXATAMENTE COMO NA FOTO DE REFERÊNCIA) */}
+        {/* ABA: DOWNLOADS */}
         {activeTab === "downloads" && (
           <div className="cfg-tab-view">
             <div className="cfg-grid-2col">
@@ -199,52 +198,25 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                   </div>
                 </div>
 
-                {/* 3. Desempenho */}
+                {/* 2. Limite de velocidade */}
                 <div className="cfg-card">
                   <div className="cfg-card-header">
                     <div className="cfg-card-icon-box">
                       <Gauge className="cfg-card-icon" size={20} />
                     </div>
                     <div>
-                      <h3 className="cfg-card-title">3. Desempenho</h3>
-                      <p className="cfg-card-subtitle">Ajuste o desempenho e a prioridade dos downloads.</p>
+                      <h3 className="cfg-card-title">2. Limite de velocidade</h3>
+                      <p className="cfg-card-subtitle">Defina o limite máximo de download ou digite um valor manual.</p>
                     </div>
                   </div>
 
                   <div className="cfg-card-content cfg-list-items">
                     <div className="cfg-item-row">
                       <div className="cfg-item-left">
-                        <Sliders size={18} className="cfg-item-icon" />
-                        <div>
-                          <strong className="cfg-item-label">Downloads simultâneos</strong>
-                          <span className="cfg-item-desc">Quantos downloads podem ocorrer ao mesmo tempo.</span>
-                        </div>
-                      </div>
-                      <div className="cfg-item-right">
-                        <CustomSelect
-                          value={String(draft.maxParallelDownloads ?? 3)}
-                          options={[
-                            { value: "1", label: "1" },
-                            { value: "2", label: "2" },
-                            { value: "3", label: "3" },
-                            { value: "4", label: "4" },
-                            { value: "5", label: "5" },
-                            { value: "6", label: "6" },
-                            { value: "8", label: "8" },
-                            { value: "10", label: "10" },
-                            { value: "16", label: "16" },
-                          ]}
-                          onChange={(val) => update("maxParallelDownloads", Number(val))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="cfg-item-row">
-                      <div className="cfg-item-left">
                         <Gauge size={18} className="cfg-item-icon" />
                         <div>
-                          <strong className="cfg-item-label">Limite de velocidade</strong>
-                          <span className="cfg-item-desc">Defina o limite máximo de download.</span>
+                          <strong className="cfg-item-label">Limite pré-definido</strong>
+                          <span className="cfg-item-desc">Selecione uma velocidade limite rápida.</span>
                         </div>
                       </div>
                       <div className="cfg-item-right">
@@ -265,21 +237,20 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
 
                     <div className="cfg-item-row">
                       <div className="cfg-item-left">
-                        <ChevronsUp size={18} className="cfg-item-icon" />
+                        <Sliders size={18} className="cfg-item-icon" />
                         <div>
-                          <strong className="cfg-item-label">Prioridade</strong>
-                          <span className="cfg-item-desc">Define a prioridade dos downloads na rede.</span>
+                          <strong className="cfg-item-label">Personalizar velocidade</strong>
+                          <span className="cfg-item-desc">Digite o valor máximo personalizado (ex: 15 MB/s).</span>
                         </div>
                       </div>
                       <div className="cfg-item-right">
-                        <CustomSelect
-                          value={draft.downloadPriority || "Alta"}
-                          options={[
-                            { value: "Alta", label: "Alta" },
-                            { value: "Normal", label: "Normal" },
-                            { value: "Baixa", label: "Baixa" },
-                          ]}
-                          onChange={(val) => update("downloadPriority", val)}
+                        <input
+                          type="text"
+                          className="cfg-path-display"
+                          style={{ width: "110px", height: "32px", textAlign: "center" }}
+                          value={draft.speedLimitText || ""}
+                          placeholder="Ex: 15 MB/s"
+                          onChange={(e) => update("speedLimitText", e.target.value)}
                         />
                       </div>
                     </div>
@@ -289,14 +260,14 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
 
               {/* Coluna da Direita */}
               <div className="cfg-col">
-                {/* 2. Comportamento do download */}
+                {/* 3. Comportamento do download */}
                 <div className="cfg-card">
                   <div className="cfg-card-header">
                     <div className="cfg-card-icon-box">
                       <Sliders className="cfg-card-icon" size={20} />
                     </div>
                     <div>
-                      <h3 className="cfg-card-title">2. Comportamento do download</h3>
+                      <h3 className="cfg-card-title">3. Comportamento do download</h3>
                       <p className="cfg-card-subtitle">Defina como os downloads devem se comportar.</p>
                     </div>
                   </div>
@@ -346,53 +317,6 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                         <Toggle
                           checked={draft.openFolderOnComplete ?? false}
                           onChange={(val) => update("openFolderOnComplete", val)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Organização */}
-                <div className="cfg-card">
-                  <div className="cfg-card-header">
-                    <div className="cfg-card-icon-box">
-                      <Folder className="cfg-card-icon" size={20} />
-                    </div>
-                    <div>
-                      <h3 className="cfg-card-title">4. Organização</h3>
-                      <p className="cfg-card-subtitle">Mantenha seus downloads organizados automaticamente.</p>
-                    </div>
-                  </div>
-
-                  <div className="cfg-card-content cfg-list-items">
-                    <div className="cfg-item-row">
-                      <div className="cfg-item-left">
-                        <FileText size={18} className="cfg-item-icon" />
-                        <div>
-                          <strong className="cfg-item-label">Criar subpastas por categoria</strong>
-                          <span className="cfg-item-desc">Organiza os downloads em pastas por tipo de arquivo.</span>
-                        </div>
-                      </div>
-                      <div className="cfg-item-right">
-                        <Toggle
-                          checked={draft.autoOrganizeEnabled}
-                          onChange={(val) => update("autoOrganizeEnabled", val)}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="cfg-item-row">
-                      <div className="cfg-item-left">
-                        <FileText size={18} className="cfg-item-icon" />
-                        <div>
-                          <strong className="cfg-item-label">Renomear arquivos automaticamente</strong>
-                          <span className="cfg-item-desc">Usa o nome original do conteúdo quando disponível.</span>
-                        </div>
-                      </div>
-                      <div className="cfg-item-right">
-                        <Toggle
-                          checked={draft.autoRenameDuplicates ?? false}
-                          onChange={(val) => update("autoRenameDuplicates", val)}
                         />
                       </div>
                     </div>
@@ -523,60 +447,112 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
         {/* ABA: ARQUIVOS */}
         {activeTab === "arquivos" && (
           <div className="cfg-tab-view">
-            <div className="cfg-card">
-              <div className="cfg-card-header">
-                <div className="cfg-card-icon-box">
-                  <Folder className="cfg-card-icon" size={20} />
-                </div>
-                <div>
-                  <h3 className="cfg-card-title">Categorias Personalizadas</h3>
-                  <p className="cfg-card-subtitle">Crie pastas para organizar automaticamente os arquivos baixados.</p>
+            <div className="cfg-grid-2col">
+              <div className="cfg-col">
+                <div className="cfg-card">
+                  <div className="cfg-card-header">
+                    <div className="cfg-card-icon-box">
+                      <Folder className="cfg-card-icon" size={20} />
+                    </div>
+                    <div>
+                      <h3 className="cfg-card-title">Organização de Arquivos</h3>
+                      <p className="cfg-card-subtitle">Mantenha seus downloads organizados automaticamente.</p>
+                    </div>
+                  </div>
+
+                  <div className="cfg-card-content cfg-list-items">
+                    <div className="cfg-item-row">
+                      <div className="cfg-item-left">
+                        <FileText size={18} className="cfg-item-icon" />
+                        <div>
+                          <strong className="cfg-item-label">Criar subpastas por categoria</strong>
+                          <span className="cfg-item-desc">Organiza os downloads em pastas por tipo de arquivo.</span>
+                        </div>
+                      </div>
+                      <div className="cfg-item-right">
+                        <Toggle
+                          checked={draft.autoOrganizeEnabled}
+                          onChange={(val) => update("autoOrganizeEnabled", val)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="cfg-item-row">
+                      <div className="cfg-item-left">
+                        <FileText size={18} className="cfg-item-icon" />
+                        <div>
+                          <strong className="cfg-item-label">Renomear arquivos automaticamente</strong>
+                          <span className="cfg-item-desc">Usa o nome original do conteúdo quando disponível.</span>
+                        </div>
+                      </div>
+                      <div className="cfg-item-right">
+                        <Toggle
+                          checked={draft.autoRenameDuplicates ?? false}
+                          onChange={(val) => update("autoRenameDuplicates", val)}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="cfg-card-content">
-                <div className="category-create-row">
-                  <input
-                    value={categoryName}
-                    onChange={(event) => setCategoryName(event.target.value)}
-                    placeholder="Nome, por exemplo: Jogos"
-                    maxLength={60}
-                  />
-                  <input
-                    value={categoryExtensions}
-                    onChange={(event) => setCategoryExtensions(event.target.value)}
-                    placeholder="Extensões: iso, rom, pkg"
-                  />
-                  <button type="button" onClick={addCategory} disabled={!categoryName.trim()}>
-                    <Plus size={16} />
-                    <span>Adicionar</span>
-                  </button>
-                </div>
 
-                <div className="custom-category-list">
-                  {draft.customCategories.length === 0 ? (
-                    <p>Nenhuma categoria personalizada.</p>
-                  ) : (
-                    draft.customCategories.map((category) => (
-                      <article key={category.id}>
-                        <Tags size={16} />
-                        <div>
-                          <strong>{category.name}</strong>
-                          <span>
-                            {category.extensions.length
-                              ? category.extensions.map((ext) => `.${ext}`).join(", ")
-                              : "Sem extensões automáticas"}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          title="Remover categoria"
-                          onClick={() => removeCategory(category.id)}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </article>
-                    ))
-                  )}
+              <div className="cfg-col">
+                <div className="cfg-card">
+                  <div className="cfg-card-header">
+                    <div className="cfg-card-icon-box">
+                      <Folder className="cfg-card-icon" size={20} />
+                    </div>
+                    <div>
+                      <h3 className="cfg-card-title">Categorias Personalizadas</h3>
+                      <p className="cfg-card-subtitle">Crie pastas para organizar automaticamente os arquivos baixados.</p>
+                    </div>
+                  </div>
+                  <div className="cfg-card-content">
+                    <div className="category-create-row">
+                      <input
+                        value={categoryName}
+                        onChange={(event) => setCategoryName(event.target.value)}
+                        placeholder="Nome, por exemplo: Jogos"
+                        maxLength={60}
+                      />
+                      <input
+                        value={categoryExtensions}
+                        onChange={(event) => setCategoryExtensions(event.target.value)}
+                        placeholder="Extensões: iso, rom, pkg"
+                      />
+                      <button type="button" onClick={addCategory} disabled={!categoryName.trim()}>
+                        <Plus size={16} />
+                        <span>Adicionar</span>
+                      </button>
+                    </div>
+
+                    <div className="custom-category-list">
+                      {draft.customCategories.length === 0 ? (
+                        <p>Nenhuma categoria personalizada.</p>
+                      ) : (
+                        draft.customCategories.map((category) => (
+                          <article key={category.id}>
+                            <Tags size={16} />
+                            <div>
+                              <strong>{category.name}</strong>
+                              <span>
+                                {category.extensions.length
+                                  ? category.extensions.map((ext) => `.${ext}`).join(", ")
+                                  : "Sem extensões automáticas"}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              title="Remover categoria"
+                              onClick={() => removeCategory(category.id)}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
