@@ -4086,4 +4086,186 @@ html, body, #root, .window-frame {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+/* ==========================================================================
+   TEMA DO APLICATIVO — GRADE DE 6 TEMAS NA PERSONALIZAÇÃO
+   ========================================================================== */
+.cfg-theme-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cfg-btn-personalizar-cor {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid var(--ember-solid, #06b6d4);
+  color: var(--ember-solid, #06b6d4);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.cfg-btn-personalizar-cor:hover {
+  background: var(--ember-soft, rgba(6, 182, 212, 0.15));
+  color: #ffffff;
+  box-shadow: 0 0 14px var(--ember-soft, rgba(6, 182, 212, 0.25));
+}
+
+.cfg-themes-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.cfg-theme-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: center;
+  outline: none;
+}
+
+.cfg-theme-tile:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.cfg-theme-tile.is-selected {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+  box-shadow: 0 0 18px rgba(59, 130, 246, 0.25);
+}
+
+.cfg-theme-check-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+  z-index: 2;
+}
+
+/* Mini Mockup Graphic */
+.cfg-theme-preview {
+  width: 100%;
+  aspect-ratio: 1.4 / 1;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 6px;
+  display: flex;
+  gap: 5px;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.cfg-mini-sidebar {
+  width: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.cfg-mini-logo {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.cfg-mini-icon {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.cfg-mini-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cfg-mini-topbar {
+  width: 60%;
+  height: 4px;
+  border-radius: 2px;
+  opacity: 0.9;
+}
+
+.cfg-mini-card {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cfg-mini-line {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.cfg-mini-line.long { width: 75%; }
+.cfg-mini-line.short { width: 45%; }
+
+.cfg-mini-bottom-glow {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  opacity: 0.9;
+}
+
+.cfg-theme-info {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.cfg-theme-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cfg-theme-status {
+  font-size: 10.5px;
+  color: #3b82f6;
+  font-weight: 600;
+}
+
 

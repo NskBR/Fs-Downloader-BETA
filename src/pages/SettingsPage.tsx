@@ -14,6 +14,8 @@ import {
   FileText,
   Info,
   CheckCircle,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -43,6 +45,52 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [categoryName, setCategoryName] = useState("");
   const [categoryExtensions, setCategoryExtensions] = useState("");
+  const [customizerOpen, setCustomizerOpen] = useState(false);
+
+  const appThemes = [
+    {
+      id: "slate",
+      name: "Escuro padrão",
+      bg: "linear-gradient(135deg, #12151b, #181c24)",
+      accent: "#06b6d4",
+      gradientStops: null,
+    },
+    {
+      id: "midnight-sapphire",
+      name: "Azul neon",
+      bg: "linear-gradient(135deg, #0b1638, #040714)",
+      accent: "#3b82f6",
+      gradientStops: ["#0b1638", "#040714"],
+    },
+    {
+      id: "cyberpunk-violet",
+      name: "Roxo gradiente",
+      bg: "linear-gradient(135deg, #320938, #050a1e)",
+      accent: "#8b5cf6",
+      gradientStops: ["#320938", "#050a1e"],
+    },
+    {
+      id: "high-contrast",
+      name: "Alto contraste",
+      bg: "linear-gradient(135deg, #0a0c10, #040507)",
+      accent: "#eab308",
+      gradientStops: null,
+    },
+    {
+      id: "crimson-void",
+      name: "Carmim Obscuro",
+      bg: "linear-gradient(135deg, #41010d, #080204)",
+      accent: "#ef4444",
+      gradientStops: ["#41010d", "#080204"],
+    },
+    {
+      id: "emerald-dusk",
+      name: "Crepúsculo Esmeralda",
+      bg: "linear-gradient(135deg, #0a2818, #040d08)",
+      accent: "#10b981",
+      gradientStops: ["#0a2818", "#040d08"],
+    },
+  ];
 
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     const next = { ...draft, [key]: value };
@@ -350,14 +398,114 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
         {/* ABA: PERSONALIZAÇÃO */}
         {activeTab === "personalizacao" && (
           <div className="cfg-tab-view">
+            {/* Card 1: Tema do aplicativo (6 Temas + Botão Personalizar cor) */}
+            <div className="cfg-card">
+              <div className="cfg-card-header cfg-theme-header">
+                <div>
+                  <h3 className="cfg-card-title">Tema do aplicativo</h3>
+                  <p className="cfg-card-subtitle">Escolha o tema que define a aparência geral do app.</p>
+                </div>
+                <button
+                  type="button"
+                  className="cfg-btn-personalizar-cor"
+                  onClick={() => setCustomizerOpen(true)}
+                >
+                  <Pencil size={14} />
+                  <span>Personalizar cor</span>
+                </button>
+              </div>
+
+              <div className="cfg-card-content">
+                <div className="cfg-themes-grid">
+                  {appThemes.map((theme) => {
+                    const isSelected =
+                      theme.gradientStops
+                        ? draft.interfaceGradient.enabled &&
+                          draft.interfaceGradient.stops[0]?.color.toLowerCase() === theme.gradientStops[0].toLowerCase()
+                        : !draft.interfaceGradient.enabled && (theme.id === "high-contrast" ? draft.accentColor === "amber" : draft.appColor === theme.id);
+
+                    return (
+                      <button
+                        key={theme.id}
+                        type="button"
+                        className={`cfg-theme-tile ${isSelected ? "is-selected" : ""}`}
+                        onClick={() => {
+                          if (theme.gradientStops) {
+                            const next = {
+                              ...draft,
+                              interfaceGradient: {
+                                enabled: true,
+                                type: "linear" as const,
+                                angle: 135,
+                                intensity: 75,
+                                stops: [
+                                  { color: theme.gradientStops[0], position: 0 },
+                                  { color: theme.gradientStops[1], position: 100 },
+                                ],
+                              },
+                            };
+                            setDraft(next);
+                            onSave(next);
+                          } else {
+                            const next = {
+                              ...draft,
+                              appColor: (theme.id === "high-contrast" ? "slate" : theme.id) as AppColor,
+                              accentColor: (theme.id === "high-contrast" ? "amber" : draft.accentColor) as AccentColor,
+                              interfaceGradient: { ...draft.interfaceGradient, enabled: false },
+                            };
+                            setDraft(next);
+                            onSave(next);
+                          }
+                        }}
+                      >
+                        {isSelected && (
+                          <div className="cfg-theme-check-badge">
+                            <Check size={12} strokeWidth={3} />
+                          </div>
+                        )}
+
+                        {/* Mini UI Mockup Graphic */}
+                        <div className="cfg-theme-preview" style={{ background: theme.bg }}>
+                          <div className="cfg-mini-sidebar">
+                            <div className="cfg-mini-logo" style={{ color: theme.accent }} />
+                            <div className="cfg-mini-icon" />
+                            <div className="cfg-mini-icon" />
+                            <div className="cfg-mini-icon" />
+                          </div>
+                          <div className="cfg-mini-main">
+                            <div className="cfg-mini-topbar" style={{ background: theme.accent }} />
+                            <div className="cfg-mini-card">
+                              <div className="cfg-mini-line long" />
+                              <div className="cfg-mini-line short" />
+                            </div>
+                            <div className="cfg-mini-card">
+                              <div className="cfg-mini-line long" />
+                              <div className="cfg-mini-line short" />
+                            </div>
+                          </div>
+                          <div className="cfg-mini-bottom-glow" style={{ background: theme.accent }} />
+                        </div>
+
+                        <div className="cfg-theme-info">
+                          <span className="cfg-theme-name">{theme.name}</span>
+                          {isSelected && <span className="cfg-theme-status">Atual</span>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Cor de destaque (Intacto) */}
             <div className="cfg-card">
               <div className="cfg-card-header">
                 <div className="cfg-card-icon-box">
                   <Palette className="cfg-card-icon" size={20} />
                 </div>
                 <div>
-                  <h3 className="cfg-card-title">Cor de Destaque do Aplicativo</h3>
-                  <p className="cfg-card-subtitle">Define a cor principal usada em botões, progresso e seletores.</p>
+                  <h3 className="cfg-card-title">Cor de destaque</h3>
+                  <p className="cfg-card-subtitle">Escolha a cor que será usada em botões, seletores e elementos interativos.</p>
                 </div>
               </div>
               <div className="cfg-card-content">
@@ -390,57 +538,31 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
               </div>
             </div>
 
-            <div className="cfg-card">
-              <DiscordThemeCustomizer
-                config={draft.interfaceGradient}
-                appColor={draft.appColor}
-                onChangeGradient={(value) => {
-                  const next = { ...draft, interfaceGradient: value };
-                  setDraft(next);
-                  if (next.rootDownloadFolder.trim()) void save(next);
-                  else setError("Escolha a pasta principal de downloads.");
-                }}
-                onSelectAppColor={(color) => {
-                  const next = {
-                    ...draft,
-                    appColor: color,
-                    interfaceGradient: { ...draft.interfaceGradient, enabled: false },
-                  };
-                  setDraft(next);
-                  if (next.rootDownloadFolder.trim()) void save(next);
-                  else setError("Escolha a pasta principal de downloads.");
-                }}
-              />
-            </div>
-
-            <div className="cfg-card">
-              <div className="cfg-card-header">
-                <div className="cfg-card-icon-box">
-                  <Sliders className="cfg-card-icon" size={20} />
-                </div>
-                <div>
-                  <h3 className="cfg-card-title">Animações da Interface</h3>
-                  <p className="cfg-card-subtitle">Personalize a movimentação de elementos da barra lateral.</p>
+            {/* Modal de Personalizar Cor Flutuante */}
+            {customizerOpen && (
+              <div className="discord-drawer-wrapper" onClick={() => setCustomizerOpen(false)}>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <DiscordThemeCustomizer
+                    config={draft.interfaceGradient}
+                    appColor={draft.appColor}
+                    onChangeGradient={(value) => {
+                      const next = { ...draft, interfaceGradient: value };
+                      setDraft(next);
+                      onSave(next);
+                    }}
+                    onSelectAppColor={(color) => {
+                      const next = {
+                        ...draft,
+                        appColor: color,
+                        interfaceGradient: { ...draft.interfaceGradient, enabled: false },
+                      };
+                      setDraft(next);
+                      onSave(next);
+                    }}
+                  />
                 </div>
               </div>
-              <div className="cfg-card-content cfg-list-items">
-                <div className="cfg-item-row">
-                  <div className="cfg-item-left">
-                    <Sliders size={18} className="cfg-item-icon" />
-                    <div>
-                      <strong className="cfg-item-label">Animar seletor do sidebar</strong>
-                      <span className="cfg-item-desc">Ativa a animação suave do indicador ao navegar entre páginas.</span>
-                    </div>
-                  </div>
-                  <div className="cfg-item-right">
-                    <Toggle
-                      checked={draft.sidebarAnimation}
-                      onChange={(value) => update("sidebarAnimation", value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
