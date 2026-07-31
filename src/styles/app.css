@@ -3266,6 +3266,22 @@ html, body, #root, .window-frame {
   border-radius: var(--radius-sm, 8px);
 }
 
+.box-custom-select .custom-select-dropdown {
+  max-height: 130px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  z-index: 999;
+}
+
+.box-custom-select .custom-select-dropdown::-webkit-scrollbar {
+  width: 4px;
+}
+
+.box-custom-select .custom-select-dropdown::-webkit-scrollbar-thumb {
+  background: var(--line, rgba(255, 255, 255, 0.2));
+  border-radius: 4px;
+}
+
 .footer-custom-select .custom-select-trigger {
   height: 28px;
   padding: 0 8px;
