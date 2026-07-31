@@ -34,6 +34,7 @@ import * as service from "../services/downloadService";
 import type { DownloadTask } from "../domain/download";
 import { CircularProgress } from "../components/downloads/CircularProgress";
 import { FileIcon } from "../components/downloads/FileIcon";
+import { CustomSelect } from "../components/ui/CustomSelect";
 
 const bytes = (value: number | null) => {
   if (value === null) return "—";
@@ -372,18 +373,11 @@ export function DownloadsPage({
 
         <div className="header-right-group" data-tauri-drag-region>
           <div className="sort-dropdown">
-            <select
-              className="sort-select"
+            <CustomSelect
               value={sort.key}
-              onChange={(event) => changeSort(event.target.value as SortKey)}
-              title="Ordenar por"
-            >
-              {sortOptions.map((option) => (
-                <option key={option.key} value={option.key}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              options={sortOptions.map((opt) => ({ value: opt.key, label: opt.label }))}
+              onChange={(val) => changeSort(val as SortKey)}
+            />
             <button
               type="button"
               className="sort-direction"
@@ -410,22 +404,6 @@ export function DownloadsPage({
             onClick={() => changeView("grid")}
           >
             <LayoutGrid size={20} />
-          </button>
-
-          <button
-            className="btn-pause-all"
-            title="Pausar todos os downloads"
-            onClick={() => downloads.filter((d) => d.status === "downloading").forEach((d) => void pause(d.id))}
-          >
-            <Pause size={16} />
-          </button>
-
-          <button
-            className="btn-resume-all"
-            title="Retomar todos os downloads"
-            onClick={() => downloads.filter((d) => d.status === "paused").forEach((d) => void resume(d.id))}
-          >
-            <Play size={16} />
           </button>
         </div>
       </header>
@@ -684,22 +662,40 @@ export function DownloadsPage({
           <span><strong>{bytes(totalSpeed)}/s</strong> Velocidade atual</span>
         </div>
 
-         <div className="footer-right">
-           <Zap />
-           <span>Máx. simultâneos:</span>
-           <select
-             className="footer-max-select"
-             value={settings.maxParallelDownloads}
-             onChange={(event) => {
-               const next = { ...settings, maxParallelDownloads: parseInt(event.target.value, 10) };
-               onSave(next);
-             }}
-           >
-             {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => (
-               <option key={n} value={n}>{n}</option>
-             ))}
-           </select>
-         </div>
+        <div className="footer-center">
+          <button
+            type="button"
+            className="footer-action-btn pause"
+            title="Pausar todos os downloads em andamento"
+            onClick={() => downloads.filter((d) => d.status === "downloading").forEach((d) => void pause(d.id))}
+          >
+            <Pause size={13} />
+            <span>Pausar todos</span>
+          </button>
+          <button
+            type="button"
+            className="footer-action-btn resume"
+            title="Retomar todos os downloads pausados"
+            onClick={() => downloads.filter((d) => d.status === "paused").forEach((d) => void resume(d.id))}
+          >
+            <Play size={13} />
+            <span>Retomar todos</span>
+          </button>
+        </div>
+
+        <div className="footer-right">
+          <Zap />
+          <span>Máx. simultâneos:</span>
+          <CustomSelect
+            value={String(settings.maxParallelDownloads)}
+            options={[1, 2, 3, 4, 5, 6, 8, 10].map((n) => ({ value: String(n), label: String(n) }))}
+            onChange={(val) => {
+              const next = { ...settings, maxParallelDownloads: parseInt(val, 10) };
+              onSave(next);
+            }}
+            className="footer-custom-select"
+          />
+        </div>
       </footer>
 
       {ctxMenu && (

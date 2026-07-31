@@ -22,6 +22,7 @@ import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize } from "@tauri-apps/api/dpi";
 import { Toggle } from "../components/ui/Toggle";
+import { CustomSelect } from "../components/ui/CustomSelect";
 import { categoryForFile, downloadCategories } from "../domain/categories";
 import { loadSettings } from "../services/settingsStorage";
 import * as service from "../services/downloadService";
@@ -342,25 +343,18 @@ export function ConfirmationPage({ token }: { token: string }) {
 
           <div className={`confirm-field-col${isCustomFolder ? " confirm-field-disabled" : ""}`}>
             <span className="confirm-label">Categoria</span>
-            <div className="confirm-control-box">
-              <Archive className="field-icon" size={16} />
-              <select
-                className="confirm-select"
+            <div className="confirm-control-box box-custom-select">
+              <CustomSelect
                 value={isCustomFolder ? "" : selectedCategory}
-                onChange={(event) => setSelectedCategory(event.target.value)}
+                options={
+                  isCustomFolder
+                    ? [{ value: "", label: "Pasta personalizada" }]
+                    : categories.map((cat) => ({ value: cat, label: cat }))
+                }
+                onChange={(val) => setSelectedCategory(val)}
                 disabled={isCustomFolder}
-              >
-                {isCustomFolder ? (
-                  <option value="">Pasta personalizada</option>
-                ) : (
-                  categories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))
-                )}
-              </select>
-              <ChevronDown className="select-arrow" size={14} />
+                icon={<Archive size={16} />}
+              />
             </div>
           </div>
         </div>

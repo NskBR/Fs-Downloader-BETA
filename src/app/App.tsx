@@ -11,6 +11,7 @@ import { useSettings } from "../hooks/useSettings";
 import { isPageId, type PageId } from "./navigation";
 import * as downloadService from "../services/downloadService";
 import { applyThemeSettings } from "../services/theme";
+import { FloatingAiWidget } from "../components/ui/FloatingAiWidget";
 interface BrowserDownloadRequest { requestId:string;url:string;fileName:string|null;fileSize:number|null;mimeType:string|null }
 const categoryPages:PageId[]=["downloads","active","completed","documents","music","videos","archives","applications","torrents","calculator"];
 const normalizePage=(page:PageId):PageId=>({home:"downloads",organization:"settings",active:"downloads",completed:"downloads"} as Partial<Record<PageId,PageId>>)[page]??page;
@@ -33,5 +34,10 @@ export function App() {
     : activePage === "profile" ? <ProfilePage />
     : activePage === "metrics" ? <MetricsPage />
     : <DownloadsPage settings={settings} onSave={persist} filter={categoryPages.includes(activePage)?activePage:"active"} />;
-   return <AppShell activePage={activePage} onNavigate={navigate} sidebarAnimation={settings.sidebarAnimation}>{content}</AppShell>;
+   return (
+     <>
+       <AppShell activePage={activePage} onNavigate={navigate} sidebarAnimation={settings.sidebarAnimation}>{content}</AppShell>
+       <FloatingAiWidget />
+     </>
+   );
 }
