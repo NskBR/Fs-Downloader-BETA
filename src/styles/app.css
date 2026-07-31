@@ -3250,31 +3250,50 @@ html, body, #root, .window-frame {
   color: var(--ember-solid, #06b6d4);
 }
 
-.confirm-body {
-  position: relative;
-  z-index: 100;
+.confirm-body,
+.download-window.confirm-v2 .confirm-body {
+  position: relative !important;
+  z-index: 100 !important;
+  overflow: visible !important;
 }
 
-.confirm-footer {
-  position: relative;
-  z-index: 1;
+.confirm-grid-row,
+.download-window.confirm-v2 .confirm-grid-row {
+  position: relative !important;
+  z-index: 100 !important;
+  overflow: visible !important;
+}
+
+.confirm-field-col,
+.download-window.confirm-v2 .confirm-field-col {
+  position: relative !important;
+  z-index: 100 !important;
+  overflow: visible !important;
+}
+
+.confirm-footer,
+.download-window.confirm-v2 .confirm-footer {
+  position: relative !important;
+  z-index: 1 !important;
 }
 
 .box-custom-select {
   padding: 0 !important;
   border: 0 !important;
   background: transparent !important;
-  position: relative;
-  z-index: 9999;
+  position: relative !important;
+  z-index: 9999 !important;
+  overflow: visible !important;
 }
 
 .box-custom-select .custom-select-wrap {
-  width: 100%;
-  position: relative;
+  width: 100% !important;
+  position: relative !important;
+  overflow: visible !important;
 }
 
 .box-custom-select .custom-select-wrap.is-open {
-  z-index: 99999;
+  z-index: 99999 !important;
 }
 
 .box-custom-select .custom-select-trigger {
@@ -3284,16 +3303,16 @@ html, body, #root, .window-frame {
 }
 
 .box-custom-select .custom-select-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  bottom: auto;
-  left: 0;
-  right: 0;
-  max-height: 120px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  z-index: 99999;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  position: absolute !important;
+  top: calc(100% + 4px) !important;
+  bottom: auto !important;
+  left: 0 !important;
+  right: 0 !important;
+  max-height: 120px !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin !important;
+  z-index: 999999 !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
 }
 
 .box-custom-select .custom-select-dropdown::-webkit-scrollbar {
