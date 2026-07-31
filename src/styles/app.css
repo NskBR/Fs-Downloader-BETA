@@ -4121,22 +4121,27 @@ html, body, #root, .window-frame {
 .cfg-themes-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
+  gap: 10px;
   margin-top: 6px;
+  align-items: stretch;
 }
 
 .cfg-theme-tile {
   position: relative;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  height: 136px;
   background: rgba(0, 0, 0, 0.3);
   border: 1.5px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  padding: 8px;
+  padding: 8px 6px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   text-align: center;
   outline: none;
+  box-sizing: border-box;
 }
 
 .cfg-theme-tile:hover {
@@ -4146,41 +4151,42 @@ html, body, #root, .window-frame {
 
 .cfg-theme-tile.is-selected {
   border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.05);
+  background: rgba(59, 130, 246, 0.06);
   box-shadow: 0 0 18px rgba(59, 130, 246, 0.25);
 }
 
 .cfg-theme-check-badge {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 18px;
-  height: 18px;
+  top: 5px;
+  right: 5px;
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
   background: #3b82f6;
   color: #ffffff;
   display: grid;
   place-items: center;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.5);
   z-index: 2;
 }
 
 /* Mini Mockup Graphic */
 .cfg-theme-preview {
   width: 100%;
-  aspect-ratio: 1.4 / 1;
+  height: 70px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 6px;
+  padding: 5px;
   display: flex;
   gap: 5px;
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .cfg-mini-sidebar {
-  width: 16px;
+  width: 14px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -4189,15 +4195,15 @@ html, body, #root, .window-frame {
 }
 
 .cfg-mini-logo {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 2px;
   background: currentColor;
 }
 
 .cfg-mini-icon {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.2);
 }
@@ -4206,7 +4212,7 @@ html, body, #root, .window-frame {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 
@@ -4247,25 +4253,37 @@ html, body, #root, .window-frame {
 }
 
 .cfg-theme-info {
-  margin-top: 6px;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  width: 100%;
   gap: 1px;
+  flex-shrink: 0;
 }
 
 .cfg-theme-name {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   color: #ffffff;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  width: 100%;
+  text-align: center;
 }
 
 .cfg-theme-status {
-  font-size: 10.5px;
+  font-size: 10px;
   color: #3b82f6;
   font-weight: 600;
+  height: 12px;
+  line-height: 12px;
+}
+
+.cfg-theme-status-spacer {
+  height: 12px;
 }
 
 

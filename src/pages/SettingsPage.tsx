@@ -53,44 +53,64 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
       name: "Escuro padrão",
       bg: "linear-gradient(135deg, #12151b, #181c24)",
       accent: "#06b6d4",
-      gradientStops: null,
+      isGradient: false,
     },
     {
       id: "midnight-sapphire",
       name: "Azul neon",
       bg: "linear-gradient(135deg, #0b1638, #040714)",
       accent: "#3b82f6",
-      gradientStops: ["#0b1638", "#040714"],
+      isGradient: true,
+      stops: ["#0b1638", "#040714"],
     },
     {
       id: "cyberpunk-violet",
       name: "Roxo gradiente",
       bg: "linear-gradient(135deg, #320938, #050a1e)",
       accent: "#8b5cf6",
-      gradientStops: ["#320938", "#050a1e"],
+      isGradient: true,
+      stops: ["#320938", "#050a1e"],
     },
     {
       id: "high-contrast",
       name: "Alto contraste",
       bg: "linear-gradient(135deg, #0a0c10, #040507)",
       accent: "#eab308",
-      gradientStops: null,
+      isGradient: true,
+      stops: ["#0a0c10", "#040507"],
     },
     {
       id: "crimson-void",
       name: "Carmim Obscuro",
       bg: "linear-gradient(135deg, #41010d, #080204)",
       accent: "#ef4444",
-      gradientStops: ["#41010d", "#080204"],
+      isGradient: true,
+      stops: ["#41010d", "#080204"],
     },
     {
       id: "emerald-dusk",
       name: "Crepúsculo Esmeralda",
       bg: "linear-gradient(135deg, #0a2818, #040d08)",
       accent: "#10b981",
-      gradientStops: ["#0a2818", "#040d08"],
+      isGradient: true,
+      stops: ["#0a2818", "#040d08"],
     },
   ];
+
+  const getSelectedThemeId = (): string => {
+    if (draft.interfaceGradient.enabled) {
+      const firstStop = draft.interfaceGradient.stops[0]?.color.toLowerCase() || "";
+      if (firstStop === "#0b1638") return "midnight-sapphire";
+      if (firstStop === "#320938") return "cyberpunk-violet";
+      if (firstStop === "#0a0c10") return "high-contrast";
+      if (firstStop === "#41010d") return "crimson-void";
+      if (firstStop === "#0a2818") return "emerald-dusk";
+      return "";
+    }
+    return "slate";
+  };
+
+  const selectedThemeId = getSelectedThemeId();
 
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     const next = { ...draft, [key]: value };
@@ -418,11 +438,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
               <div className="cfg-card-content">
                 <div className="cfg-themes-grid">
                   {appThemes.map((theme) => {
-                    const isSelected =
-                      theme.gradientStops
-                        ? draft.interfaceGradient.enabled &&
-                          draft.interfaceGradient.stops[0]?.color.toLowerCase() === theme.gradientStops[0].toLowerCase()
-                        : !draft.interfaceGradient.enabled && (theme.id === "high-contrast" ? draft.accentColor === "amber" : draft.appColor === theme.id);
+                    const isSelected = selectedThemeId === theme.id;
 
                     return (
                       <button
@@ -430,7 +446,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                         type="button"
                         className={`cfg-theme-tile ${isSelected ? "is-selected" : ""}`}
                         onClick={() => {
-                          if (theme.gradientStops) {
+                          if (theme.isGradient && theme.stops) {
                             const next = {
                               ...draft,
                               interfaceGradient: {
@@ -439,8 +455,8 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                                 angle: 135,
                                 intensity: 75,
                                 stops: [
-                                  { color: theme.gradientStops[0], position: 0 },
-                                  { color: theme.gradientStops[1], position: 100 },
+                                  { color: theme.stops[0], position: 0 },
+                                  { color: theme.stops[1], position: 100 },
                                 ],
                               },
                             };
@@ -449,8 +465,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                           } else {
                             const next = {
                               ...draft,
-                              appColor: (theme.id === "high-contrast" ? "slate" : theme.id) as AppColor,
-                              accentColor: (theme.id === "high-contrast" ? "amber" : draft.accentColor) as AccentColor,
+                              appColor: "slate" as AppColor,
                               interfaceGradient: { ...draft.interfaceGradient, enabled: false },
                             };
                             setDraft(next);
