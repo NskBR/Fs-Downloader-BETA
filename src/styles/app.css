@@ -3261,17 +3261,28 @@ html, body, #root, .window-frame {
   overflow: visible !important;
 }
 
-.confirm-grid-row,
-.download-window.confirm-v2 .confirm-grid-row {
+.confirm-body > .confirm-grid-row:nth-child(1),
+.download-window.confirm-v2 .confirm-body > .confirm-grid-row:nth-child(1) {
+  position: relative !important;
+  z-index: 900 !important;
+  overflow: visible !important;
+}
+
+.confirm-body > .confirm-meta-row,
+.download-window.confirm-v2 .confirm-body > .confirm-meta-row {
+  position: relative !important;
+  z-index: 500 !important;
+}
+
+.confirm-body > .confirm-grid-row:nth-child(3),
+.download-window.confirm-v2 .confirm-body > .confirm-grid-row:nth-child(3) {
   position: relative !important;
   z-index: 100 !important;
-  overflow: visible !important;
 }
 
 .confirm-field-col,
 .download-window.confirm-v2 .confirm-field-col {
   position: relative !important;
-  z-index: 100 !important;
   overflow: visible !important;
 }
 
@@ -3312,7 +3323,7 @@ html, body, #root, .window-frame {
   bottom: auto !important;
   left: 0 !important;
   right: 0 !important;
-  max-height: 175px !important;
+  max-height: 132px !important;
   overflow-y: auto !important;
   scrollbar-width: thin !important;
   z-index: 999999 !important;
