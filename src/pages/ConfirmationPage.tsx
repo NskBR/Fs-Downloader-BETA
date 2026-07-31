@@ -295,23 +295,7 @@ export function ConfirmationPage({ token }: { token: string }) {
 
       {/* 2. Conteúdo Central */}
       <div className="confirm-body">
-        {/* Linha 1: Pílula Integrada de Metadados */}
-        <div className="confirm-meta-row">
-          <div className="confirm-meta-item item-origin" title={hostName || "Provedor desconhecido"}>
-            <Globe size={16} />
-            <span>{hostName || "origem desconhecida"}</span>
-          </div>
-          <div className="confirm-meta-item item-size">
-            <Package size={16} />
-            <span>{loading ? "Calculando..." : bytes(preview?.fileSize ?? null)}</span>
-          </div>
-          <div className="confirm-meta-item item-type">
-            <FileText size={16} />
-            <span>{(preview?.extension || "ARQUIVO").toUpperCase()}</span>
-          </div>
-        </div>
-
-        {/* Linha 2: Local e Categoria em 2 Colunas */}
+        {/* Linha 1: Local e Categoria em 2 Colunas */}
         <div className="confirm-grid-row">
           <div className="confirm-field-col">
             <div className="confirm-label-row">
@@ -358,6 +342,22 @@ export function ConfirmationPage({ token }: { token: string }) {
                 direction="down"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Linha 2: Pílula Integrada de Metadados */}
+        <div className="confirm-meta-row">
+          <div className="confirm-meta-item item-origin" title={hostName || "Provedor desconhecido"}>
+            <Globe size={16} />
+            <span>{hostName || "origem desconhecida"}</span>
+          </div>
+          <div className="confirm-meta-item item-size">
+            <Package size={16} />
+            <span>{loading ? "Calculando..." : bytes(preview?.fileSize ?? null)}</span>
+          </div>
+          <div className="confirm-meta-item item-type">
+            <FileText size={16} />
+            <span>{(preview?.extension || "ARQUIVO").toUpperCase()}</span>
           </div>
         </div>
 
