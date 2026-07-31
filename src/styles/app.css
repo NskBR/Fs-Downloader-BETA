@@ -2397,9 +2397,14 @@ input::-ms-clear {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   padding: 8px 0;
   display: flex;
   flex-direction: column;
+}
+.dw-details-body::-webkit-scrollbar {
+  display: none;
 }
 
 .dw-details-footer {

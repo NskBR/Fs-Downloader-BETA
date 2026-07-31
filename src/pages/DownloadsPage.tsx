@@ -451,17 +451,16 @@ export function DownloadsPage({
           </div>
         )}
 
-        {/* Scrollable list of Cards */}
-        <div className={`cards-scroll-container view-${view}`}>
-          {loading ? (
-            <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px" }}>Carregando...</div>
-          ) : visible.length === 0 ? (
-            <div className="empty-downloads-state">
-              <FolderOpen size={48} />
-              <strong>Nenhum download encontrado</strong>
-            </div>
-          ) : (
-            visible.map((item) => {
+        {loading ? (
+          <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px" }}>Carregando...</div>
+        ) : visible.length === 0 ? (
+          <div className="empty-downloads-state">
+            <FolderOpen size={48} />
+            <strong>Nenhum download encontrado</strong>
+          </div>
+        ) : (
+          <div className={`cards-scroll-container view-${view}`}>
+            {visible.map((item) => {
               const progress = item.fileSize
                 ? Math.min(100, (item.totalDownloaded / item.fileSize) * 100)
                 : 0;
@@ -673,9 +672,9 @@ export function DownloadsPage({
                   </div>
                 </article>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </section>
 
       {/* Discreete Footer */}

@@ -479,12 +479,6 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
               </div>
             )}
           </div>
-
-          <div className="dw-details-footer">
-            <button className="dw-btn-primary dw-btn-back-main" onClick={() => setDetailsOpen(false)}>
-              Voltar
-            </button>
-          </div>
         </div>
       )}
 
