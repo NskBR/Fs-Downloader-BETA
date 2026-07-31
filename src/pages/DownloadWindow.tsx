@@ -167,39 +167,55 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
   }, [detailsOpen, cancelOpen]);
 
   useEffect(() => {
-    void Promise.all([
-      service.listDownloads(),
-      service.extractionStatus(downloadId),
-    ]).then(([list, result]) => {
-      const found = list.find((item) => item.id === downloadId);
-      if (!found) return;
-      setTask(found);
-      setDownloaded(found.totalDownloaded);
-      setSpeed(found.speedCurrent);
-      setStatus(found.status);
-      setExtraction(result);
-    });
+    let active = true;
+    const fetchTask = () => {
+      void Promise.all([
+        service.listDownloads(),
+        service.extractionStatus(downloadId),
+      ]).then(([list, result]) => {
+        if (!active) return;
+        const found = list.find((item) => item.id === downloadId);
+        if (found) {
+          setTask(found);
+          setDownloaded(found.totalDownloaded);
+          setSpeed(found.speedCurrent);
+          setStatus(found.status);
+          setExtraction(result);
+        }
+      });
+    };
+
+    fetchTask();
+    const interval = setInterval(fetchTask, task ? 2000 : 400);
+
     const listener = listen<DownloadProgress>("download-progress", ({ payload }) => {
       if (payload.id !== downloadId) return;
       setDownloaded(payload.downloaded);
       setSpeed(payload.speed);
       setStatus(payload.status);
-      setTask((current) =>
-        current
-          ? {
-              ...current,
-              status: payload.status,
-              totalDownloaded: payload.downloaded,
-              speedCurrent: payload.speed,
-            }
-          : current,
-      );
+      setTask((current) => {
+        if (!current) {
+          fetchTask();
+          return current;
+        }
+        return {
+          ...current,
+          status: payload.status,
+          totalDownloaded: payload.downloaded,
+          speedCurrent: payload.speed,
+        };
+      });
       if (payload.error) {
         setError(payload.error);
       }
     });
-    return () => void listener.then((dispose) => dispose());
-  }, [downloadId]);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+      void listener.then((dispose) => dispose());
+    };
+  }, [downloadId, task === null]);
 
   const pauseResume = async () => {
     setError(null);
