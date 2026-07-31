@@ -56,6 +56,11 @@ export interface AppSettings {
   interfaceGradient: GradientConfig;
   sidebarAnimation: boolean;
   customCategories: CustomCategory[];
+  autoStartDownloads?: boolean;
+  openFolderOnComplete?: boolean;
+  autoRenameDuplicates?: boolean;
+  downloadPriority?: string;
+  speedLimitText?: string;
 }
 
 export const defaultSettings: AppSettings = {
@@ -86,4 +91,9 @@ export const defaultSettings: AppSettings = {
   },
   sidebarAnimation: true,
   customCategories: [],
+  autoStartDownloads: true,
+  openFolderOnComplete: false,
+  autoRenameDuplicates: false,
+  downloadPriority: "Alta",
+  speedLimitText: "Sem limite",
 };
