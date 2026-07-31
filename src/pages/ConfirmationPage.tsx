@@ -469,26 +469,23 @@ export function ConfirmationPage({ token }: { token: string }) {
               </div>
             </div>
 
-            {/* Ações Rápidas (Apenas 3 botões compactos) */}
-            <div className="dw-details-card dw-actions-card">
-              <span className="dw-actions-title">Ações</span>
-              <div className="dw-actions-grid-3col">
-                <button type="button" className="dw-action-btn" onClick={() => void navigator.clipboard.writeText(payload.url)}>
-                  <Copy size={15} className="icon-green" />
-                  <span>Copiar URL</span>
-                </button>
-                <button type="button" className="dw-action-btn" onClick={() => {
-                  const info = `URL: ${payload.url}\nProvedor: ${hostName}\nMIME: ${preview?.mimeType}\nTamanho: ${preview?.fileSize} bytes\nDestino: ${destination}`;
-                  void navigator.clipboard.writeText(info);
-                }}>
-                  <CopyCheck size={15} className="icon-green" />
-                  <span>Copiar tudo</span>
-                </button>
-                <button type="button" className="dw-action-btn" onClick={chooseFolder}>
-                  <FolderOpen size={15} className="icon-amber" />
-                  <span>Abrir pasta</span>
-                </button>
-              </div>
+            {/* Apenas os 3 Botões Pequenos Diretos no Rodapé */}
+            <div className="dw-mini-actions-row">
+              <button type="button" className="dw-mini-action-btn" onClick={() => void navigator.clipboard.writeText(payload.url)}>
+                <Copy size={13} className="icon-green" />
+                <span>Copiar URL</span>
+              </button>
+              <button type="button" className="dw-mini-action-btn" onClick={() => {
+                const info = `URL: ${payload.url}\nProvedor: ${hostName}\nMIME: ${preview?.mimeType}\nTamanho: ${preview?.fileSize} bytes\nDestino: ${destination}`;
+                void navigator.clipboard.writeText(info);
+              }}>
+                <CopyCheck size={13} className="icon-green" />
+                <span>Copiar tudo</span>
+              </button>
+              <button type="button" className="dw-mini-action-btn" onClick={chooseFolder}>
+                <FolderOpen size={13} className="icon-amber" />
+                <span>Abrir pasta</span>
+              </button>
             </div>
           </div>
         </div>

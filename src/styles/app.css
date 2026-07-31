@@ -2469,42 +2469,31 @@ input::-ms-clear {
   max-width: 320px;
 }
 
-/* Card de Ações Rápidas (3 colunas compactas) */
-.dw-actions-card {
-  gap: 6px;
-}
-
-.dw-actions-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.dw-actions-grid-3col {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+/* Botões Rápidos Diretos no Rodapé */
+.dw-mini-actions-row {
+  display: flex;
   gap: 8px;
+  margin-top: 2px;
 }
 
-.dw-action-btn {
+.dw-mini-action-btn {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 38px;
-  border-radius: 8px;
+  gap: 5px;
+  height: 30px;
+  border-radius: 7px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #ffffff;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.18s ease;
-  text-align: center;
-  padding: 0 8px;
+  transition: all 0.15s ease;
 }
 
-.dw-action-btn:hover {
+.dw-mini-action-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.2);
 }
