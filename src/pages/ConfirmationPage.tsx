@@ -354,7 +354,7 @@ export function ConfirmationPage({ token }: { token: string }) {
                 onChange={(val) => setSelectedCategory(val)}
                 disabled={isCustomFolder}
                 icon={<Archive size={16} />}
-                direction="up"
+                direction="down"
               />
             </div>
           </div>
