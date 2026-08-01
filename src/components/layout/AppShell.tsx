@@ -80,22 +80,44 @@ export function AppShell({
   useLayoutEffect(() => {
     const sidebar = sidebarRef.current;
     if (!sidebar) return;
+
+    const updatePosition = () => {
+      const active =
+        sidebar.querySelector<HTMLElement>(".navigation__item--active") ??
+        sidebar.querySelector<HTMLElement>(".sidebar-footer-btn.active");
+      if (!active) {
+        setIndicator((prev) => ({ ...prev, visible: false }));
+        return;
+      }
+      const base = sidebar.getBoundingClientRect();
+      const rect = active.getBoundingClientRect();
+      setIndicator({
+        top: rect.top - base.top,
+        left: rect.left - base.left,
+        width: rect.width,
+        height: rect.height,
+        visible: true,
+      });
+    };
+
+    updatePosition();
+
+    window.addEventListener("resize", updatePosition);
+    const resizeObserver = new ResizeObserver(updatePosition);
+    resizeObserver.observe(sidebar);
+
+    // Também observar o botão ativo caso ele se mova devido ao flexbox
     const active =
       sidebar.querySelector<HTMLElement>(".navigation__item--active") ??
       sidebar.querySelector<HTMLElement>(".sidebar-footer-btn.active");
-    if (!active) {
-      setIndicator((prev) => ({ ...prev, visible: false }));
-      return;
+    if (active) {
+      resizeObserver.observe(active);
     }
-    const base = sidebar.getBoundingClientRect();
-    const rect = active.getBoundingClientRect();
-    setIndicator({
-      top: rect.top - base.top,
-      left: rect.left - base.left,
-      width: rect.width,
-      height: rect.height,
-      visible: true,
-    });
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      resizeObserver.disconnect();
+    };
   }, [activePage, typesOpen]);
 
   const navigate = (page: PageId) => {
