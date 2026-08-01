@@ -204,6 +204,13 @@ impl TorrentManager {
         }
     }
 
+    pub fn entries(&self) -> &Arc<RwLock<BTreeMap<String, TorrentEntry>>> {
+        &self.entries
+    }
+
+    pub fn session(&self) -> &Arc<RwLock<Option<Arc<Session>>>> {
+        &self.session
+    }
     pub async fn get_session(&self, default_output_dir: &Path) -> Result<Arc<Session>, String> {
         let mut guard = self.session.write().await;
         if let Some(ref s) = *guard {

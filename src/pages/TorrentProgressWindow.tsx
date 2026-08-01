@@ -231,13 +231,14 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
 
   const pauseResume = async () => {
     setError(null);
+    const taskId = task?.id ?? downloadId;
     try {
-      if (["pending", "downloading"].includes(status)) {
-        await service.pauseDownload(downloadId);
+      if (["pending", "connecting", "downloading"].includes(status)) {
+        await service.pauseDownload(taskId);
         setStatus("paused");
         setSpeed(0);
       } else {
-        await service.resumeDownload(downloadId);
+        await service.resumeDownload(taskId);
         setStatus("downloading");
       }
     } catch (cause) {
@@ -248,7 +249,8 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
   const cancel = async (deleteFiles: boolean) => {
     setBusy(true);
     try {
-      await service.cancelDownload(downloadId, deleteFiles);
+      // downloadId é o infoHash — cancelTorrent usa info_hash
+      await service.cancelTorrent(downloadId, deleteFiles);
       setStatus("cancelled");
       setSpeed(0);
       setCancelOpen(false);

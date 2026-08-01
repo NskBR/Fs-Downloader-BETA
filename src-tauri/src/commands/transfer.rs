@@ -762,7 +762,28 @@ pub fn pause_download(
         if let Ok(Some(task)) = downloads::find(&conn, &id) {
             if task.download_type == "torrent" || task.original_url.starts_with("magnet:") {
                 let info_hash = task.info_hash.clone().unwrap_or_default();
-                println!("[TORRENT_PAUSE] info_hash='{}', handle_valido=true, estado_antes='{:?}', estado_depois='paused'", info_hash, task.status);
+                if info_hash.is_empty() {
+                    return Err("Torrent sem info_hash registrado.".into());
+                }
+                println!("[TORRENT_PAUSE] info_hash='{}', estado_antes='{:?}', estado_depois='paused'", info_hash, task.status);
+
+                // Pausar via librqbit session diretamente no handle
+                let manager = crate::download::torrent::get_torrent_manager();
+                let rt = tokio::runtime::Handle::current();
+                let _ = rt.block_on(async {
+                    let guard = manager.entries().read().await;
+                    if let Some(entry) = guard.get(&info_hash) {
+                        let session_guard = manager.session().read().await;
+                        if let Some(ref session) = *session_guard {
+                            if let Err(e) = session.pause(&entry.handle).await {
+                                println!("[TORRENT_PAUSE] Erro ao pausar via session: {:?}", e);
+                            } else {
+                                println!("[TORRENT_PAUSE] librqbit session.pause() chamado com sucesso para info_hash={}", info_hash);
+                            }
+                        }
+                    }
+                });
+
                 let _ = downloads::update_progress(
                     &conn,
                     &crate::database::models::UpdateDownloadInput {
@@ -789,6 +810,7 @@ pub fn pause_download(
                         "error": null
                     }),
                 );
+                return Ok(true);
             }
         }
     }
