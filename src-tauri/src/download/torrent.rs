@@ -1068,7 +1068,8 @@ pub async fn run_torrent(
                         (DownloadStatus::Downloading, "checking_files")
                     }
                     TorrentStatsState::Live => {
-                        if speed_bytes > 0.0 || peers > 0 {
+                        // Exibir "Baixando" apenas quando houver velocidade real de download (>= 1.0 KB/s)
+                        if speed_bytes >= 1024.0 {
                             (DownloadStatus::Downloading, "downloading")
                         } else {
                             (DownloadStatus::Downloading, "connecting")
