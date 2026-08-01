@@ -89,23 +89,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Lista de arquivos internos do Torrent (fidelidade a foto de referencia 1)
-  const initialFiles: TorrentFileNode[] = useMemo(() => [
-    { id: 1, name: "Breaking Bad S01E01 - Pilot.mkv", size: 1567670272, selected: true },
-    { id: 2, name: "Breaking Bad S01E02 - Cat's in the Bag.mkv", size: 1449551462, selected: true },
-    { id: 3, name: "Breaking Bad S01E03 - ...And the Bag's in the River.mkv", size: 1428160512, selected: true },
-    { id: 4, name: "Breaking Bad S01E04 - Cancer Man.mkv", size: 1471012864, selected: true },
-    { id: 5, name: "Breaking Bad S01E05 - Gray Matter.mkv", size: 1395864371, selected: true },
-    { id: 6, name: "Breaking Bad S01E06 - Crazy Handful of Nothin'.mkv", size: 1374389534, selected: true },
-    { id: 7, name: "Breaking Bad S01E07 - A No-Rough-Stuff Type Deal.mkv", size: 1309965516, selected: true },
-    { id: 8, name: "Breaking Bad S01E08 - Hermanos.mkv", size: 1309965516, selected: false },
-    { id: 9, name: "Breaking Bad S01E09 - Bug.mkv", size: 1331439861, selected: true },
-    { id: 10, name: "Breaking Bad S01E10 - ...And the Bag's in the River.mkv", size: 1181116006, selected: false },
-    { id: 11, name: "sample.nfo", size: 6451, selected: true },
-    { id: 12, name: "poster.jpg", size: 335872, selected: false },
-  ], []);
-
-  const [fileList, setFileList] = useState<TorrentFileNode[]>(initialFiles);
+  const [fileList, setFileList] = useState<TorrentFileNode[]>([]);
 
   const mainRef = useRef<HTMLDivElement>(null);
 
@@ -116,12 +100,43 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
         .parseTorrentInfo(payload.url)
         .then((meta) => {
           if (!active) return;
-          if (meta.name && meta.name !== "Torrent Magnet") {
-            setTorrentName(meta.name);
-            setSelectedCategory(categoryForFile(meta.name, settings.customCategories));
+          const realName = meta.name && meta.name !== "Torrent Magnet" ? meta.name : (payload.preview?.fileName || "Torrent Download");
+          setTorrentName(realName);
+          setSelectedCategory(categoryForFile(realName, settings.customCategories));
+
+          if (meta.files && meta.files.length > 0) {
+            setFileList(
+              meta.files.map((f, idx) => ({
+                id: idx + 1,
+                name: f.path || realName,
+                size: f.size > 0 ? f.size : (meta.totalSize || 0),
+                selected: true,
+              }))
+            );
+          } else {
+            setFileList([
+              {
+                id: 1,
+                name: realName,
+                size: meta.totalSize || payload.preview?.fileSize || 0,
+                selected: true,
+              },
+            ]);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          if (!active) return;
+          const fallbackName = payload.preview?.fileName || "Torrent Download";
+          setTorrentName(fallbackName);
+          setFileList([
+            {
+              id: 1,
+              name: fallbackName,
+              size: payload.preview?.fileSize || 0,
+              selected: true,
+            },
+          ]);
+        });
     }
     return () => {
       active = false;
@@ -129,7 +144,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   }, [payload, settings.customCategories]);
 
   useEffect(() => {
-    void appWindow.setSize(new LogicalSize(740, 570)).catch(() => {});
+    void appWindow.setSize(new LogicalSize(760, 580)).catch(() => {});
   }, [appWindow]);
 
   const close = () => void appWindow.close();
@@ -198,15 +213,17 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
 
   return (
     <div className="download-window torrent-confirm-window" ref={mainRef}>
-      {/* Header */}
-      <header className="tc-header">
-        <div className="tc-header-title">
+      {/* Header com drag region */}
+      <header className="tc-header" data-tauri-drag-region>
+        <div className="tc-header-title" data-tauri-drag-region>
           <div className="tc-header-icon-box">
             <Download size={18} />
           </div>
-          <div>
-            <h1>Adicionar Torrent</h1>
-            <p>Configure seu download antes de iniciar.</p>
+          <div data-tauri-drag-region>
+            <h1 data-tauri-drag-region className="text-truncate" style={{ maxWidth: 520 }}>
+              {torrentName}
+            </h1>
+            <p data-tauri-drag-region>Adicionar Torrent • Configure seu download antes de iniciar.</p>
           </div>
         </div>
         <button type="button" className="tc-close-btn" onClick={close}>

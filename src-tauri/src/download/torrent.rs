@@ -94,11 +94,17 @@ impl TorrentEngine {
                 .map(|m| format!("{:?}", m.as_id20()))
                 .unwrap_or_default();
 
+            let files = vec![TorrentFileItem {
+                index: 0,
+                path: name.clone(),
+                size: total_size,
+            }];
+
             Ok(ParsedTorrentMeta {
                 name,
                 info_hash,
                 total_size,
-                files: vec![],
+                files,
             })
         } else {
             let path = PathBuf::from(source);
@@ -109,11 +115,17 @@ impl TorrentEngine {
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("Torrent").to_string();
             let total_size = bytes.len() as u64;
 
+            let files = vec![TorrentFileItem {
+                index: 0,
+                path: name.clone(),
+                size: total_size,
+            }];
+
             Ok(ParsedTorrentMeta {
                 name,
                 info_hash: format!("{:?}", uuid::Uuid::new_v4()),
                 total_size,
-                files: vec![],
+                files,
             })
         }
     }

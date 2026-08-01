@@ -179,7 +179,8 @@ pub async fn open_download_confirmation(
     let build_result = WebviewWindowBuilder::new(&app, &label, confirmation_url)
         .title(if is_torrent { "Adicionar Torrent" } else { "Confirmar download" })
         .inner_size(width, height)
-        .resizable(false)
+        .min_inner_size(660.0, 480.0)
+        .resizable(true)
         .decorations(false)
         .shadow(false)
         .visible(false)
@@ -237,7 +238,7 @@ pub async fn open_download_confirmation(
     let url = WebviewUrl::App("index.html".into());
 
     let (width, height) = if is_torrent {
-        (520.0, 275.0)
+        (540.0, 290.0)
     } else {
         (450.0, 205.0)
     };
@@ -245,7 +246,8 @@ pub async fn open_download_confirmation(
     let build_result = WebviewWindowBuilder::new(&app, &label, url)
       .title(if is_torrent { "SF Downloader - Torrent" } else { "SF Downloader - Download" })
       .inner_size(width, height)
-        .resizable(false)
+      .min_inner_size(460.0, 240.0)
+      .resizable(true)
         .decorations(false)
         .shadow(false)
         .visible(false)

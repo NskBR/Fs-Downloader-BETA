@@ -129,15 +129,15 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
     }
   };
 
-  const downloaded = liveData?.downloaded ?? task?.totalDownloaded ?? 16428236800; // Mock 15,3 GB
-  const total = liveData?.total ?? task?.fileSize ?? 24051810304; // Mock 22,4 GB
-  const speed = liveData?.speed ?? task?.speedCurrent ?? 9122611; // Mock 8,7 MB/s
-  const peersCount = liveData?.peers ?? task?.peers ?? 42;
-  const trackersCount = liveData?.trackers ?? 8;
+  const downloaded = liveData?.downloaded ?? task?.totalDownloaded ?? 0;
+  const total = liveData?.total ?? task?.fileSize ?? null;
+  const speed = liveData?.speed ?? task?.speedCurrent ?? 0;
+  const peersCount = liveData?.peers ?? task?.peers ?? 0;
+  const trackersCount = liveData?.trackers ?? 0;
   const isPaused = task?.status === "paused";
 
-  const percent = total && total > 0 ? Math.min(100, Math.round((downloaded / total) * 100)) : 68;
-  const etaSeconds = speed > 0 && total && total > downloaded ? (total - downloaded) / speed : 720;
+  const percent = total && total > 0 ? Math.min(100, Math.round((downloaded / total) * 100)) : (downloaded > 0 ? 100 : 0);
+  const etaSeconds = speed > 0 && total && total > downloaded ? (total - downloaded) / speed : null;
 
   // Donut SVG circumference calculation
   const radius = 38;
@@ -146,14 +146,14 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
 
   return (
     <div className="download-window torrent-live-window">
-      {/* Header Row */}
-      <div className="tl-header">
-        <div className="tl-title-group">
+      {/* Header Row com drag region */}
+      <div className="tl-header" data-tauri-drag-region>
+        <div className="tl-title-group" data-tauri-drag-region>
           <div className="tl-folder-box">
             <Folder size={22} className="tl-folder-icon" />
           </div>
-          <h2 className="tl-title text-truncate">
-            {task?.fileName || "Breaking Bad Season 1 Complete 720p BRRip"}
+          <h2 className="tl-title text-truncate" data-tauri-drag-region>
+            {task?.fileName || "Torrent Download"}
           </h2>
         </div>
 

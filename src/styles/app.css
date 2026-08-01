@@ -4682,61 +4682,70 @@ html, body, #root, .window-frame {
    ESTILOS DEDICADOS: JANELAS DE TORRENT
    ========================================== */
 
-/* --- JANELA 1: ADICIONAR TORRENT (CONFIRMAÇÃO) --- */
-.torrent-confirm-window {
+.torrent-confirm-window, .torrent-live-window {
   width: 100vw;
   height: 100vh;
-  background: var(--bg-fill, #0d1117);
+  background: var(--bg-fill, var(--panel, #0d1117)) !important;
   color: var(--text, #f0f2f5);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  padding: 12px 16px;
+  padding: 14px 16px;
   overflow: hidden;
   user-select: none;
+  border-radius: var(--radius-lg, 12px);
 }
 
+.torrent-confirm-window [data-tauri-drag-region],
+.torrent-live-window [data-tauri-drag-region] {
+  cursor: grab;
+}
+
+/* --- JANELA 1: ADICIONAR TORRENT (CONFIRMAÇÃO) --- */
 .tc-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  flex-shrink: 0;
 }
 .tc-header-title {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 .tc-header-icon-box {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: rgba(6, 182, 212, 0.15);
-  border: 1px solid rgba(6, 182, 212, 0.3);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--ember-soft, rgba(6, 182, 212, 0.15));
+  border: 1px solid var(--ember-soft, rgba(6, 182, 212, 0.3));
   color: var(--ember-solid, #06b6d4);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 .tc-header-title h1 {
   font-size: 15px;
   font-weight: 700;
   margin: 0;
-  color: #ffffff;
+  color: var(--text, #ffffff);
 }
 .tc-header-title p {
   font-size: 11px;
   color: var(--text-2, #8a92a3);
-  margin: 1px 0 0 0;
+  margin: 2px 0 0 0;
 }
 .tc-close-btn {
   background: transparent;
   border: none;
   color: var(--text-2, #8a92a3);
   cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
+  padding: 5px;
+  border-radius: 8px;
   transition: 0.15s;
 }
 .tc-close-btn:hover { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
@@ -4746,14 +4755,14 @@ html, body, #root, .window-frame {
   border: 1px solid rgba(239, 68, 68, 0.3);
   color: #f87171;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 11px;
   margin-top: 8px;
 }
 
 .tc-body-grid {
   display: grid;
-  grid-template-columns: 310px 1fr;
+  grid-template-columns: 290px 1fr;
   gap: 12px;
   flex: 1;
   min-height: 0;
@@ -4769,9 +4778,9 @@ html, body, #root, .window-frame {
 }
 
 .tc-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  background: var(--surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
@@ -4796,8 +4805,8 @@ html, body, #root, .window-frame {
 .tc-path-box {
   flex: 1;
   background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
   padding: 5px 8px;
   font-size: 11px;
   color: #ffffff;
@@ -4807,8 +4816,8 @@ html, body, #root, .window-frame {
 }
 .tc-input-name {
   background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
   padding: 6px 10px;
   font-size: 11.5px;
   color: #ffffff;
@@ -4867,8 +4876,8 @@ html, body, #root, .window-frame {
 .tc-speed-inputs label { font-size: 10px; color: var(--text-2); }
 .tc-speed-inputs input {
   background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
   padding: 4px 6px;
   font-size: 11px;
   color: #ffffff;
@@ -4887,18 +4896,19 @@ html, body, #root, .window-frame {
   flex-direction: column;
   gap: 6px;
   background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.05));
+  border-radius: 10px;
   padding: 8px 10px;
 }
 .tc-stat-pair {
   display: flex;
   justify-content: space-between;
+  gap: 12px;
   font-size: 11px;
 }
-.tc-stat-pair div { display: flex; flex-direction: column; }
+.tc-stat-pair div { display: flex; flex-direction: column; min-width: 0; }
 .tc-stat-label { font-size: 10px; color: var(--text-2, #8a92a3); }
-.tc-stat-val { color: #ffffff; font-weight: 600; font-size: 11px; }
+.tc-stat-val { color: #ffffff; font-weight: 600; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .tc-actions-bar {
   display: flex;
@@ -4909,8 +4919,8 @@ html, body, #root, .window-frame {
 .tc-table-wrap {
   flex: 1;
   background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -4921,7 +4931,7 @@ html, body, #root, .window-frame {
   justify-content: space-between;
   padding: 6px 12px;
   background: rgba(255, 255, 255, 0.04);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.08));
   font-size: 11px;
   font-weight: 700;
   color: var(--text-2, #8a92a3);
@@ -4939,21 +4949,22 @@ html, body, #root, .window-frame {
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   font-size: 11px;
 }
-.tc-file-row:hover { background: rgba(255, 255, 255, 0.03); }
+.tc-file-row:hover { background: rgba(255, 255, 255, 0.04); }
 .tc-file-row.folder-root { font-weight: 700; color: #ffffff; }
 .tc-file-row.child { padding-left: 24px; color: var(--text, #f0f2f5); }
 .tc-folder-icon { color: #f59e0b; }
 .tc-file-icon { color: var(--text-2); }
 .tc-file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tc-file-size { color: var(--text-2); font-size: 10.5px; }
+.tc-file-size { color: var(--text-2); font-size: 10.5px; flex-shrink: 0; }
 
 .tc-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.08));
   margin-top: 8px;
+  flex-shrink: 0;
 }
 .tc-footer-left {
   display: flex;
@@ -4964,7 +4975,7 @@ html, body, #root, .window-frame {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: rgba(6, 182, 212, 0.15);
+  background: var(--ember-soft, rgba(6, 182, 212, 0.15));
   color: var(--ember-solid, #06b6d4);
   display: flex;
   align-items: center;
@@ -4979,20 +4990,20 @@ html, body, #root, .window-frame {
   background: transparent;
   border: 1px solid var(--ember-solid, #06b6d4);
   color: var(--ember-solid, #06b6d4);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 5px 12px;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: 0.15s;
 }
-.tc-btn-outline:hover { background: rgba(6, 182, 212, 0.15); }
+.tc-btn-outline:hover { background: var(--ember-soft, rgba(6, 182, 212, 0.15)); }
 
 .tc-btn-dark {
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
   color: #ffffff;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 5px 14px;
   font-size: 11px;
   font-weight: 600;
@@ -5005,7 +5016,7 @@ html, body, #root, .window-frame {
   background: var(--ember-solid, #06b6d4);
   border: none;
   color: #000000;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 5px 14px;
   font-size: 11.5px;
   font-weight: 700;
@@ -5018,20 +5029,6 @@ html, body, #root, .window-frame {
 .tc-btn-cyan-solid:hover { opacity: 0.9; transform: translateY(-1px); }
 
 /* --- JANELA 2: DOWNLOAD EM PROGRESSO TORRENT --- */
-.torrent-live-window {
-  width: 100vw;
-  height: 100vh;
-  background: var(--bg-fill, #0d1117);
-  color: var(--text, #f0f2f5);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-sizing: border-box;
-  padding: 14px 16px;
-  overflow: hidden;
-  user-select: none;
-}
-
 .tl-header {
   display: flex;
   align-items: center;
@@ -5047,15 +5044,15 @@ html, body, #root, .window-frame {
 .tl-folder-box {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 10px;
+  background: var(--ember-soft, rgba(6, 182, 212, 0.15));
+  border: 1px solid var(--ember-soft, rgba(6, 182, 212, 0.3));
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.tl-folder-icon { color: #3b82f6; }
+.tl-folder-icon { color: var(--ember-solid, #06b6d4); }
 .tl-title {
   font-size: 14px;
   font-weight: 700;
@@ -5128,9 +5125,9 @@ html, body, #root, .window-frame {
   gap: 8px;
 }
 .tl-metric-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  background: var(--surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
   padding: 8px 10px;
   display: flex;
   align-items: center;
@@ -5152,8 +5149,8 @@ html, body, #root, .window-frame {
   align-items: center;
   gap: 6px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
   padding: 6px 14px;
   color: #ffffff;
   font-size: 11px;
