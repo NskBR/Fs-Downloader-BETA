@@ -561,6 +561,35 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
               </div>
             </div>
 
+            {/* Card 3: Animações e Efeitos da Interface */}
+            <div className="cfg-card">
+              <div className="cfg-card-header">
+                <div className="cfg-card-icon-box">
+                  <Sparkles className="cfg-card-icon" size={18} />
+                </div>
+                <div>
+                  <h3 className="cfg-card-title">Animações da Interface</h3>
+                  <p className="cfg-card-subtitle">Personalize a fluidez dos movimentos e efeitos visuais do aplicativo.</p>
+                </div>
+              </div>
+              <div className="cfg-card-content cfg-list-items">
+                <div className="cfg-item-row">
+                  <div className="cfg-item-left">
+                    <div>
+                      <strong className="cfg-item-label">Animações da barra lateral</strong>
+                      <span className="cfg-item-desc">Ativa a transição suave e o movimento fluido do seletor no menu lateral.</span>
+                    </div>
+                  </div>
+                  <div className="cfg-item-right">
+                    <Toggle
+                      checked={draft.sidebarAnimation ?? true}
+                      onChange={(value) => update("sidebarAnimation", value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Modal Drawer: Personalizar Tema (Do print do usuario) */}
             {customizerModalOpen && (
               <ThemeCustomizerModal
