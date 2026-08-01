@@ -50,7 +50,7 @@ const eta = (seconds: number) => {
 const statusLabels: Record<DownloadStatus, string> = {
   pending: "Aguardando",
   connecting: "Conectando P2P",
-  checking_files: "Verificando arquivos",
+  checking_files: "Verificando",
   downloading: "Baixando",
   paused: "Pausado",
   assembling: "Montando",
@@ -325,12 +325,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
               </button>
             )}
             <p className="dw-size">
-              {isChecking ? (
-                // Mostra progresso de verificação, não bytes baixados
-                <><span style={{ opacity: 0.7, fontSize: "0.85em" }}>Verificado: </span>{bytes(verifiedBytes)}<em> / {bytes(total)}</em></>
-              ) : (
-                <>{bytes(downloaded)}{!isCompleted && total ? <em> / {bytes(total)}</em> : null}</>
-              )}
+              {bytes(isChecking ? 0 : downloaded)}{!isCompleted && total ? <em> / {bytes(total)}</em> : null}
             </p>
           </div>
 
@@ -342,7 +337,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
                   <span>{error}</span>
                 </span>
               ) : isChecking ? (
-                <span style={{ opacity: 0.75, fontSize: "0.85em" }}>Verificando integridade dos arquivos existentes...</span>
+                <span style={{ opacity: 0.75, fontSize: "0.85em" }}>🔍 Checando dados no disco</span>
               ) : (
                 <>
                   ⬇️ {isActive ? `${bytes(speed)}/s` : "0 B/s"}
