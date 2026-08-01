@@ -570,7 +570,7 @@ impl TorrentManager {
         entry.save_path = save_path.to_string();
 
         let conn = database.connect().map_err(|e| e.to_string())?;
-        let task_id = format!("torrent_{}", info_hash);
+        let _task_id = format!("torrent_{}", info_hash);
 
         let input = crate::database::models::CreateDownloadInput {
             file_name: entry.name.clone(),
