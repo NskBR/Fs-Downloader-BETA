@@ -17,14 +17,45 @@ Construído com **Tauri 2 + React + Rust** — leve, nativo e sem Electron.
 > **⚠️ AVISO DE DESENVOLVIMENTO (BITTORRENT)**:  
 > O suporte a downloads BitTorrent encontra-se em **fase ativa de desenvolvimento**. O sistema está parcialmente funcional, porém ainda apresenta **bastante inconsistência**. Recomendamos utilizar prioritariamente downloads HTTP/HTTPS diretos enquanto aprimoramos o motor Torrent.
 
+> [!IMPORTANT]
+> **🗺️ ROADMAP EM DESTAQUE**:  
+> - [x] Motor de download HTTP/HTTPS com segmentação por Range
+> - [x] Pausa, retomada e recuperação automática de downloads interrompidos
+> - [x] Extração automática de arquivos compactados (ZIP, RAR, 7Z, TAR) com senha
+> - [x] Extensão oficial para navegadores Chromium (Chrome, Edge, Brave, Opera) e Firefox
+> - [x] Notificador nativo de atualizações via GitHub Releases na barra de título
+> - [x] Temas futuristas com customizador de cores sólidas e gradientes dinâmicos
+> - [x] Painel de Métricas e estatísticas com exportação em TXT / JSON
+> - [ ] 🛠️ **Em Desenvolvimento**: Estabilização do motor BitTorrent / P2P
+> - [ ] Limitação dinâmica de velocidade de download por tarefa
+> - [ ] Agendador inteligente de downloads por horário
+> - [ ] Fila de downloads sequencial com prioridades configuráveis
+
 ---
 
 ## 📸 Capturas de Tela
 
-### Lista de Downloads
-> Visualize todos os seus downloads organizados por tipo de arquivo, com filtros por categoria, ordenação persistente e modos de exibição em lista ou grade.
+### Interface Principal (Lista de Downloads)
+> Visualize todos os seus downloads organizados por categorias, com filtros em tempo real, velocidade acumulada, busca e modos de exibição.
 
 ![Lista de Downloads](screenshots/downloads-list.png)
+
+### 🪟 Janelas Secundárias & Diálogos Nativos
+
+| Janela de Confirmação | Progresso de Download (HTTP) |
+|---|---|
+| ![Confirmação](screenshots/window-confirmation.png) | ![Progresso HTTP](screenshots/window-download-progress.png) |
+
+| Progresso BitTorrent (P2P) | Download Concluído |
+|---|---|
+| ![Progresso Torrent](screenshots/window-torrent-progress.png) | ![Concluído](screenshots/window-completed.png) |
+
+#### 🛡️ Tratamento Intuitivo de Erros (HTTP 403 / Conectividade)
+> Tela nativa de erro com sugestões práticas e resolução com um clique, sem sobreposição de interface.
+
+![Tratamento de Erros](screenshots/window-error.png)
+
+---
 
 ### Configurações e Personalização
 > Cores de destaque sólidas e gradientes, temas de interface com paletas pré-definidas e seletor de idioma.
@@ -42,7 +73,7 @@ Construído com **Tauri 2 + React + Rust** — leve, nativo e sem Electron.
 ![Métricas](screenshots/metrics.png)
 
 ### Integração com Navegadores
-> Extensão nativa para Chromium (Chrome, Edge, Opera, Brave, Vivaldi) e Firefox. Captura links automaticamente e envia direto para o SF Downloader.
+> Extensão nativa para Chromium (Chrome, Edge, Opera, Brave, Vivaldi) e Firefox. Captura links automaticamente e envia direto para o SFDownloader.
 
 ![Integração com Navegadores](screenshots/browser-integration.png)
 
@@ -65,7 +96,7 @@ Construído com **Tauri 2 + React + Rust** — leve, nativo e sem Electron.
 - 📊 **Métricas detalhadas** com gráfico donut e cards de estatísticas
 - 🔍 **Busca e filtros** por categoria, status, tamanho e data
 - 📋 **Seleção múltipla** com Shift + Click e Ctrl + Click
-- 🖥️ **Janela de progresso** independente com indicador circular gradiente
+- 🖥️ **Janelas independentes** para cada download em andamento
 
 ### Extensão de Navegador
 - 🌐 **Chromium** — Chrome, Edge, Opera, Brave, Vivaldi
@@ -115,8 +146,8 @@ npm run tauri dev
 ### Build de Produção
 
 ```bash
-# Compilar instalador (.msi / .exe)
-npm run tauri build
+# Compilar executável e instalador para a pasta /release
+npm run release
 ```
 
 ### Extensão de Navegador
@@ -133,7 +164,7 @@ Os builds ficam em `browser-extension/dist-chromium/` e `browser-extension/dist-
 ## 📂 Estrutura do Projeto
 
 ```
-SF Downloader/
+SFDownloader/
 ├── src/                    # Frontend React + TypeScript
 │   ├── app/                # Composição e navegação
 │   ├── components/         # Componentes reutilizáveis (UI, downloads)
@@ -147,27 +178,9 @@ SF Downloader/
 │   ├── src/database/       # SQLite, migrações e repositórios
 │   └── src/engine/         # Motor de download segmentado
 ├── browser-extension/      # Extensão WebExtensions (Chromium + Firefox)
-├── screenshots/            # Capturas de tela para o README
-└── docs/                   # Documentação técnica
+├── screenshots/            # Capturas de tela do aplicativo e janelas
+└── release/                # Executáveis e instaladores gerados no build
 ```
-
----
-
-## 🗺️ Roadmap
-
-- [x] Motor de download HTTP/HTTPS com segmentação
-- [x] Pausa, retomada e cancelamento
-- [x] Extração automática de arquivos compactados
-- [x] Organização por tipo de arquivo
-- [x] Extensão para Chromium e Firefox
-- [x] Métricas e estatísticas detalhadas
-- [x] Temas e cores de destaque personalizáveis
-- [x] Gradientes dinâmicos multi-stop
-- [ ] Limitação dinâmica de velocidade por download
-- [ ] Fila de downloads sequencial com prioridades
-- [ ] Agendador de downloads por horário
-- [ ] Integração via Native Messaging (sem abas temporárias)
-- [ ] Suporte a BitTorrent / SFTP
 
 ---
 
