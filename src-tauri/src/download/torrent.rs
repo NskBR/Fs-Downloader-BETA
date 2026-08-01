@@ -557,11 +557,11 @@ impl TorrentManager {
             return Err("Metadados do torrent ainda não foram baixados.".into());
         }
 
-        let stats = entry.handle.stats();
+        let _stats = entry.handle.stats();
         println!(
             "[TORRENT_HANDLE_FOUND] handle_id={}, metadata_ready=true, estado_atual='{:?}', total_size={} bytes",
             entry.handle.id(),
-            stats,
+            _stats,
             entry.total_size
         );
 
@@ -618,20 +618,15 @@ impl TorrentManager {
 
         println!("[TORRENT_RESUME] Motor retomado/iniciado com sucesso para info_hash={}", info_hash);
 
-        // Se start_immediately for verdadeiro, emitir progresso
         if start_immediately {
-            use tauri::Emitter;
-            let _ = app.emit(
-                "download-progress",
-                serde_json::json!({
-                    "id": task.id,
-                    "downloaded": stats.progress_bytes,
-                    "total": entry.total_size,
-                    "speed": 0.0,
-                    "status": "downloading",
-                    "error": null
-                }),
-            );
+            let control = crate::download::runtime::TaskControl::new();
+            let database_clone = database.clone();
+            let spawned_task = task.clone();
+            let app_handle = app.clone();
+
+            tokio::spawn(async move {
+                run_torrent(app_handle, database_clone, spawned_task, control).await;
+            });
         }
 
         Ok(task)

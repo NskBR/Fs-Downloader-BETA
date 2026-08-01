@@ -170,23 +170,26 @@ pub async fn open_download_confirmation(
     #[cfg(not(debug_assertions))]
     let confirmation_url = WebviewUrl::App("index.html".into());
 
-    let (width, height) = if is_torrent {
-        (740.0, 570.0)
-    } else {
-        (600.0, 295.0)
-    };
-
-    let build_result = WebviewWindowBuilder::new(&app, &label, confirmation_url)
+    let builder = WebviewWindowBuilder::new(&app, &label, confirmation_url)
         .title(if is_torrent { "Adicionar Torrent" } else { "Confirmar download" })
-        .inner_size(width, height)
-        .min_inner_size(660.0, 480.0)
-        .resizable(true)
         .decorations(false)
         .shadow(false)
         .visible(false)
         .transparent(true)
-        .center()
-        .build();
+        .center();
+
+    let build_result = if is_torrent {
+        builder
+            .inner_size(740.0, 520.0)
+            .min_inner_size(660.0, 480.0)
+            .resizable(true)
+            .build()
+    } else {
+        builder
+            .inner_size(600.0, 295.0)
+            .resizable(false)
+            .build()
+    };
 
     {
       if let Ok(mut creating) = CREATING_WINDOWS.lock() {
@@ -237,23 +240,26 @@ pub async fn open_download_confirmation(
     #[cfg(not(debug_assertions))]
     let url = WebviewUrl::App("index.html".into());
 
-    let (width, height) = if is_torrent {
-        (540.0, 290.0)
-    } else {
-        (450.0, 205.0)
-    };
-
-    let build_result = WebviewWindowBuilder::new(&app, &label, url)
+    let builder = WebviewWindowBuilder::new(&app, &label, url)
       .title(if is_torrent { "SF Downloader - Torrent" } else { "SF Downloader - Download" })
-      .inner_size(width, height)
-      .min_inner_size(460.0, 240.0)
-      .resizable(true)
-        .decorations(false)
-        .shadow(false)
-        .visible(false)
-        .transparent(true)
-        .center()
-        .build();
+      .decorations(false)
+      .shadow(false)
+      .visible(false)
+      .transparent(true)
+      .center();
+
+    let build_result = if is_torrent {
+        builder
+            .inner_size(540.0, 290.0)
+            .min_inner_size(460.0, 240.0)
+            .resizable(true)
+            .build()
+    } else {
+        builder
+            .inner_size(450.0, 205.0)
+            .resizable(false)
+            .build()
+    };
 
     {
       if let Ok(mut creating) = CREATING_WINDOWS.lock() {
