@@ -30,29 +30,9 @@ export function App() {
       .then((res) => {
         if (res && res.available) {
           setUpdateInfo(res);
-        } else {
-          // Dados de teste para visualização da interface
-          setUpdateInfo({
-            available: true,
-            current_version: "0.3.1",
-            latest_version: "0.4.0",
-            release_url: "https://github.com/NskBR/SFDownloader-BETA/releases",
-            release_name: "v0.4.0 - Nova Atualização",
-            release_notes: "Notificações de atualização e correções no motor de torrent.",
-          });
         }
       })
-      .catch((err) => {
-        console.log("[UPDATER] Erro ao checar atualizações:", err);
-        setUpdateInfo({
-          available: true,
-          current_version: "0.3.1",
-          latest_version: "0.4.0",
-          release_url: "https://github.com/NskBR/SFDownloader-BETA/releases",
-          release_name: "v0.4.0 - Nova Atualização",
-          release_notes: "Notificações de atualização e correções no motor de torrent.",
-        });
-      });
+      .catch((err) => console.log("[UPDATER] Erro ao checar atualizações:", err));
   }, []);
 
   useEffect(()=>{const media=matchMedia("(prefers-color-scheme: dark)");const apply=()=>{document.documentElement.dataset.theme=settings.theme==="system"?(media.matches?"midnight":"light"):settings.theme;document.documentElement.lang=settings.language};apply();media.addEventListener("change",apply);return()=>media.removeEventListener("change",apply)},[settings.theme,settings.language]);
