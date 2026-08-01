@@ -152,6 +152,24 @@ fn parse_bencode_value(bytes: &[u8], pos: &mut usize) -> Result<BencodeValue, St
     }
 }
 
+pub fn sanitize_info_hash(raw: &str) -> String {
+    let mut s = raw.trim();
+    if let Some(inner) = s.strip_prefix("Id20(\"").and_then(|i| i.strip_suffix("\")")) {
+        s = inner;
+    } else if let Some(inner) = s.strip_prefix("Id20(").and_then(|i| i.strip_suffix(")")) {
+        s = inner;
+    }
+    let cleaned: String = s
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+        .collect();
+    if cleaned.is_empty() {
+        "torrent_hash".to_string()
+    } else {
+        cleaned
+    }
+}
+
 pub struct TorrentEntry {
     pub info_hash: String,
     pub source: String,
@@ -254,7 +272,7 @@ impl TorrentManager {
             println!("[MAGNET_RECEIVED] Magnet link recebido: {}", source);
             let magnet = librqbit::Magnet::parse(source)
                 .map_err(|_| "Não foi possível ler os metadados deste torrent.".to_string())?;
-            let info_hash = format!("{:?}", magnet.as_id20());
+            let info_hash = sanitize_info_hash(&format!("{:?}", magnet.as_id20()));
             let name = magnet.name.clone();
 
             println!("[MAGNET_PARSED] Magnet parsed: info_hash={}, name={:?}", info_hash, name);

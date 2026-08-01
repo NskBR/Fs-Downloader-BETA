@@ -271,10 +271,11 @@ pub async fn open_download_confirmation(
       info_hash: String,
       task_id: String,
   ) -> Result<(), String> {
-      let label = format!("torrent-progress-{}", info_hash);
+      let clean_hash = crate::download::torrent::sanitize_info_hash(&info_hash);
+      let label = format!("torrent-progress-{}", clean_hash);
       println!(
           "[PROGRESS_WINDOW_OPEN] label='{}', info_hash='{}', task_id='{}'",
-          label, info_hash, task_id
+          label, clean_hash, task_id
       );
 
       if let Some(window) = app.get_webview_window(&label) {
