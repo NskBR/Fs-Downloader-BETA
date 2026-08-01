@@ -1014,22 +1014,23 @@ pub async fn run_torrent(
                 task.file_size.unwrap_or(entry.total_size as i64)
             };
 
-            // O librqbit trabalha por peças. Uma peça pode atravessar o limite entre
-            // um arquivo selecionado e outro desmarcado, então file_progress nunca deve
-            // ser usado como condição de conclusão. Projetamos o progresso real das
-            // peças sobre o tamanho lógico escolhido apenas para apresentação na UI.
-            let downloaded = if stats.finished {
+            let downloaded = if has_selected_subset {
+                entry
+                    .selected_file_indexes
+                    .iter()
+                    .map(|&idx| stats.file_progress.get(idx).copied().unwrap_or(0))
+                    .sum::<u64>() as i64
+            } else if stats.finished {
                 logical_total_size
-            } else if stats.total_bytes > 0 && logical_total_size > 0 {
-                ((stats.progress_bytes as f64 / stats.total_bytes as f64)
-                    * logical_total_size as f64)
-                    .round()
-                    .clamp(0.0, logical_total_size as f64) as i64
             } else {
-                0
+                stats.progress_bytes as i64
             };
             let total_size = logical_total_size;
-            let is_finished = stats.finished;
+            let is_finished = if has_selected_subset && logical_total_size > 0 {
+                downloaded >= logical_total_size
+            } else {
+                stats.finished
+            };
 
             let speed_bytes = stats
                 .live

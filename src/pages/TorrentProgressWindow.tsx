@@ -170,7 +170,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
           setSpeed(found.speedCurrent);
           setUploadSpeed(found.uploadSpeed ?? 0);
           setPeers(found.peers ?? 0);
-          setStatus(found.status);
+          setStatus((prev) => (prev === "pending" ? found.status : prev));
         }
       });
     };
