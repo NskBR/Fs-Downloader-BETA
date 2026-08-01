@@ -135,7 +135,6 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
   const [verifiedBytes, setVerifiedBytes] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [uploadSpeed, setUploadSpeed] = useState(0);
-  const [seeds, setSeeds] = useState(0);
   const [peers, setPeers] = useState(0);
   const [trackers, setTrackers] = useState(0);
   const [status, setStatus] = useState<DownloadStatus>("pending");
@@ -151,17 +150,10 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
     let fitted = false;
     const fit = async () => {
       if (!detailsOpen && !cancelOpen && fitted) return;
-      const root = mainRef.current;
-      if (!root) return;
       await document.fonts?.ready.catch(() => {});
-      const height = root.scrollHeight || root.offsetHeight;
-      if (height > 0) {
-        fitted = true;
-        const targetHeight = cancelOpen ? Math.max(260, height) : detailsOpen ? Math.max(360, height) : Math.max(205, height);
-        void appWindow
-          .setSize(new LogicalSize(470, targetHeight))
-          .catch(() => {});
-      }
+      fitted = true;
+      const targetHeight = cancelOpen ? 300 : detailsOpen ? 420 : 205;
+      void appWindow.setSize(new LogicalSize(470, targetHeight)).catch(() => {});
     };
     void fit();
   }, [detailsOpen, cancelOpen]);
@@ -171,19 +163,12 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
     const fetchTask = () => {
       void service.listDownloads().then((list) => {
         if (!active) return;
-        const found = list.find(
-          (item) =>
-            item.id === downloadId ||
-            item.infoHash === downloadId ||
-            item.id.includes(downloadId) ||
-            (item.infoHash && downloadId.includes(item.infoHash))
-        );
+        const found = list.find((item) => item.id === downloadId);
         if (found) {
           setTask(found);
           setDownloaded(found.totalDownloaded);
           setSpeed(found.speedCurrent);
           setUploadSpeed(found.uploadSpeed ?? 0);
-          setSeeds(found.seeds ?? 0);
           setPeers(found.peers ?? 0);
           setStatus(found.status);
         }
@@ -194,19 +179,13 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
     const interval = setInterval(fetchTask, task ? 2000 : 400);
 
     const listener = listen<TorrentProgressPayload>("download-progress", ({ payload }) => {
-      if (
-        task &&
-        payload.id !== task.id &&
-        payload.id !== downloadId &&
-        !payload.id.includes(downloadId)
-      ) {
+      if (payload.id !== downloadId) {
         return;
       }
       setDownloaded(payload.downloaded);
       if (payload.verifiedBytes !== undefined) setVerifiedBytes(payload.verifiedBytes);
       setSpeed(payload.speed);
       if (payload.uploadSpeed !== undefined) setUploadSpeed(payload.uploadSpeed);
-      if (payload.seeds !== undefined) setSeeds(payload.seeds);
       if (payload.peers !== undefined) setPeers(payload.peers);
       if (payload.trackers !== undefined) setTrackers(payload.trackers);
       setStatus(payload.status as DownloadStatus);
@@ -253,7 +232,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
     setBusy(true);
     try {
       // downloadId é o infoHash — cancelTorrent usa info_hash
-      await service.cancelTorrent(downloadId, deleteFiles);
+      await service.cancelTorrent(task?.infoHash ?? downloadId, deleteFiles);
       setStatus("cancelled");
       setSpeed(0);
       setCancelOpen(false);
@@ -306,7 +285,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
     destination = task.finalPath.replace(/[\\/][^\\/]*$/, "");
 
   return (
-    <main ref={mainRef} className={`dw-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}${cancelOpen ? " cancel-open" : ""}`}>
+    <main ref={mainRef} className={`dw-window torrent-download-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}${cancelOpen ? " cancel-open" : ""}`}>
       <header className="dw-title" data-tauri-drag-region>
         <span className="dw-title-text" data-tauri-drag-region>
           <FileIcon extension={task.extension || "torrent"} />
@@ -436,12 +415,12 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
                 <span className="dw-detail-val">{bytes(uploadSpeed)}/s</span>
               </div>
               <div className="dw-detail-row">
-                <span className="dw-detail-label">Sementes (Seeds) / Pares (Peers)</span>
-                <span className="dw-detail-val">{seeds} sementes / {peers} pares</span>
+                <span className="dw-detail-label">Conexões P2P</span>
+                <span className="dw-detail-val">{peers} pares conectando/ativos</span>
               </div>
               <div className="dw-detail-row">
                 <span className="dw-detail-label">Trackers Ativos</span>
-                <span className="dw-detail-val">{trackers || "8 trackers"}</span>
+                <span className="dw-detail-val">{trackers || "Não informado"}</span>
               </div>
               <div className="dw-detail-row">
                 <span className="dw-detail-label">Pasta de Destino</span>

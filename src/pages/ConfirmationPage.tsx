@@ -24,11 +24,10 @@ import {
   CopyCheck,
   Code,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { LogicalSize } from "@tauri-apps/api/dpi";
 import { Toggle } from "../components/ui/Toggle";
 import { CustomSelect } from "../components/ui/CustomSelect";
 import { categoryForFile, downloadCategories } from "../domain/categories";
@@ -119,7 +118,6 @@ export function ConfirmationPage({ token }: { token: string }) {
   const [selectedCategory, setSelectedCategory] = useState("Outros");
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!payload || payload.preview) return;
@@ -162,37 +160,6 @@ export function ConfirmationPage({ token }: { token: string }) {
       );
     }
   }, [preview, settings.customCategories]);
-
-  useEffect(() => {
-    let active = true;
-    const fit = async () => {
-      const root = mainRef.current;
-      if (!root) return;
-      await document.fonts?.ready.catch(() => {});
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      if (!active) return;
-      if (error) {
-        void appWindow
-          .setSize(new LogicalSize(640, 350))
-          .catch(() => {});
-        return;
-      }
-      const header = root.querySelector(".confirm-header") as HTMLElement | null;
-      const body = root.querySelector(".confirm-body") as HTMLElement | null;
-      const footer = root.querySelector(".confirm-footer") as HTMLElement | null;
-      const headerH = header?.getBoundingClientRect().height || 46;
-      const bodyH = body?.getBoundingClientRect().height || body?.scrollHeight || 190;
-      const footerH = footer?.getBoundingClientRect().height || 50;
-      const totalH = Math.ceil(headerH + bodyH + footerH);
-      void appWindow
-        .setSize(new LogicalSize(600, Math.max(295, Math.min(totalH, 480))))
-        .catch(() => {});
-    };
-    void fit();
-    return () => {
-      active = false;
-    };
-  }, [loading, preview, error]);
 
   const close = () => void appWindow.close();
   const isArchive = ["zip", "7z", "rar", "tar", "gz", "tgz"].includes(
@@ -263,7 +230,7 @@ export function ConfirmationPage({ token }: { token: string }) {
 
   if (!payload)
     return (
-      <main ref={mainRef} className="download-window confirm-v2">
+      <main className="download-window confirm-v2 http-confirm-window">
         <header className="confirm-header" data-tauri-drag-region>
           <div className="confirm-header-left">
             <Download className="confirm-header-icon" size={20} />
@@ -285,7 +252,7 @@ export function ConfirmationPage({ token }: { token: string }) {
     );
 
   return (
-    <main ref={mainRef} className="download-window confirm-v2">
+    <main className="download-window confirm-v2 http-confirm-window">
       {/* 1. Header (Barra de título com nome do arquivo) */}
       <header className="confirm-header" data-tauri-drag-region>
         <div className="confirm-header-left">

@@ -14,11 +14,10 @@ import {
   Clock,
   Key,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { LogicalSize } from "@tauri-apps/api/dpi";
 import { Toggle } from "../components/ui/Toggle";
 import { loadSettings } from "../services/settingsStorage";
 import * as service from "../services/downloadService";
@@ -33,6 +32,7 @@ interface Payload {
 
 interface TorrentFileNode {
   id: number;
+  torrentIndex: number;
   name: string;
   size: number;
   selected: boolean;
@@ -109,7 +109,6 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [fileList, setFileList] = useState<TorrentFileNode[]>([]);
 
-  const mainRef = useRef<HTMLDivElement>(null);
 
   // Timer para tempo decorrido no fetchingMetadata
   useEffect(() => {
@@ -147,6 +146,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
 
       const nodes: TorrentFileNode[] = rawFiles.map((f: any, idx: number) => ({
         id: idx + 1,
+        torrentIndex: Number.isInteger(f.index) ? f.index : idx,
         name: f.path,
         size: f.size > 0 ? f.size : rawTotalSize,
         selected: true,
@@ -204,10 +204,6 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
       };
     }
   }, [payload, token]);
-
-  useEffect(() => {
-    void appWindow.setSize(new LogicalSize(740, 520)).catch(() => {});
-  }, [appWindow]);
 
   const close = () => {
     if (infoHash) {
@@ -268,7 +264,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
       const task = await service.confirmTorrent({
         infoHash,
         savePath: finalSavePath,
-        selectedFileIndexes: selectedFiles.map((f) => f.id - 1),
+        selectedFileIndexes: selectedFiles.map((f) => f.torrentIndex),
         startImmediately: autoStart,
       });
       localStorage.removeItem(storageKey);
@@ -284,7 +280,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   };
 
   return (
-    <div className="download-window torrent-confirm-window" ref={mainRef}>
+    <div className="torrent-confirm-window">
       {/* Header com drag region */}
       <header className="tc-header" data-tauri-drag-region>
         <div className="tc-header-title" data-tauri-drag-region>

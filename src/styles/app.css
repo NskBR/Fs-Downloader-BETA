@@ -4700,11 +4700,16 @@ html, body, #root, .window-frame {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  padding: 14px 16px;
+  padding: 10px 12px;
   overflow: hidden;
   user-select: none;
   border-radius: var(--radius-lg, 12px);
 }
+
+/* Contratos de layout separados: alterações de torrent não devem vazar para HTTP. */
+.http-confirm-window { width: 100%; height: 100%; }
+.http-download-window { width: 100%; height: 100%; }
+.torrent-download-window { width: 100%; height: 100%; }
 
 .torrent-confirm-window [data-tauri-drag-region],
 .torrent-live-window [data-tauri-drag-region] {

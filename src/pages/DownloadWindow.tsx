@@ -152,17 +152,10 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
     let fitted = false;
     const fit = async () => {
       if (!detailsOpen && !cancelOpen && fitted) return;
-      const root = mainRef.current;
-      if (!root) return;
       await document.fonts?.ready.catch(() => {});
-      const height = root.scrollHeight || root.offsetHeight;
-      if (height > 0) {
-        fitted = true;
-        const targetHeight = cancelOpen ? Math.max(260, height) : detailsOpen ? Math.max(340, height) : Math.max(205, height);
-        void appWindow
-          .setSize(new LogicalSize(450, targetHeight))
-          .catch(() => {});
-      }
+      fitted = true;
+      const targetHeight = cancelOpen ? 300 : detailsOpen ? 400 : 205;
+      void appWindow.setSize(new LogicalSize(450, targetHeight)).catch(() => {});
     };
     void fit();
   }, [detailsOpen, cancelOpen]);
@@ -297,7 +290,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
     destination = task.finalPath.replace(/[\\/][^\\/]*$/, "");
 
   return (
-    <main ref={mainRef} className={`dw-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}${cancelOpen ? " cancel-open" : ""}`}>
+    <main ref={mainRef} className={`dw-window http-download-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}${cancelOpen ? " cancel-open" : ""}`}>
       <header className="dw-title" data-tauri-drag-region>
         <span className="dw-title-text">
           <FileIcon extension={task.extension} />

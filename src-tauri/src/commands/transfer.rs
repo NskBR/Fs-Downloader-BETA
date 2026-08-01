@@ -171,7 +171,11 @@ pub async fn open_download_confirmation(
     let confirmation_url = WebviewUrl::App("index.html".into());
 
     let builder = WebviewWindowBuilder::new(&app, &label, confirmation_url)
-        .title(if is_torrent { "Adicionar Torrent" } else { "Confirmar download" })
+        .title(if is_torrent {
+            "Adicionar Torrent"
+        } else {
+            "Confirmar download"
+        })
         .decorations(false)
         .shadow(false)
         .visible(false)
@@ -179,36 +183,33 @@ pub async fn open_download_confirmation(
         .center();
 
     let build_result = if is_torrent {
-        builder
-            .inner_size(740.0, 520.0)
-            .min_inner_size(660.0, 480.0)
-            .resizable(true)
-            .build()
+        builder.inner_size(740.0, 520.0).resizable(false).build()
     } else {
-        builder
-            .inner_size(600.0, 295.0)
-            .resizable(false)
-            .build()
+        builder.inner_size(600.0, 295.0).resizable(false).build()
     };
 
     {
-      if let Ok(mut creating) = CREATING_WINDOWS.lock() {
-        creating.remove(&label);
-      }
+        if let Ok(mut creating) = CREATING_WINDOWS.lock() {
+            creating.remove(&label);
+        }
     }
 
     build_result.map_err(|error| format!("Falha ao abrir confirmação: {error}"))?;
     Ok(())
-  }
+}
 
-  #[tauri::command]
-  pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), String> {
+#[tauri::command]
+pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), String> {
     let is_torrent = app
         .state::<Database>()
         .connect()
         .ok()
         .and_then(|c| downloads::find(&c, &id).ok().flatten())
-        .map(|t| t.download_type == "torrent" || t.original_url.starts_with("magnet:") || t.file_name.to_lowercase().ends_with(".torrent"))
+        .map(|t| {
+            t.download_type == "torrent"
+                || t.original_url.starts_with("magnet:")
+                || t.file_name.to_lowercase().ends_with(".torrent")
+        })
         .unwrap_or(false);
 
     let label = if is_torrent {
@@ -241,96 +242,94 @@ pub async fn open_download_confirmation(
     let url = WebviewUrl::App("index.html".into());
 
     let builder = WebviewWindowBuilder::new(&app, &label, url)
-      .title(if is_torrent { "SF Downloader - Torrent" } else { "SF Downloader - Download" })
-      .decorations(false)
-      .shadow(false)
-      .visible(false)
-      .transparent(true)
-      .center();
+        .title(if is_torrent {
+            "SF Downloader - Torrent"
+        } else {
+            "SF Downloader - Download"
+        })
+        .decorations(false)
+        .shadow(false)
+        .visible(false)
+        .transparent(true)
+        .center();
 
     let build_result = if is_torrent {
-        builder
-            .inner_size(540.0, 290.0)
-            .min_inner_size(460.0, 240.0)
-            .resizable(true)
-            .build()
+        builder.inner_size(470.0, 205.0).resizable(false).build()
     } else {
-        builder
-            .inner_size(450.0, 205.0)
-            .resizable(false)
-            .build()
+        builder.inner_size(450.0, 205.0).resizable(false).build()
     };
 
     {
-      if let Ok(mut creating) = CREATING_WINDOWS.lock() {
-        creating.remove(&label);
-      }
+        if let Ok(mut creating) = CREATING_WINDOWS.lock() {
+            creating.remove(&label);
+        }
     }
 
     build_result.map_err(|error| format!("Falha ao abrir progresso: {error}"))?;
     Ok(())
 }
 
-  #[tauri::command]
-  pub async fn open_torrent_progress_window(
-      app: AppHandle,
-      info_hash: String,
-      task_id: String,
-  ) -> Result<(), String> {
-      let clean_hash = crate::download::torrent::sanitize_info_hash(&info_hash);
-      let label = format!("torrent-progress-{}", clean_hash);
-      println!(
-          "[PROGRESS_WINDOW_OPEN] label='{}', info_hash='{}', task_id='{}'",
-          label, clean_hash, task_id
-      );
+#[tauri::command]
+pub async fn open_torrent_progress_window(
+    app: AppHandle,
+    info_hash: String,
+    task_id: String,
+) -> Result<(), String> {
+    let clean_hash = crate::download::torrent::sanitize_info_hash(&info_hash);
+    let label = format!("download-torrent-live-{}", task_id);
+    println!(
+        "[PROGRESS_WINDOW_OPEN] label='{}', info_hash='{}', task_id='{}'",
+        label, clean_hash, task_id
+    );
 
-      if let Some(window) = app.get_webview_window(&label) {
-          println!("[PROGRESS_WINDOW_OPEN] Janela existente encontrada, executando show() e set_focus()");
-          let _ = window.show();
-          let _ = window.set_focus();
-          return Ok(());
-      }
+    if let Some(window) = app.get_webview_window(&label) {
+        println!(
+            "[PROGRESS_WINDOW_OPEN] Janela existente encontrada, executando show() e set_focus()"
+        );
+        let _ = window.show();
+        let _ = window.set_focus();
+        return Ok(());
+    }
 
-      {
-          let mut creating = CREATING_WINDOWS.lock().map_err(|error| error.to_string())?;
-          if creating.contains(&label) {
-              return Ok(());
-          }
-          creating.insert(label.clone());
-      }
+    {
+        let mut creating = CREATING_WINDOWS.lock().map_err(|error| error.to_string())?;
+        if creating.contains(&label) {
+            return Ok(());
+        }
+        creating.insert(label.clone());
+    }
 
-      #[cfg(debug_assertions)]
-      let window_url = app
-          .config()
-          .build
-          .dev_url
-          .clone()
-          .map(WebviewUrl::External)
-          .unwrap_or_else(|| WebviewUrl::App("index.html".into()));
-      #[cfg(not(debug_assertions))]
-      let window_url = WebviewUrl::App("index.html".into());
+    #[cfg(debug_assertions)]
+    let window_url = app
+        .config()
+        .build
+        .dev_url
+        .clone()
+        .map(WebviewUrl::External)
+        .unwrap_or_else(|| WebviewUrl::App("index.html".into()));
+    #[cfg(not(debug_assertions))]
+    let window_url = WebviewUrl::App("index.html".into());
 
-      let build_result = WebviewWindowBuilder::new(&app, &label, window_url)
-          .title("SF Downloader - Torrent")
-          .inner_size(540.0, 290.0)
-          .min_inner_size(460.0, 240.0)
-          .resizable(true)
-          .decorations(false)
-          .shadow(false)
-          .visible(true)
-          .transparent(true)
-          .center()
-          .build();
+    let build_result = WebviewWindowBuilder::new(&app, &label, window_url)
+        .title("SF Downloader - Torrent")
+        .inner_size(470.0, 205.0)
+        .resizable(false)
+        .decorations(false)
+        .shadow(false)
+        .visible(false)
+        .transparent(true)
+        .center()
+        .build();
 
-      {
-          if let Ok(mut creating) = CREATING_WINDOWS.lock() {
-              creating.remove(&label);
-          }
-      }
+    {
+        if let Ok(mut creating) = CREATING_WINDOWS.lock() {
+            creating.remove(&label);
+        }
+    }
 
-      build_result.map_err(|error| format!("Falha ao abrir janela de progresso torrent: {error}"))?;
-      Ok(())
-  }
+    build_result.map_err(|error| format!("Falha ao abrir janela de progresso torrent: {error}"))?;
+    Ok(())
+}
 
 #[tauri::command]
 pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), String> {
@@ -371,9 +370,9 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
         .build();
 
     {
-      if let Ok(mut creating) = CREATING_WINDOWS.lock() {
-        creating.remove(&label);
-      }
+        if let Ok(mut creating) = CREATING_WINDOWS.lock() {
+            creating.remove(&label);
+        }
     }
 
     build_result.map_err(|error| format!("Falha ao abrir conclusão: {error}"))?;
@@ -640,7 +639,8 @@ pub async fn start_download(
             return;
         };
         if spawned_task.download_type == "torrent" {
-            crate::download::torrent::run_torrent(app, database.clone(), spawned_task, control).await;
+            crate::download::torrent::run_torrent(app, database.clone(), spawned_task, control)
+                .await;
         } else if segmented {
             drop(prepared.response);
             engine::run_segmented(
@@ -653,15 +653,7 @@ pub async fn start_download(
             )
             .await;
         } else if let Some(resp) = prepared.response {
-            engine::run(
-                app,
-                database.clone(),
-                spawned_task,
-                resp,
-                control,
-                0,
-            )
-            .await;
+            engine::run(app, database.clone(), spawned_task, resp, control, 0).await;
         }
         runtime.remove(&id);
         if let Ok(connection) = database.connect() {
@@ -694,7 +686,9 @@ pub async fn cancel_download(
         if task.download_type == "torrent" || task.original_url.starts_with("magnet:") {
             let info_hash = task.info_hash.clone().unwrap_or_else(|| id.clone());
             let manager = crate::download::torrent::get_torrent_manager();
-            let _ = manager.cancel_torrent(&app, database.inner(), &info_hash, delete_files).await;
+            let _ = manager
+                .cancel_torrent(&app, database.inner(), &info_hash, delete_files)
+                .await;
         }
     }
 
@@ -726,7 +720,11 @@ pub async fn cancel_download(
         crate::database::models::UpdateDownloadInput {
             id: id.clone(),
             status: crate::database::models::DownloadStatus::Cancelled,
-            total_downloaded: if delete_files { 0 } else { task.total_downloaded },
+            total_downloaded: if delete_files {
+                0
+            } else {
+                task.total_downloaded
+            },
             speed_current: 0.0,
             speed_average: task.speed_average,
             seeds: None,
@@ -782,7 +780,10 @@ pub async fn pause_download(
                 if info_hash.is_empty() {
                     return Err("Torrent sem info_hash registrado.".into());
                 }
-                println!("[TORRENT_PAUSE] info_hash='{}', estado_antes='{:?}', estado_depois='paused'", info_hash, task.status);
+                println!(
+                    "[TORRENT_PAUSE] info_hash='{}', estado_antes='{:?}', estado_depois='paused'",
+                    info_hash, task.status
+                );
 
                 // Pausar via librqbit session diretamente no handle (async — sem block_on)
                 let manager = crate::download::torrent::get_torrent_manager();
@@ -830,6 +831,7 @@ pub async fn pause_download(
                         "error": null
                     }),
                 );
+                let _ = runtime.pause(&id);
                 return Ok(true);
             }
         }
@@ -989,8 +991,51 @@ pub async fn resume_owned(
             let save_path = std::path::Path::new(&task.save_path);
             match manager.get_session(save_path).await {
                 Ok(session) => {
-                    match manager.start_torrent_handle(&session, &magnet, save_path).await {
-                        Ok(_handle) => {
+                    match manager
+                        .start_torrent_handle(&session, &magnet, save_path)
+                        .await
+                    {
+                        Ok(handle) => {
+                            let selected_file_indexes = handle.only_files().unwrap_or_default();
+                            let files = handle
+                                .with_metadata(|metadata| {
+                                    metadata
+                                        .file_infos
+                                        .iter()
+                                        .enumerate()
+                                        .map(|(index, file)| {
+                                            crate::download::torrent::TorrentFileItem {
+                                                index,
+                                                path: file
+                                                    .relative_filename
+                                                    .to_string_lossy()
+                                                    .replace('\\', "/"),
+                                                size: file.len,
+                                            }
+                                        })
+                                        .collect::<Vec<_>>()
+                                })
+                                .unwrap_or_default();
+                            let total_size = files.iter().map(|file| file.size).sum::<u64>();
+                            manager.entries().write().await.insert(
+                                info_hash.clone(),
+                                crate::download::torrent::TorrentEntry {
+                                    info_hash: info_hash.clone(),
+                                    source: magnet.clone(),
+                                    handle,
+                                    metadata_ready: true,
+                                    confirmed: true,
+                                    name: task.file_name.clone(),
+                                    total_size: if total_size > 0 {
+                                        total_size
+                                    } else {
+                                        task.file_size.unwrap_or_default().max(0) as u64
+                                    },
+                                    files,
+                                    selected_file_indexes,
+                                    save_path: task.save_path.clone(),
+                                },
+                            );
                             println!("[TORRENT_RESUME] Handle re-adicionado com sucesso para info_hash={}", info_hash);
                         }
                         Err(e) => {
@@ -1009,10 +1054,22 @@ pub async fn resume_owned(
                 let session_guard = manager.session().read().await;
                 if let Some(ref session) = *session_guard {
                     if let Err(e) = session.unpause(&entry.handle).await {
-                        println!("[TORRENT_RESUME] Erro ao retomar via session.unpause: {:?}", e);
+                        println!(
+                            "[TORRENT_RESUME] Erro ao retomar via session.unpause: {:?}",
+                            e
+                        );
                     } else {
                         println!("[TORRENT_RESUME] librqbit session.unpause() chamado com sucesso para info_hash={}", info_hash);
                     }
+                }
+            }
+        }
+
+        if runtime.has(&task.id) {
+            for _ in 0..50 {
+                tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+                if !runtime.has(&task.id) {
+                    break;
                 }
             }
         }
@@ -1044,7 +1101,13 @@ pub async fn resume_owned(
         let task_id = task.id.clone();
 
         tauri::async_runtime::spawn(async move {
-            crate::download::torrent::run_torrent(app_handle, database_clone, spawned_task, control).await;
+            crate::download::torrent::run_torrent(
+                app_handle,
+                database_clone,
+                spawned_task,
+                control,
+            )
+            .await;
             runtime_clone.remove(&task_id);
         });
 
@@ -1233,9 +1296,9 @@ pub async fn open_browser_integration_window(app: AppHandle) -> Result<(), Strin
         .build();
 
     {
-      if let Ok(mut creating) = CREATING_WINDOWS.lock() {
-        creating.remove(label);
-      }
+        if let Ok(mut creating) = CREATING_WINDOWS.lock() {
+            creating.remove(label);
+        }
     }
 
     build_result.map_err(|error| format!("Falha ao abrir integração: {error}"))?;
@@ -1246,7 +1309,7 @@ pub async fn open_browser_integration_window(app: AppHandle) -> Result<(), Strin
 pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, String> {
     let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let ext_dir = app_data.join("extension").join(&browser);
-    
+
     std::fs::create_dir_all(&ext_dir).map_err(|e| e.to_string())?;
     std::fs::create_dir_all(ext_dir.join("icons")).map_err(|e| e.to_string())?;
 
@@ -1258,7 +1321,16 @@ pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, Stri
         .join(&browser);
 
     if browser == "chromium" {
-        let files = ["manifest.json", "background.js", "content.js", "popup.html", "popup.css", "popup.js", "icons/sf-small.png", "icons/sf-large.png"];
+        let files = [
+            "manifest.json",
+            "background.js",
+            "content.js",
+            "popup.html",
+            "popup.css",
+            "popup.js",
+            "icons/sf-small.png",
+            "icons/sf-large.png",
+        ];
         for file in files {
             let src_file = project_dist.join(file);
             let dest_file = ext_dir.join(file);
@@ -1266,14 +1338,30 @@ pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, Stri
                 let _ = std::fs::write(&dest_file, bytes);
             } else {
                 let embedded_bytes: &[u8] = match file {
-                    "manifest.json" => include_bytes!("../../../browser-extension/dist/chromium/manifest.json"),
-                    "background.js" => include_bytes!("../../../browser-extension/dist/chromium/background.js"),
-                    "content.js" => include_bytes!("../../../browser-extension/dist/chromium/content.js"),
-                    "popup.html" => include_bytes!("../../../browser-extension/dist/chromium/popup.html"),
-                    "popup.css" => include_bytes!("../../../browser-extension/dist/chromium/popup.css"),
-                    "popup.js" => include_bytes!("../../../browser-extension/dist/chromium/popup.js"),
-                    "icons/sf-small.png" => include_bytes!("../../../browser-extension/dist/chromium/icons/sf-small.png"),
-                    "icons/sf-large.png" => include_bytes!("../../../browser-extension/dist/chromium/icons/sf-large.png"),
+                    "manifest.json" => {
+                        include_bytes!("../../../browser-extension/dist/chromium/manifest.json")
+                    }
+                    "background.js" => {
+                        include_bytes!("../../../browser-extension/dist/chromium/background.js")
+                    }
+                    "content.js" => {
+                        include_bytes!("../../../browser-extension/dist/chromium/content.js")
+                    }
+                    "popup.html" => {
+                        include_bytes!("../../../browser-extension/dist/chromium/popup.html")
+                    }
+                    "popup.css" => {
+                        include_bytes!("../../../browser-extension/dist/chromium/popup.css")
+                    }
+                    "popup.js" => {
+                        include_bytes!("../../../browser-extension/dist/chromium/popup.js")
+                    }
+                    "icons/sf-small.png" => include_bytes!(
+                        "../../../browser-extension/dist/chromium/icons/sf-small.png"
+                    ),
+                    "icons/sf-large.png" => include_bytes!(
+                        "../../../browser-extension/dist/chromium/icons/sf-large.png"
+                    ),
                     _ => &[],
                 };
                 if !embedded_bytes.is_empty() {
@@ -1282,7 +1370,16 @@ pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, Stri
             }
         }
     } else if browser == "firefox" {
-        let files = ["manifest.json", "background.js", "content.js", "popup.html", "popup.css", "popup.js", "icons/sf-small.png", "icons/sf-large.png"];
+        let files = [
+            "manifest.json",
+            "background.js",
+            "content.js",
+            "popup.html",
+            "popup.css",
+            "popup.js",
+            "icons/sf-small.png",
+            "icons/sf-large.png",
+        ];
         for file in files {
             let src_file = project_dist.join(file);
             let dest_file = ext_dir.join(file);
@@ -1290,14 +1387,30 @@ pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, Stri
                 let _ = std::fs::write(&dest_file, bytes);
             } else {
                 let embedded_bytes: &[u8] = match file {
-                    "manifest.json" => include_bytes!("../../../browser-extension/dist/firefox/manifest.json"),
-                    "background.js" => include_bytes!("../../../browser-extension/dist/firefox/background.js"),
-                    "content.js" => include_bytes!("../../../browser-extension/dist/firefox/content.js"),
-                    "popup.html" => include_bytes!("../../../browser-extension/dist/firefox/popup.html"),
-                    "popup.css" => include_bytes!("../../../browser-extension/dist/firefox/popup.css"),
-                    "popup.js" => include_bytes!("../../../browser-extension/dist/firefox/popup.js"),
-                    "icons/sf-small.png" => include_bytes!("../../../browser-extension/dist/firefox/icons/sf-small.png"),
-                    "icons/sf-large.png" => include_bytes!("../../../browser-extension/dist/firefox/icons/sf-large.png"),
+                    "manifest.json" => {
+                        include_bytes!("../../../browser-extension/dist/firefox/manifest.json")
+                    }
+                    "background.js" => {
+                        include_bytes!("../../../browser-extension/dist/firefox/background.js")
+                    }
+                    "content.js" => {
+                        include_bytes!("../../../browser-extension/dist/firefox/content.js")
+                    }
+                    "popup.html" => {
+                        include_bytes!("../../../browser-extension/dist/firefox/popup.html")
+                    }
+                    "popup.css" => {
+                        include_bytes!("../../../browser-extension/dist/firefox/popup.css")
+                    }
+                    "popup.js" => {
+                        include_bytes!("../../../browser-extension/dist/firefox/popup.js")
+                    }
+                    "icons/sf-small.png" => {
+                        include_bytes!("../../../browser-extension/dist/firefox/icons/sf-small.png")
+                    }
+                    "icons/sf-large.png" => {
+                        include_bytes!("../../../browser-extension/dist/firefox/icons/sf-large.png")
+                    }
                     _ => &[],
                 };
                 if !embedded_bytes.is_empty() {
@@ -1305,7 +1418,7 @@ pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, Stri
                 }
             }
         }
-        
+
         // Copia o arquivo XPI para instalação direta ou manual.
         let release_dir = app_data
             .join("..")
@@ -1314,7 +1427,9 @@ pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, Stri
             .join("release");
         let xpi_bytes = find_latest_xpi(&release_dir)
             .and_then(|path| std::fs::read(&path).ok())
-            .unwrap_or_else(|| include_bytes!("../../../browser-extension/release/firefox-extension.xpi").to_vec());
+            .unwrap_or_else(|| {
+                include_bytes!("../../../browser-extension/release/firefox-extension.xpi").to_vec()
+            });
         std::fs::write(ext_dir.join("integration.xpi"), xpi_bytes).map_err(|e| e.to_string())?;
     }
 
@@ -1349,8 +1464,7 @@ pub fn open_folder(path: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
-    let parsed = Url::parse(&url)
-        .map_err(|e| format!("URL inválida: {e}"))?;
+    let parsed = Url::parse(&url).map_err(|e| format!("URL inválida: {e}"))?;
     if parsed.scheme() != "http" && parsed.scheme() != "https" {
         return Err("Apenas links http(s) são suportados".into());
     }
@@ -1386,11 +1500,15 @@ pub fn start_drag_folder(window: tauri::WebviewWindow, path: String) -> Result<(
     }
 
     let drag_item = drag::DragItem::Files(vec![folder_path.clone()]);
-    
+
     // Icon de preview da extensão
     let app_data = window.path().app_data_dir().map_err(|e| e.to_string())?;
-    let icon_path = app_data.join("extension").join("chromium").join("icons").join("sf-small.png");
-    
+    let icon_path = app_data
+        .join("extension")
+        .join("chromium")
+        .join("icons")
+        .join("sf-small.png");
+
     let preview_icon = if icon_path.exists() {
         drag::Image::File(icon_path)
     } else {
@@ -1405,7 +1523,8 @@ pub fn start_drag_folder(window: tauri::WebviewWindow, path: String) -> Result<(
             println!("Drag terminado: {:?}", result);
         },
         drag::Options::default(),
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -1417,13 +1536,16 @@ pub async fn parse_torrent_info(
     source: String,
 ) -> Result<crate::download::torrent::TorrentMetadataResponse, String> {
     let manager = crate::download::torrent::get_torrent_manager();
-    manager.parse_torrent_with_app(Some(app), token.as_deref(), &source).await
+    manager
+        .parse_torrent_with_app(Some(app), token.as_deref(), &source)
+        .await
 }
 
 #[tauri::command]
 pub async fn confirm_torrent(
     app: tauri::AppHandle,
     database: tauri::State<'_, crate::database::Database>,
+    runtime: tauri::State<'_, crate::download::runtime::DownloadRuntime>,
     info_hash: String,
     save_path: String,
     selected_file_indexes: Vec<usize>,
@@ -1431,7 +1553,15 @@ pub async fn confirm_torrent(
 ) -> Result<crate::database::models::DownloadTask, String> {
     let manager = crate::download::torrent::get_torrent_manager();
     manager
-        .confirm_torrent(&app, &database, &info_hash, &save_path, &selected_file_indexes, start_immediately)
+        .confirm_torrent(
+            &app,
+            &database,
+            &runtime,
+            &info_hash,
+            &save_path,
+            &selected_file_indexes,
+            start_immediately,
+        )
         .await
 }
 
@@ -1468,9 +1598,5 @@ pub(crate) fn find_latest_xpi(dir: &Path) -> Option<PathBuf> {
         .flatten()
         .map(|entry| entry.path())
         .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("xpi"))
-        .max_by_key(|path| {
-            std::fs::metadata(path)
-                .and_then(|m| m.modified())
-                .ok()
-        })
+        .max_by_key(|path| std::fs::metadata(path).and_then(|m| m.modified()).ok())
 }
