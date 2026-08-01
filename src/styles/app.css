@@ -4923,12 +4923,14 @@ html, body, #root, .window-frame {
   border-radius: 10px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
   min-height: 0;
 }
 .tc-table-header-row {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
   padding: 6px 12px;
   background: rgba(255, 255, 255, 0.04);
   border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.08));
@@ -4939,23 +4941,28 @@ html, body, #root, .window-frame {
 .tc-table-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: thin;
 }
 .tc-file-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   font-size: 11px;
+  width: 100%;
+  box-sizing: border-box;
 }
 .tc-file-row:hover { background: rgba(255, 255, 255, 0.04); }
 .tc-file-row.folder-root { font-weight: 700; color: #ffffff; }
-.tc-file-row.child { padding-left: 24px; color: var(--text, #f0f2f5); }
+.tc-file-row.child { padding-left: 20px; color: var(--text, #f0f2f5); }
+.tc-file-row.single-file { color: var(--text, #f0f2f5); }
 .tc-folder-icon { color: #f59e0b; }
 .tc-file-icon { color: var(--text-2); }
-.tc-file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tc-file-size { color: var(--text-2); font-size: 10.5px; flex-shrink: 0; }
+.tc-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tc-file-size { color: var(--text-2); font-size: 10.5px; white-space: nowrap; text-align: right; flex-shrink: 0; }
 
 .tc-footer {
   display: flex;
