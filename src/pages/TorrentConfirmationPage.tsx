@@ -6,6 +6,10 @@ import {
   Layers,
   FileText,
   FileVideo,
+  FileAudio,
+  FileArchive,
+  Disc,
+  File,
   Loader2,
   Clock,
   Key,
@@ -40,17 +44,33 @@ export const formatFileSize = (value: number | null | undefined): string => {
   if (value === null || value === undefined || value < 0) return "Desconhecido";
   if (value === 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
-  let size = value;
-  let index = 0;
-  while (size >= 1024 && index < units.length - 1) {
-    size /= 1024;
-    index++;
-  }
+  const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+  const size = value / Math.pow(1024, index);
   return `${size.toLocaleString("pt-BR", {
     minimumFractionDigits: index >= 3 ? 2 : index ? 1 : 0,
     maximumFractionDigits: 2,
   })} ${units[index]}`;
 };
+
+function getFileItemIcon(filename: string) {
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  if (["iso", "img", "nrg", "vcd"].includes(ext)) {
+    return <Disc size={14} className="tc-file-icon" style={{ color: "#a855f7" }} />;
+  }
+  if (["mkv", "mp4", "avi", "mov", "wmv", "flv", "webm"].includes(ext)) {
+    return <FileVideo size={14} className="tc-file-icon" style={{ color: "#3b82f6" }} />;
+  }
+  if (["mp3", "flac", "wav", "aac", "ogg", "m4a"].includes(ext)) {
+    return <FileAudio size={14} className="tc-file-icon" style={{ color: "#ec4899" }} />;
+  }
+  if (["zip", "rar", "7z", "tar", "gz", "bz2", "xz"].includes(ext)) {
+    return <FileArchive size={14} className="tc-file-icon" style={{ color: "#f59e0b" }} />;
+  }
+  if (["txt", "nfo", "md", "doc", "docx", "pdf", "sfv", "info"].includes(ext)) {
+    return <FileText size={14} className="tc-file-icon" style={{ color: "#10b981" }} />;
+  }
+  return <File size={14} className="tc-file-icon" style={{ color: "var(--text-2)" }} />;
+}
 
 export function TorrentConfirmationPage({ token }: { token: string }) {
   const storageKey = `sf-downloader.confirmation-${token}`;
@@ -423,7 +443,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                           checked={fileList[0].selected}
                           onChange={() => toggleFile(fileList[0].id)}
                         />
-                        <FileVideo size={14} className="tc-file-icon" />
+                        {getFileItemIcon(fileList[0].name)}
                         <span className="tc-file-name" title={fileList[0].name}>
                           {fileList[0].name}
                         </span>
@@ -454,7 +474,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                               checked={f.selected}
                               onChange={() => toggleFile(f.id)}
                             />
-                            <FileVideo size={14} className="tc-file-icon" />
+                            {getFileItemIcon(f.name)}
                             <span className="tc-file-name" title={f.name}>{f.name}</span>
                             <span className="tc-file-size" title={`${f.size.toLocaleString("pt-BR")} bytes`}>
                               {formatFileSize(f.size)}

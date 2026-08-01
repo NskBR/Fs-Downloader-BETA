@@ -345,11 +345,26 @@ impl TorrentManager {
                         if stats.total_bytes > 0 {
                             let meta_name = handle.name().unwrap_or_else(|| name_str.clone().unwrap_or_else(|| "Torrent".into()));
                             let total_size = stats.total_bytes as u64;
-                            let files = vec![TorrentFileItem {
-                                index: 0,
-                                path: meta_name.clone(),
-                                size: total_size,
-                            }];
+
+                            // Extrair lista real de arquivos do torrent via handle.with_metadata()
+                            let files: Vec<TorrentFileItem> = match handle.with_metadata(|m| {
+                                m.file_infos
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(idx, fi)| TorrentFileItem {
+                                        index: idx,
+                                        path: fi.relative_filename.to_string_lossy().replace('\\', "/"),
+                                        size: fi.len,
+                                    })
+                                    .collect::<Vec<TorrentFileItem>>()
+                            }) {
+                                Ok(files) if !files.is_empty() => files,
+                                _ => vec![TorrentFileItem {
+                                    index: 0,
+                                    path: meta_name.clone(),
+                                    size: total_size,
+                                }],
+                            };
 
                             println!("[MAGNET_METADATA_RECEIVED] Metadados recebidos do swarm P2P!");
                             println!(
