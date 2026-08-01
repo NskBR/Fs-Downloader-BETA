@@ -7,6 +7,8 @@ import { listen } from "@tauri-apps/api/event";
 import { App } from "./app/App";
 import { ConfirmationPage } from "./pages/ConfirmationPage";
 import { DownloadWindow } from "./pages/DownloadWindow";
+import { TorrentConfirmationPage } from "./pages/TorrentConfirmationPage";
+import { TorrentProgressWindow } from "./pages/TorrentProgressWindow";
 import { BrowserIntegrationPage } from "./pages/BrowserIntegrationPage";
 import { loadSettings } from "./services/settingsStorage";
 import { applyThemeSettings } from "./services/theme";
@@ -14,19 +16,22 @@ import type { AppSettings } from "./domain/settings";
 import "./styles/app.css";
 
 const label = getCurrentWindow().label;
+const torrentConfirmMatch = label.match(/^download-torrent-confirm-(.*)$/);
 const confirmationMatch = label.match(/^download-confirm-(.*)$/);
+const isTorrentConfirmation = Boolean(torrentConfirmMatch);
 const isConfirmationWindow = Boolean(confirmationMatch);
-const isLiveWindow = label.startsWith("download-") && !isConfirmationWindow;
+const isTorrentLiveWindow = label.startsWith("download-torrent-live-");
+const isLiveWindow = label.startsWith("download-") && !isConfirmationWindow && !isTorrentConfirmation && !isTorrentLiveWindow;
 const isBrowserIntegrationWindow = label === "browser-integration";
 const isMainWindow = label === "main";
 
 if (isMainWindow) {
   document.documentElement.classList.add("window-type-main");
   document.body.classList.add("window-type-main");
-} else if (isConfirmationWindow) {
+} else if (isConfirmationWindow || isTorrentConfirmation) {
   document.documentElement.classList.add("window-type-confirmation");
   document.body.classList.add("window-type-confirmation");
-} else if (isLiveWindow) {
+} else if (isLiveWindow || isTorrentLiveWindow) {
   document.documentElement.classList.add("window-type-live");
   document.body.classList.add("window-type-live");
 } else if (isBrowserIntegrationWindow) {
@@ -61,10 +66,19 @@ if (label === "main" && !initialSettings.startInTrayMode) {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {isConfirmationWindow ? <ConfirmationPage token={confirmationMatch![1]} />
-      : isLiveWindow ? <DownloadWindow downloadId={label.substring("download-".length)} />
-      : isBrowserIntegrationWindow ? <BrowserIntegrationPage />
-      : <App />}
+    {isTorrentConfirmation ? (
+      <TorrentConfirmationPage token={torrentConfirmMatch![1]} />
+    ) : isConfirmationWindow ? (
+      <ConfirmationPage token={confirmationMatch![1]} />
+    ) : isTorrentLiveWindow ? (
+      <TorrentProgressWindow downloadId={label.substring("download-torrent-live-".length)} />
+    ) : isLiveWindow ? (
+      <DownloadWindow downloadId={label.substring("download-".length)} />
+    ) : isBrowserIntegrationWindow ? (
+      <BrowserIntegrationPage />
+    ) : (
+      <App />
+    )}
   </React.StrictMode>,
 );
 
