@@ -34,6 +34,8 @@ interface TorrentFileNode {
   selected: boolean;
 }
 
+type PageStatus = "idle" | "fetchingMetadata" | "ready" | "failed" | "cancelled";
+
 const bytes = (value: number | null) => {
   if (value === null || value === undefined || value < 0) return "Desconhecido";
   if (value === 0) return "0 B";
@@ -44,7 +46,7 @@ const bytes = (value: number | null) => {
     size /= 1024;
     index++;
   }
-  return `${size.toFixed(index >= 3 ? 2 : index ? 1 : 0)} ${units[index]}`;
+  return `${size.toFixed(index >= 3 ? 2 : index ? 1 : 0)} ${units[index]} (${value.toLocaleString("pt-BR")} bytes)`;
 };
 
 export function TorrentConfirmationPage({ token }: { token: string }) {
@@ -79,7 +81,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [status, setStatus] = useState<"fetchingMetadata" | "ready">("fetchingMetadata");
+  const [status, setStatus] = useState<PageStatus>("idle");
   const [infoHash, setInfoHash] = useState<string>("");
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [fileList, setFileList] = useState<TorrentFileNode[]>([]);
@@ -97,28 +99,37 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
 
   const handleMetadataResponse = (res: TorrentMetadataResponse) => {
     console.log("[TORRENT_LOG][FRONTEND_STATE] Recebida resposta de metadados:", res);
+
     if (res.status === "fetchingMetadata") {
       setStatus("fetchingMetadata");
-      setInfoHash(res.infoHash || "");
+      setError(null);
+      setInfoHash(res.infoHash || (res as any).info_hash || "");
       if (res.name) setTorrentName(res.name);
       setFileList([]);
     } else if (res.status === "ready") {
-      if (!res.files || res.files.length === 0 || !res.totalSize || res.totalSize === 0) {
+      const rawTotalSize = res.totalSize ?? (res as any).total_size ?? 0;
+      const rawFiles = res.files ?? (res as any).files ?? [];
+
+      if (!rawFiles || rawFiles.length === 0 || !rawTotalSize || rawTotalSize === 0) {
         setError("Não foi possível ler os metadados deste torrent.");
+        setStatus("failed");
         setFileList([]);
         return;
       }
+
+      setError(null); // Remover mensagem de erro imediatamente apos sucesso
       setStatus("ready");
       setTorrentName(res.name);
-      setInfoHash(res.infoHash || "");
-      const nodes: TorrentFileNode[] = res.files.map((f, idx) => ({
+      setInfoHash(res.infoHash || (res as any).info_hash || "");
+
+      const nodes: TorrentFileNode[] = rawFiles.map((f: any, idx: number) => ({
         id: idx + 1,
         name: f.path,
-        size: f.size,
+        size: f.size > 0 ? f.size : rawTotalSize,
         selected: true,
       }));
       setFileList(nodes);
-      console.log("[TORRENT_LOG][FRONTEND_STATE] Lista real de arquivos armazenada no estado:", nodes);
+      console.log("[TORRENT_LOG][FRONTEND_STATE] Estado atualizado para ready com arquivos reais:", nodes);
     }
   };
 
@@ -126,6 +137,8 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
     let active = true;
     if (payload?.url) {
       setError(null);
+      setStatus("fetchingMetadata");
+
       void service
         .parseTorrentInfo(payload.url, token)
         .then((res) => {
@@ -136,17 +149,35 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
           if (!active) return;
           console.error("[TORRENT_LOG][FRONTEND_STATE] Falha ao obter metadados:", err);
           setError("Não foi possível ler os metadados deste torrent.");
+          setStatus("failed");
           setFileList([]);
         });
 
-      // Escutar evento assíncrono para Magnet links que obtêm metadados via P2P
+      // Listener assincrono com cleanup estrito (StrictMode safe)
       const unlistenPromise = listen<TorrentMetadataResponse>(
         `torrent-metadata-ready-${token}`,
         (event) => {
           if (!active) return;
-          console.log("[MAGNET_METADATA_RECEIVED] Evento Tauri recebido com metadados do swarm P2P:", event.payload);
-          handleMetadataResponse(event.payload);
-        }
+          const p = event.payload;
+
+          // Log obrigatorio solicitado no passo 8
+          console.log(
+            JSON.stringify(
+              {
+                status: p.status,
+                totalSize: (p as any).totalSize,
+                total_size: (p as any).total_size,
+                files: (p as any).files,
+                errorBeforeUpdate: error,
+                currentStatus: status,
+              },
+              null,
+              2,
+            ),
+          );
+
+          handleMetadataResponse(p);
+        },
       );
 
       return () => {
@@ -163,6 +194,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   const close = () => {
     if (status === "fetchingMetadata") {
       console.log("[MAGNET_CANCELLED] Cancelando busca de metadados pelo usuário.");
+      setStatus("cancelled");
     }
     void appWindow.close();
   };
@@ -250,7 +282,8 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
         </button>
       </header>
 
-      {error && <div className="tc-error-banner">{error}</div>}
+      {/* Exibir banner de erro apenas se no estado failed */}
+      {status === "failed" && error && <div className="tc-error-banner">{error}</div>}
 
       {/* Main 2-Column Body */}
       <main className="tc-body-grid">
@@ -303,7 +336,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
               <strong>Conteúdo do torrent</strong>
             </div>
 
-            {status === "fetchingMetadata" ? (
+            {status === "fetchingMetadata" && (
               <div
                 style={{
                   flex: 1,
@@ -347,9 +380,11 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                   </div>
                 </div>
               </div>
-            ) : (
+            )}
+
+            {status === "ready" && (
               <>
-                {/* 4. Lista real de arquivos & 6. Tamanho selecionado */}
+                {/* Tamanho selecionado e Total */}
                 <div className="tc-stats-header">
                   <div className="tc-stat-pair">
                     <div>
@@ -365,7 +400,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                   </div>
                 </div>
 
-                {/* 5. Seleção de arquivos */}
+                {/* Botões de Seleção */}
                 <div className="tc-actions-bar">
                   <button type="button" className="tc-btn-outline" onClick={selectAll}>
                     Selecionar tudo
@@ -411,6 +446,24 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                 </div>
               </>
             )}
+
+            {status === "failed" && (
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 24,
+                  textAlign: "center",
+                }}
+              >
+                <span style={{ fontSize: 13, color: "var(--text-2)" }}>
+                  Não foi possível ler os metadados deste torrent.
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -425,17 +478,17 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             <strong>
               {status === "fetchingMetadata"
                 ? "Obtendo metadados P2P..."
-                : `${selectedCount} de ${totalFilesCount} arquivos selecionados • ${bytes(selectedSize)}`}
+                : status === "ready"
+                ? `${selectedCount} de ${totalFilesCount} arquivos selecionados • ${bytes(selectedSize)}`
+                : "Erro nos metadados"}
             </strong>
           </div>
         </div>
 
         <div className="tc-footer-right">
-          {/* 8. Cancelar */}
           <button type="button" className="tc-btn-dark" onClick={close}>
             Cancelar
           </button>
-          {/* 9. Adicionar Torrent */}
           <button
             type="button"
             className="tc-btn-cyan-solid"
