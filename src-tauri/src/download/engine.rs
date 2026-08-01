@@ -145,8 +145,8 @@ pub async fn prepare_with_headers(
     }
 
     if url.starts_with("magnet:") || url.to_lowercase().ends_with(".torrent") {
-        let engine = crate::download::torrent::TorrentEngine::new();
-        let meta = engine.parse_torrent(url).await.ok();
+        let torrent_manager = crate::download::torrent::get_torrent_manager();
+        let meta = torrent_manager.parse_torrent(url).await.ok();
 
         let raw_name = meta.as_ref().and_then(|m| m.name()).unwrap_or("Torrent Download");
         let file_name = safe_file_name(raw_name);

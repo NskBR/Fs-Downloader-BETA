@@ -178,3 +178,13 @@ export const parseTorrentInfo = async (
     throw err;
   }
 };
+
+export const confirmTorrent = (input: {
+  infoHash: string;
+  savePath: string;
+  selectedFileIndexes: number[];
+  startImmediately: boolean;
+}) => invoke<DownloadTask>("confirm_torrent", input);
+
+export const cancelTorrent = (infoHash: string, deleteFiles: boolean = false) =>
+  invoke<void>("cancel_torrent", { infoHash, deleteFiles });

@@ -316,8 +316,8 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
 #[tauri::command]
 pub async fn inspect_download(url: String) -> Result<DownloadPreview, String> {
     if url.starts_with("magnet:") || url.to_lowercase().ends_with(".torrent") {
-        let engine = crate::download::torrent::TorrentEngine::new();
-        let meta = engine.parse_torrent(&url).await.ok();
+        let manager = crate::download::torrent::get_torrent_manager();
+        let meta = manager.parse_torrent(&url).await.ok();
         let file_name = meta
             .as_ref()
             .and_then(|m| m.name())
@@ -1177,8 +1177,36 @@ pub async fn parse_torrent_info(
     token: Option<String>,
     source: String,
 ) -> Result<crate::download::torrent::TorrentMetadataResponse, String> {
-    let engine = crate::download::torrent::TorrentEngine::new();
-    engine.parse_torrent_with_app(Some(app), token.as_deref(), &source).await
+    let manager = crate::download::torrent::get_torrent_manager();
+    manager.parse_torrent_with_app(Some(app), token.as_deref(), &source).await
+}
+
+#[tauri::command]
+pub async fn confirm_torrent(
+    app: tauri::AppHandle,
+    database: tauri::State<'_, crate::database::Database>,
+    info_hash: String,
+    save_path: String,
+    selected_file_indexes: Vec<usize>,
+    start_immediately: bool,
+) -> Result<crate::database::models::DownloadTask, String> {
+    let manager = crate::download::torrent::get_torrent_manager();
+    manager
+        .confirm_torrent(&app, &database, &info_hash, &save_path, &selected_file_indexes, start_immediately)
+        .await
+}
+
+#[tauri::command]
+pub async fn cancel_torrent(
+    app: tauri::AppHandle,
+    database: tauri::State<'_, crate::database::Database>,
+    info_hash: String,
+    delete_files: Option<bool>,
+) -> Result<(), String> {
+    let manager = crate::download::torrent::get_torrent_manager();
+    manager
+        .cancel_torrent(&app, &database, &info_hash, delete_files.unwrap_or(false))
+        .await
 }
 
 #[cfg(test)]

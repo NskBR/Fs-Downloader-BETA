@@ -190,10 +190,11 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   }, [appWindow]);
 
   const close = () => {
-    if (status === "fetchingMetadata") {
-      console.log("[MAGNET_CANCELLED] Cancelando busca de metadados pelo usuário.");
-      setStatus("cancelled");
+    if (infoHash) {
+      console.log("[MAGNET_CANCELLED] Cancelando busca/torrent pelo infoHash:", infoHash);
+      void service.cancelTorrent(infoHash, false).catch(() => {});
     }
+    setStatus("cancelled");
     void appWindow.close();
   };
 
@@ -235,25 +236,21 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   };
 
   const finish = async () => {
-    if (!payload?.url || status !== "ready") return;
+    if (!payload?.url || status !== "ready" || !infoHash) return;
     setBusy(true);
     setError(null);
     try {
-      const task = await service.startDownload(
-        payload.url,
-        settings,
-        destination,
-        payload?.requestId,
-        true,
-        false,
-        undefined,
-        undefined,
-        autoStart,
-      );
+      const task = await service.confirmTorrent({
+        infoHash,
+        savePath: destination,
+        selectedFileIndexes: selectedFiles.map((f) => f.id - 1),
+        startImmediately: autoStart,
+      });
       localStorage.removeItem(storageKey);
-      close();
+      void appWindow.close();
       void emit("download-created", task).catch(() => {});
     } catch (cause) {
+      console.error("[ADD_TORRENT_ALERT] Erro ao confirmar torrent:", cause);
       setError(String(cause));
     } finally {
       setBusy(false);

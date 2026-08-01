@@ -230,6 +230,8 @@ pub fn run() {
             commands::transfer::open_url,
             commands::transfer::start_drag_folder,
             commands::transfer::parse_torrent_info,
+            commands::transfer::confirm_torrent,
+            commands::transfer::cancel_torrent,
             commands::metrics::metrics_snapshot,
             commands::metrics::reset_metrics,
             commands::metrics::export_metrics,
