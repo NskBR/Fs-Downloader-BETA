@@ -144,5 +144,15 @@ export const importMetrics = () =>
   invoke<void>("import_metrics");
 export const profileStatistics = () =>
   invoke<ProfileStatistics>("profile_statistics");
-export const parseTorrentInfo = (source: string) =>
-  invoke<ParsedTorrentMeta>("parse_torrent_info", { source });
+export const parseTorrentInfo = async (source: string): Promise<ParsedTorrentMeta> => {
+  console.log("[TORRENT_LOG][FRONTEND_SEND] Enviando argumento para parse_torrent_info:", { source });
+  try {
+    const res = await invoke<ParsedTorrentMeta>("parse_torrent_info", { source });
+    console.log("[TORRENT_LOG][FRONTEND_RECEIVE] Resposta recebida de parse_torrent_info:", res);
+    console.log("[TORRENT_LOG][FRONTEND_RECEIVE] totalSize:", res.totalSize, "files.length:", res.files?.length);
+    return res;
+  } catch (err) {
+    console.error("[TORRENT_LOG][FRONTEND_ERROR] Erro retornado de parse_torrent_info:", err);
+    throw err;
+  }
+};

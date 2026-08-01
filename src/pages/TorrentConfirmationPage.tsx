@@ -82,36 +82,33 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   useEffect(() => {
     let active = true;
     if (payload?.url) {
+      setError(null);
       void service
         .parseTorrentInfo(payload.url)
         .then((meta) => {
           if (!active) return;
-          const realName = meta.name && meta.name !== "Torrent Magnet" ? meta.name : (payload.preview?.fileName || "Torrent Download");
-          setTorrentName(realName);
-
-          if (meta.files && meta.files.length > 0) {
-            setFileList(
-              meta.files.map((f, idx) => ({
-                id: idx + 1,
-                name: f.path || realName,
-                size: f.size > 0 ? f.size : (meta.totalSize || 0),
-                selected: true,
-              }))
-            );
-          } else {
-            setFileList([
-              {
-                id: 1,
-                name: realName,
-                size: meta.totalSize || payload.preview?.fileSize || 0,
-                selected: true,
-              },
-            ]);
+          console.log("[TORRENT_LOG][FRONTEND_STATE] Recebido meta do torrent:", meta);
+          if (!meta || !meta.files || meta.files.length === 0 || !meta.totalSize || meta.totalSize === 0) {
+            setError("Não foi possível ler os metadados deste torrent.");
+            setFileList([]);
+            return;
           }
+
+          setTorrentName(meta.name);
+          const nodes: TorrentFileNode[] = meta.files.map((f, idx) => ({
+            id: idx + 1,
+            name: f.path,
+            size: f.size,
+            selected: true,
+          }));
+          setFileList(nodes);
+          console.log("[TORRENT_LOG][FRONTEND_STATE] Lista armazenada no estado:", nodes);
         })
         .catch((err) => {
           if (!active) return;
-          setError(String(err));
+          console.error("[TORRENT_LOG][FRONTEND_STATE] Falha no parsing:", err);
+          setError("Não foi possível ler os metadados deste torrent.");
+          setFileList([]);
         });
     }
     return () => {
@@ -342,7 +339,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             type="button"
             className="tc-btn-cyan-solid"
             onClick={finish}
-            disabled={busy}
+            disabled={busy || !!error || fileList.length === 0 || selectedCount === 0}
           >
             <Plus size={16} />
             <span>Adicionar torrent</span>
