@@ -1,4 +1,4 @@
-export type DownloadStatus = "pending" | "checking_files" | "downloading" | "paused" | "assembling" | "extracting" | "completed" | "failed" | "cancelled";
+export type DownloadStatus = "pending" | "connecting" | "checking_files" | "downloading" | "paused" | "assembling" | "extracting" | "completed" | "failed" | "cancelled";
 
 export interface DownloadTask {
   id: string;
@@ -48,6 +48,9 @@ export interface DownloadProgress {
   downloaded: number;
   total: number | null;
   speed: number;
+  uploadSpeed?: number;
+  seeds?: number;
+  peers?: number;
   status: DownloadStatus;
   error: string | null;
 }

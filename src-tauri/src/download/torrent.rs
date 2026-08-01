@@ -775,22 +775,37 @@ pub async fn run_torrent(
                 .map(|l| (l.snapshot.peer_stats.live + l.snapshot.peer_stats.connecting) as i64)
                 .unwrap_or(0);
 
-            let status = if stats.finished {
-                DownloadStatus::Completed
+            // Mapear estado real do librqbit para DownloadStatus
+            use librqbit::TorrentStatsState;
+            let (db_status, ui_status) = if stats.error.is_some() {
+                (DownloadStatus::Failed, "failed")
+            } else if stats.finished {
+                (DownloadStatus::Completed, "completed")
             } else {
-                DownloadStatus::Downloading
+                match stats.state {
+                    TorrentStatsState::Initializing => (DownloadStatus::Downloading, "connecting"),
+                    TorrentStatsState::Live => {
+                        if peers > 0 || downloaded > 0 {
+                            (DownloadStatus::Downloading, "downloading")
+                        } else {
+                            (DownloadStatus::Downloading, "connecting")
+                        }
+                    }
+                    TorrentStatsState::Paused => (DownloadStatus::Paused, "paused"),
+                    TorrentStatsState::Error => (DownloadStatus::Failed, "failed"),
+                }
             };
 
             println!(
-                "[TORRENT_LOG][BACKEND_STATUS] info_hash={} progress={} bytes, total={} bytes, speed={} B/s, peers={}",
-                info_hash, downloaded, total_size, speed_bytes, peers
+                "[TORRENT_LOG][BACKEND_STATUS] info_hash={} state={:?} progress={}/{} bytes, speed={:.0} B/s, peers={} seeds={}",
+                info_hash, stats.state, downloaded, total_size, speed_bytes, peers, seeds
             );
 
             let _ = downloads::update_progress(
                 &connection,
                 &UpdateDownloadInput {
                     id: task.id.clone(),
-                    status,
+                    status: db_status,
                     total_downloaded: downloaded,
                     speed_current: speed_bytes,
                     speed_average: speed_bytes,
@@ -808,15 +823,19 @@ pub async fn run_torrent(
                     "downloaded": downloaded,
                     "total": total_size,
                     "speed": speed_bytes,
-                    "status": if stats.finished { "completed" } else { "downloading" },
+                    "uploadSpeed": upload_speed,
+                    "seeds": seeds,
+                    "peers": peers,
+                    "status": ui_status,
                     "error": stats.error.clone()
                 }),
             );
 
-            if stats.finished {
+            if stats.finished || stats.error.is_some() {
                 break;
             }
         } else {
+            println!("[TORRENT_LOG][BACKEND_STATUS] info_hash={} handle not found in TorrentManager — encerrando loop", info_hash);
             break;
         }
     }

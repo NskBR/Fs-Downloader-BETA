@@ -48,9 +48,10 @@ const eta = (seconds: number) => {
 };
 
 const statusLabels: Record<DownloadStatus, string> = {
-  pending: "Conectando P2P",
+  pending: "Aguardando",
+  connecting: "Conectando P2P",
   checking_files: "Verificando arquivos",
-  downloading: "Baixando Torrent",
+  downloading: "Baixando",
   paused: "Pausado",
   assembling: "Montando",
   extracting: "Extraindo arquivo",
