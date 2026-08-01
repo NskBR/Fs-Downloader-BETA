@@ -51,7 +51,7 @@ export function TitleBar({ updateInfo }: TitleBarProps) {
         )}
       </div>
       <div className="titlebar-center" data-tauri-drag-region>
-        <strong>SF Downloader</strong>
+        <strong>SFDownloader</strong>
         <span className="titlebar-version">v{version}</span>
       </div>
       <div className="titlebar-side titlebar-actions" data-tauri-drag-region>

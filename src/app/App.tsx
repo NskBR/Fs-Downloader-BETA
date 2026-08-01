@@ -36,7 +36,7 @@ export function App() {
             available: true,
             current_version: "0.3.1",
             latest_version: "0.4.0",
-            release_url: "https://github.com/skell/sf-downloader/releases",
+            release_url: "https://github.com/NskBR/SFDownloader-BETA/releases",
             release_name: "v0.4.0 - Nova Atualização",
             release_notes: "Notificações de atualização e correções no motor de torrent.",
           });
@@ -48,7 +48,7 @@ export function App() {
           available: true,
           current_version: "0.3.1",
           latest_version: "0.4.0",
-          release_url: "https://github.com/skell/sf-downloader/releases",
+          release_url: "https://github.com/NskBR/SFDownloader-BETA/releases",
           release_name: "v0.4.0 - Nova Atualização",
           release_notes: "Notificações de atualização e correções no motor de torrent.",
         });

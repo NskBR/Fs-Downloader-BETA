@@ -33,13 +33,13 @@ pub async fn check_for_updates(
 ) -> Result<UpdateCheckResult, String> {
     let repo = repo_override
         .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| "skell/sf-downloader".to_string());
+        .unwrap_or_else(|| "NskBR/SFDownloader-BETA".to_string());
 
     let current_version = env!("CARGO_PKG_VERSION").to_string();
     let url = format!("https://api.github.com/repos/{}/releases/latest", repo);
 
     let client = reqwest::Client::builder()
-        .user_agent("sf-downloader-updater")
+        .user_agent("SFDownloader-updater")
         .build()
         .map_err(|e| format!("Erro ao criar cliente HTTP: {e}"))?;
 
@@ -51,7 +51,7 @@ pub async fn check_for_updates(
                 available: false,
                 current_version: current_version.clone(),
                 latest_version: current_version,
-                release_url: format!("https://github.com/{}", repo),
+                release_url: format!("https://github.com/{}/releases", repo),
                 release_name: None,
                 release_notes: None,
             });
@@ -64,7 +64,7 @@ pub async fn check_for_updates(
             available: false,
             current_version: current_version.clone(),
             latest_version: current_version,
-            release_url: format!("https://github.com/{}", repo),
+            release_url: format!("https://github.com/{}/releases", repo),
             release_name: None,
             release_notes: None,
         });
@@ -80,7 +80,7 @@ pub async fn check_for_updates(
 
     let release_url = json["html_url"]
         .as_str()
-        .unwrap_or(&format!("https://github.com/{}", repo))
+        .unwrap_or(&format!("https://github.com/{}/releases", repo))
         .to_string();
 
     let release_name = json["name"].as_str().map(String::from);

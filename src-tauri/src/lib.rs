@@ -84,13 +84,13 @@ pub fn run() {
         ))
         .setup(|app| {
             let open_item =
-                MenuItem::with_id(app, "tray-open", "Abrir SF Downloader", true, None::<&str>)?;
+                MenuItem::with_id(app, "tray-open", "Abrir SFDownloader", true, None::<&str>)?;
             let hide_item =
                 MenuItem::with_id(app, "tray-hide", "Minimizar para a bandeja", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "tray-quit", "Sair", true, None::<&str>)?;
             let tray_menu = Menu::with_items(app, &[&open_item, &hide_item, &quit_item])?;
             let mut tray = TrayIconBuilder::with_id("main-tray")
-                .tooltip("SF Downloader")
+                .tooltip("SFDownloader")
                 .menu(&tray_menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id().as_ref() {
