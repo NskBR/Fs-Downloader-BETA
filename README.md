@@ -1,17 +1,21 @@
 <div align="center">
 
-# ⚡ SF Downloader
+# ⚡ SFDownloader
 
 **Gerenciador de downloads moderno, rápido e elegante para Windows.**
 
 Construído com **Tauri 2 + React + Rust** — leve, nativo e sem Electron.
 
-[![Version](https://img.shields.io/badge/versão-0.3.0-blue?style=for-the-badge)](https://github.com/NskBR/Fs-Downloader-BETA/releases)
+[![Version](https://img.shields.io/badge/versão-0.3.1-blue?style=for-the-badge)](https://github.com/NskBR/SFDownloader-BETA/releases)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?style=for-the-badge&logo=tauri&logoColor=white)](https://tauri.app)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
 [![Rust](https://img.shields.io/badge/Rust-2021-CE422B?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 
 </div>
+
+> [!WARNING]
+> **⚠️ AVISO DE DESENVOLVIMENTO (BITTORRENT)**:  
+> O suporte a downloads BitTorrent encontra-se em **fase ativa de desenvolvimento**. O sistema está parcialmente funcional, porém ainda apresenta **bastante inconsistência**. Recomendamos utilizar prioritariamente downloads HTTP/HTTPS diretos enquanto aprimoramos o motor Torrent.
 
 ---
 
