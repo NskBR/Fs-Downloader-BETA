@@ -154,6 +154,9 @@ fn parse_bencode_value(bytes: &[u8], pos: &mut usize) -> Result<BencodeValue, St
 
 pub fn sanitize_info_hash(raw: &str) -> String {
     let mut s = raw.trim();
+    if let Some(inner) = s.strip_prefix("Some(").and_then(|i| i.strip_suffix(")")) {
+        s = inner;
+    }
     if let Some(inner) = s.strip_prefix("Id20(\"").and_then(|i| i.strip_suffix("\")")) {
         s = inner;
     } else if let Some(inner) = s.strip_prefix("Id20(").and_then(|i| i.strip_suffix(")")) {
