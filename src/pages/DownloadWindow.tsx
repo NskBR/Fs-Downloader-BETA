@@ -147,6 +147,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
   const [extraction, setExtraction] = useState<string | null>(null);
   const appWindow = getCurrentWindow();
   const mainRef = useRef<HTMLElement>(null);
+  const notFoundCount = useRef(0);
 
   useEffect(() => {
     let fitted = false;
@@ -168,13 +169,19 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
         service.extractionStatus(downloadId),
       ]).then(([list, result]) => {
         if (!active) return;
-        const found = list.find((item) => item.id === downloadId);
+        const found = list.find((item) => item.id === downloadId || item.infoHash === downloadId);
         if (found) {
+          notFoundCount.current = 0;
           setTask(found);
           setDownloaded(found.totalDownloaded);
           setSpeed(found.speedCurrent);
           setStatus(found.status);
           setExtraction(result);
+        } else {
+          notFoundCount.current += 1;
+          if (notFoundCount.current >= 3) {
+            void appWindow.close();
+          }
         }
       });
     };
@@ -278,23 +285,23 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
     );
 
   const total = task.fileSize ?? 0,
-    progress = total ? Math.min(100, (downloaded / total) * 100) : 0,
+    isAssembling = status === "assembling",
+    isExtracting = status === "extracting",
+    isChecking = status === "checking_files",
     isCompleted = status === "completed",
-    isActive = status === "downloading",
+    isActive = ["downloading", "assembling", "extracting", "checking_files"].includes(status),
     isFailed = status === "failed" || status === "cancelled",
-    remaining = isActive && speed > 0 ? (total - downloaded) / speed : -1,
-    source = task.currentUrl || task.originalUrl,
+    progress = total > 0 ? Math.min(100, (downloaded / total) * 100) : 0,
+    remaining = speed > 0 && total > downloaded ? (total - downloaded) / speed : -1,
     domain = sourceDomain(task.originalUrl),
-    totalTime = formatElapsed(elapsedSeconds(task.createdAt, task.completedAt)),
-    avgSpeed = task.speedAverage > 0 ? `${bytes(task.speedAverage)}/s` : "—",
     destination = task.finalPath.replace(/[\\/][^\\/]*$/, "");
 
   return (
-    <main ref={mainRef} className={`dw-window http-download-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}${cancelOpen ? " cancel-open" : ""}`}>
+    <main ref={mainRef} className={`dw-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}${cancelOpen ? " cancel-open" : ""}`}>
       <header className="dw-title" data-tauri-drag-region>
-        <span className="dw-title-text">
+        <span className="dw-title-text" data-tauri-drag-region>
           <FileIcon extension={task.extension} />
-          <span className="dw-title-name" title={task.fileName}>
+          <span className="dw-title-name" title={task.fileName} data-tauri-drag-region>
             {task.fileName}
           </span>
         </span>
@@ -315,16 +322,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
 
         <div className="dw-right">
           <p className="dw-origin">
-            {isCompleted
-              ? "Baixado de "
-              : status === "checking_files"
-              ? "Verificando arquivos de "
-              : status === "assembling"
-              ? "Montando arquivo de "
-              : status === "extracting"
-              ? "Extraindo arquivo de "
-              : `${statusLabels[status]} de `}
-            <span className="dw-origin-domain">{domain}</span>
+            {statusLabels[status]} <span className="dw-origin-domain">• {domain}</span>
           </p>
 
           <div className="dw-size-row">
@@ -348,31 +346,20 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
             <p className="dw-meta">
               {error ? (
                 <span className="dw-meta-error">
-                  <span
-                    className="dw-meta-error-text"
-                    title="Clique para copiar a mensagem de erro"
-                    onClick={() => copyError(error)}
-                  >
-                    {copiedError ? <Check size={13} style={{ flexShrink: 0 }} /> : <AlertTriangle size={13} style={{ flexShrink: 0 }} />}
-                    <span>{copiedError ? "Copiado!" : error}</span>
-                  </span>
-                  <button
-                    type="button"
-                    className="dw-meta-error-close"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setError(null);
-                    }}
-                    title="Fechar aviso de erro"
-                  >
-                    <X size={12} />
-                  </button>
+                  <AlertTriangle size={13} style={{ flexShrink: 0 }} />
+                  <span>{error}</span>
                 </span>
+              ) : isExtracting ? (
+                <span>{extraction || "Descompactando arquivos..."}</span>
+              ) : isAssembling ? (
+                <span>Montando partes do arquivo...</span>
+              ) : isChecking ? (
+                <span>Verificando integridade dos arquivos...</span>
               ) : (
                 <>
-                  Velocidade: {isActive ? `${bytes(speed)}/s` : "—"}
+                  {isActive ? `${bytes(speed)}/s` : "0 B/s"}
                   <span className="dw-dot">•</span>
-                  Tempo restante: {eta(remaining)}
+                  {eta(remaining)}
                 </>
               )}
             </p>
@@ -383,26 +370,6 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
               <i style={{ width: `${progress}%` }} />
             </div>
           )}
-
-          {isCompleted && (
-            <p className="dw-meta">
-              Concluído em {formatDateTime(task.completedAt)}
-              <span className="dw-dot">•</span>
-              {totalTime}
-            </p>
-          )}
-
-          {isCompleted && (
-            <p className="dw-path" title={destination}>
-              <FolderOpen size={12} />
-              <span className="dw-path-value">{destination}</span>
-            </p>
-          )}
-
-          {isFailed && (
-            <p className="dw-meta dw-meta-error">{status === "cancelled" ? "Cancelado" : "Falhou"}</p>
-          )}
-
         </div>
       </section>
 
@@ -442,79 +409,68 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
           <div className="dw-details-header" data-tauri-drag-region>
             <button className="dw-details-back nodrag" onClick={() => setDetailsOpen(false)}>
               <ArrowLeft size={16} />
-              <span>Voltar</span>
+              Voltar
             </button>
             <span className="dw-details-header-title">Detalhes do Download</span>
           </div>
 
-          <div className="dw-details-body">
-            <div className="dw-detail-row">
-              <span>Tamanho</span>
-              <b>{bytes(task.fileSize)}</b>
-            </div>
-            <div className="dw-detail-row">
-              <span>Vel. média</span>
-              <b>{avgSpeed}</b>
-            </div>
-            <div className="dw-detail-row">
-              <span>Tempo total</span>
-              <b>{totalTime}</b>
-            </div>
-            <div className="dw-detail-row">
-              <span>Origem</span>
-              <b className="dw-detail-link" title={source}>
-                <Link2 size={12} />
-                {domain}
-                <ExternalLink size={11} />
-              </b>
-            </div>
-            <div className="dw-detail-row">
-              <span>Salvo em</span>
-              <b className="dw-detail-path" title={task.finalPath}>
-                {task.finalPath}
-              </b>
-            </div>
-            <div className="dw-detail-row">
-              <span>ETag</span>
-              <b className="dw-detail-path">{task.etag ?? "—"}</b>
-            </div>
-            <div className="dw-detail-row">
-              <span>Retomada</span>
-              <b>{task.supportsRange ? "Suportada" : "Não suportada"}</b>
-            </div>
-            {extraction && (
+          <div className="dw-details-compact-body">
+            <div className="dw-details-card">
               <div className="dw-detail-row">
-                <span>Extração</span>
-                <b>{extraction}</b>
+                <span className="dw-detail-label">Velocidade Atual</span>
+                <span className="dw-detail-val">{bytes(speed)}/s</span>
               </div>
-            )}
+              <div className="dw-detail-row">
+                <span className="dw-detail-label">Tempo Restante</span>
+                <span className="dw-detail-val">{eta(remaining)}</span>
+              </div>
+              <div className="dw-detail-row">
+                <span className="dw-detail-label">Tempo Decorrido</span>
+                <span className="dw-detail-val">{formatElapsed(elapsedSeconds(task.createdAt, task.completedAt))}</span>
+              </div>
+              <div className="dw-detail-row">
+                <span className="dw-detail-label">Criado em</span>
+                <span className="dw-detail-val">{formatDateTime(task.createdAt)}</span>
+              </div>
+              <div className="dw-detail-row">
+                <span className="dw-detail-label">Concluído em</span>
+                <span className="dw-detail-val">{formatDateTime(task.completedAt)}</span>
+              </div>
+              <div className="dw-detail-row">
+                <span className="dw-detail-label">URL Original</span>
+                <span className="dw-detail-val dw-detail-url" title={task.originalUrl}>{task.originalUrl}</span>
+              </div>
+              <div className="dw-detail-row">
+                <span className="dw-detail-label">Pasta de Destino</span>
+                <span className="dw-detail-val">{destination}</span>
+              </div>
+            </div>
+
+            <div className="dw-mini-actions-row">
+              <button className="dw-mini-action-btn" onClick={() => void service.revealInFolder(task.finalPath)}>
+                <FolderOpen size={14} className="icon-blue" />
+                <span>Abrir pasta</span>
+              </button>
+              <button className="dw-mini-action-btn" onClick={() => copyPath(task.originalUrl)}>
+                <Link2 size={14} className="icon-blue" />
+                <span>Copiar URL</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {cancelOpen && (
-        <div className="dw-cancel-sheet">
-          <div className="dw-cancel-sheet-header">
-            <div className="dw-cancel-sheet-icon">
-              <AlertTriangle />
-            </div>
-            <div className="dw-cancel-sheet-text">
-              <p className="dw-cancel-sheet-title">Cancelar este download?</p>
-              <p className="dw-cancel-sheet-desc">
-                Escolha se deseja manter ou remover somente parte referente a este download do disco.
-              </p>
-            </div>
-          </div>
-          <div className="dw-cancel-sheet-sep" />
-          <div className="dw-cancel-sheet-actions">
-            <button className="dw-cancel-btn-keep" disabled={busy} onClick={() => void cancel(false)}>
+        <div className="dw-confirm-cancel">
+          <p>Deseja cancelar este download?</p>
+          <div className="dw-confirm-cancel-actions">
+            <button className="dw-btn-danger" onClick={() => void cancel(true)}>
+              Excluir arquivos
+            </button>
+            <button className="dw-btn-warning" onClick={() => void cancel(false)}>
               Manter arquivos
             </button>
-            <button className="dw-cancel-btn-delete" disabled={busy} onClick={() => void cancel(true)}>
-              <Trash2 size={13} />
-              <span>Apagar arquivos</span>
-            </button>
-            <button className="dw-cancel-btn-back" disabled={busy} onClick={() => setCancelOpen(false)}>
+            <button className="dw-btn-secondary" onClick={() => setCancelOpen(false)}>
               Voltar
             </button>
           </div>

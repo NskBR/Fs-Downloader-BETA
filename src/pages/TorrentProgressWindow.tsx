@@ -158,19 +158,27 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
     void fit();
   }, [detailsOpen]);
 
+  const notFoundCount = useRef(0);
+
   useEffect(() => {
     let active = true;
     const fetchTask = () => {
       void service.listDownloads().then((list) => {
         if (!active) return;
-        const found = list.find((item) => item.id === downloadId);
+        const found = list.find((item) => item.id === downloadId || item.infoHash === downloadId);
         if (found) {
+          notFoundCount.current = 0;
           setTask(found);
           setDownloaded(found.totalDownloaded);
           setSpeed(found.speedCurrent);
           setUploadSpeed(found.uploadSpeed ?? 0);
           setPeers(found.peers ?? 0);
           setStatus((prev) => (prev === "pending" ? found.status : prev));
+        } else {
+          notFoundCount.current += 1;
+          if (notFoundCount.current >= 3) {
+            void appWindow.close();
+          }
         }
       });
     };
