@@ -3746,8 +3746,7 @@ html, body, #root, .window-frame {
 /* ==========================================================================
    CONFIGURAÇÕES — REDESIGN COMPLETO BASEADO NA FOTO DE REFERÊNCIA
    ========================================================================== */
-/* ==========================================================================
-   CONFIGURAÇÕES — REDESIG.cfg-container {
+.cfg-container {
   padding: 10px 20px 6px;
   width: 100%;
   max-width: 1000px;
