@@ -52,11 +52,6 @@ Construído com **Tauri 2 + React + Rust** — leve, nativo e sem Electron.
 
 ![Configurações](screenshots/settings.png)
 
-### Customizador de Temas
-> Crie seu próprio tema com múltiplas cores gradiente, pipeta de cor, controle de intensidade e botão "Surpreenda-me!" para gerar combinações aleatórias.
-
-![Customizador de Temas](screenshots/theme-customizer.png)
-
 ### Métricas e Estatísticas
 > Painel completo com total baixado, volume por status, escrita em disco, velocidade média e tempo médio por download — tudo exportável em TXT ou JSON.
 
