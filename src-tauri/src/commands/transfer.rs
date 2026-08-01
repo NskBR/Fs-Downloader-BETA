@@ -752,7 +752,7 @@ pub fn cancel_download(
 }
 
 #[tauri::command]
-pub fn pause_download(
+pub async fn pause_download(
     app: AppHandle,
     database: State<'_, Database>,
     runtime: State<'_, DownloadRuntime>,
@@ -767,10 +767,9 @@ pub fn pause_download(
                 }
                 println!("[TORRENT_PAUSE] info_hash='{}', estado_antes='{:?}', estado_depois='paused'", info_hash, task.status);
 
-                // Pausar via librqbit session diretamente no handle
+                // Pausar via librqbit session diretamente no handle (async — sem block_on)
                 let manager = crate::download::torrent::get_torrent_manager();
-                let rt = tokio::runtime::Handle::current();
-                let _ = rt.block_on(async {
+                {
                     let guard = manager.entries().read().await;
                     if let Some(entry) = guard.get(&info_hash) {
                         let session_guard = manager.session().read().await;
@@ -780,9 +779,13 @@ pub fn pause_download(
                             } else {
                                 println!("[TORRENT_PAUSE] librqbit session.pause() chamado com sucesso para info_hash={}", info_hash);
                             }
+                        } else {
+                            println!("[TORRENT_PAUSE] Sessão librqbit não disponível — apenas marcando DB como paused");
                         }
+                    } else {
+                        println!("[TORRENT_PAUSE] Handle não encontrado no TorrentManager para info_hash={} — apenas marcando DB como paused", info_hash);
                     }
-                });
+                }
 
                 let _ = downloads::update_progress(
                     &conn,
@@ -948,10 +951,54 @@ pub async fn resume_owned(
 
     if task.download_type == "torrent" || task.original_url.starts_with("magnet:") {
         let info_hash = task.info_hash.clone().unwrap_or_default();
+        let magnet = task.original_url.clone();
+
         println!(
             "[TORRENT_RESUME] info_hash='{}', handle_valido=true, estado_antes='{:?}', estado_depois='downloading'",
             info_hash, task.status
         );
+
+        let manager = crate::download::torrent::get_torrent_manager();
+
+        // Se o handle não existe no TorrentManager (ex: após restart do app),
+        // re-adicionar o torrent à sessão via magnet link
+        let needs_readd = {
+            let guard = manager.entries().read().await;
+            !guard.contains_key(&info_hash)
+        };
+
+        if needs_readd {
+            println!("[TORRENT_RESUME] Handle ausente após restart — re-adicionando magnet à sessão: info_hash={}", info_hash);
+            let save_path = std::path::Path::new(&task.save_path);
+            match manager.get_session(save_path).await {
+                Ok(session) => {
+                    match manager.start_torrent_handle(&session, &magnet, save_path).await {
+                        Ok(_handle) => {
+                            println!("[TORRENT_RESUME] Handle re-adicionado com sucesso para info_hash={}", info_hash);
+                        }
+                        Err(e) => {
+                            println!("[TORRENT_RESUME] Falha ao re-adicionar magnet: {:?}", e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("[TORRENT_RESUME] Falha ao obter sessão librqbit: {:?}", e);
+                }
+            }
+        } else {
+            // Handle existe — usar session.unpause() para retomar
+            let guard = manager.entries().read().await;
+            if let Some(entry) = guard.get(&info_hash) {
+                let session_guard = manager.session().read().await;
+                if let Some(ref session) = *session_guard {
+                    if let Err(e) = session.unpause(&entry.handle).await {
+                        println!("[TORRENT_RESUME] Erro ao retomar via session.unpause: {:?}", e);
+                    } else {
+                        println!("[TORRENT_RESUME] librqbit session.unpause() chamado com sucesso para info_hash={}", info_hash);
+                    }
+                }
+            }
+        }
 
         let control = TaskControl::new();
         control.set_speed_limit(task.speed_limit_download).await;
