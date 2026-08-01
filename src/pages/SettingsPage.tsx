@@ -754,36 +754,6 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                         />
                       </div>
                     </div>
-
-                    {/* Sub-card: Prévia da estrutura */}
-                    <div className="cfg-preview-box">
-                      <div className="cfg-preview-header">
-                        <strong className="cfg-preview-title">Prévia da estrutura</strong>
-                        <span className="cfg-preview-subtitle">Exemplo de organização:</span>
-                      </div>
-                      <div className="cfg-tree-preview">
-                        <div className="cfg-tree-node root">
-                          <span className="cfg-tree-arrow">˅</span>
-                          <Folder size={14} className="cfg-tree-folder-icon" />
-                          <span>Downloads</span>
-                        </div>
-                        <div className="cfg-tree-node child">
-                          <span className="cfg-tree-indent">┊   </span>
-                          <Folder size={14} className="cfg-tree-folder-icon" />
-                          <span>Jogos</span>
-                        </div>
-                        <div className="cfg-tree-node child">
-                          <span className="cfg-tree-indent">┊   </span>
-                          <Folder size={14} className="cfg-tree-folder-icon" />
-                          <span>Séries</span>
-                        </div>
-                        <div className="cfg-tree-node child">
-                          <span className="cfg-tree-indent">┊   </span>
-                          <Folder size={14} className="cfg-tree-folder-icon" />
-                          <span>Documentos</span>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
