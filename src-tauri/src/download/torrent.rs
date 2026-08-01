@@ -52,6 +52,7 @@ impl TorrentMetadataResponse {
         }
     }
 
+    #[allow(dead_code)]
     pub fn files(&self) -> Option<&[TorrentFileItem]> {
         match self {
             Self::Ready { files, .. } => Some(files.as_slice()),
