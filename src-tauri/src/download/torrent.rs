@@ -763,9 +763,19 @@ impl TorrentManager {
             .clone()
             .ok_or_else(|| "Sessão Torrent não disponível.".to_string())?;
         session
-            .delete(librqbit::api::TorrentIdOrHash::Id(old_handle_id), false)
+            .delete(librqbit::api::TorrentIdOrHash::Id(old_handle_id), true)
             .await
             .map_err(|e| format!("Falha ao preparar destino do torrent: {e}"))?;
+
+        use tauri::Manager;
+        if let Some(app_dir) = app.path().app_data_dir().ok() {
+            let persistence_root = app_dir.join("SF Downloader").join("torrent-session");
+            let bitv = persistence_root.join(format!("{}.bitv", info_hash));
+            let torrent_file = persistence_root.join(format!("{}.torrent", info_hash));
+            let _ = std::fs::remove_file(bitv);
+            let _ = std::fs::remove_file(torrent_file);
+        }
+
         let final_handle = self
             .start_torrent_handle_configured(
                 &session,

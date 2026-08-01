@@ -149,14 +149,14 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
   useEffect(() => {
     let fitted = false;
     const fit = async () => {
-      if (!detailsOpen && !cancelOpen && fitted) return;
+      if (!detailsOpen && fitted) return;
       await document.fonts?.ready.catch(() => {});
       fitted = true;
-      const targetHeight = cancelOpen ? 300 : detailsOpen ? 420 : 205;
+      const targetHeight = detailsOpen ? 420 : 205;
       void appWindow.setSize(new LogicalSize(470, targetHeight)).catch(() => {});
     };
     void fit();
-  }, [detailsOpen, cancelOpen]);
+  }, [detailsOpen]);
 
   useEffect(() => {
     let active = true;
@@ -380,7 +380,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
                 </button>
               </div>
             ) : (
-              <button className="dw-btn-cancel" onClick={() => setCancelOpen(true)}>
+              <button className="dw-btn-cancel" onClick={() => void cancel(true)} disabled={busy}>
                 <Ban size={15} />
                 Cancelar
               </button>
@@ -389,7 +389,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
         </>
       )}
 
-      {detailsOpen && !cancelOpen && (
+      {detailsOpen && (
         <div className="dw-details dw-details-full">
           <div className="dw-details-header" data-tauri-drag-region>
             <button className="dw-details-back nodrag" onClick={() => setDetailsOpen(false)}>
@@ -429,23 +429,6 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
                 <span>Abrir pasta</span>
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {cancelOpen && (
-        <div className="dw-confirm-cancel">
-          <p>Deseja cancelar o download deste torrent?</p>
-          <div className="dw-confirm-cancel-actions">
-            <button className="dw-btn-danger" onClick={() => void cancel(true)}>
-              Excluir arquivos
-            </button>
-            <button className="dw-btn-warning" onClick={() => void cancel(false)}>
-              Manter arquivos
-            </button>
-            <button className="dw-btn-secondary" onClick={() => setCancelOpen(false)}>
-              Voltar
-            </button>
           </div>
         </div>
       )}
