@@ -1317,7 +1317,7 @@ input::-ms-clear {
 .confirm-error-sheet {
   position: absolute;
   left: 0; right: 0; top: 46px; bottom: 0;
-  background: var(--bg-fill, #111318);
+  background: #0b0d12;
   padding: 16px 24px 16px 24px;
   display: flex;
   flex-direction: column;
@@ -5150,12 +5150,12 @@ html, body, #root, .window-frame {
   background: var(--surface, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
   border-radius: 10px;
-  padding: 8px 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
 }
-.tl-m-icon { color: var(--ember-solid, #06b6d4); flex-shrink: 0; }
+.tc-file-row {
+  display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;

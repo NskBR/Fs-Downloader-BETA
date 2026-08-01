@@ -1,6 +1,6 @@
 [package]
 name = "SFDownloader"
-version = "0.3.3"
+version = "0.3.4"
 description = "A modern desktop download manager"
 authors = ["SFDownloader Contributors"]
 edition = "2021"

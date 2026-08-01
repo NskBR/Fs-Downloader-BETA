@@ -271,133 +271,135 @@ export function ConfirmationPage({ token }: { token: string }) {
         </div>
       </header>
 
-      {/* 2. Conteúdo Central */}
-      <div className="confirm-body">
-        {/* Linha 1: Local e Categoria em 2 Colunas */}
-        <div className="confirm-grid-row">
-          <div className="confirm-field-col">
-            <div className="confirm-label-row">
-              <span className="confirm-label">Local</span>
-              {destination !== settings.rootDownloadFolder && (
+      {/* 2. Conteúdo Central (Apenas se não houver erro) */}
+      {!error && (
+        <>
+          <div className="confirm-body">
+            {/* Linha 1: Local e Categoria em 2 Colunas */}
+            <div className="confirm-grid-row">
+              <div className="confirm-field-col">
+                <div className="confirm-label-row">
+                  <span className="confirm-label">Local</span>
+                  {destination !== settings.rootDownloadFolder && (
+                    <button
+                      type="button"
+                      className="confirm-btn-reset-default"
+                      onClick={restoreDefaultFolder}
+                      title="Voltar para a pasta padrão configurada no aplicativo"
+                    >
+                      <RotateCcw size={12} />
+                      <span>Voltar ao padrão</span>
+                    </button>
+                  )}
+                </div>
+                <div className="confirm-control-box">
+                  <FolderOpen className="field-icon" size={16} />
+                  <input
+                    className="confirm-input-text"
+                    value={destination || ""}
+                    placeholder="Selecione uma pasta"
+                    readOnly
+                  />
+                  <button className="confirm-btn-alterar" onClick={chooseFolder}>
+                    Alterar
+                  </button>
+                </div>
+              </div>
+
+              <div className={`confirm-field-col${isCustomFolder ? " confirm-field-disabled" : ""}`}>
+                <span className="confirm-label">Categoria</span>
+                <div className="confirm-control-box box-custom-select">
+                  <CustomSelect
+                    value={isCustomFolder ? "" : selectedCategory}
+                    options={
+                      isCustomFolder
+                        ? [{ value: "", label: "Pasta personalizada" }]
+                        : categories.map((cat) => ({ value: cat, label: cat }))
+                    }
+                    onChange={(val) => setSelectedCategory(val)}
+                    disabled={isCustomFolder}
+                    icon={<Archive size={16} />}
+                    direction="down"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Linha 2: Pílula Integrada de Metadados */}
+            <div className="confirm-meta-row">
+              <div className="confirm-meta-item item-origin" title={hostName || "Provedor desconhecido"}>
+                <Globe size={16} />
+                <span>{hostName || "origem desconhecida"}</span>
+              </div>
+              <div className="confirm-meta-item item-size">
+                <Package size={16} />
+                <span>{loading ? "Calculando..." : bytes(preview?.fileSize ?? null)}</span>
+              </div>
+              <div className="confirm-meta-item item-type">
+                <FileText size={16} />
+                <span>{(preview?.extension || "ARQUIVO").toUpperCase()}</span>
+              </div>
+            </div>
+
+            {/* Linha 3: Extrair e Senha em 2 Colunas */}
+            <div className="confirm-grid-row">
+              <div className="confirm-control-box box-toggle">
+                <Toggle
+                  label="Extrair após concluir"
+                  checked={isArchive && autoExtract}
+                  onChange={setAutoExtract}
+                  disabled={!isArchive}
+                />
+                <span className="toggle-label">Extrair após concluir</span>
+              </div>
+
+              <div className={`confirm-control-box box-password ${autoExtract ? "" : "is-disabled"}`}>
+                <LockKeyhole className="field-icon" size={16} />
+                <input
+                  className="confirm-input-text"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  disabled={!autoExtract}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Digite a senha (opcional)"
+                />
                 <button
                   type="button"
-                  className="confirm-btn-reset-default"
-                  onClick={restoreDefaultFolder}
-                  title="Voltar para a pasta padrão configurada no aplicativo"
+                  className="confirm-btn-eye"
+                  onClick={() => setShowPassword((value) => !value)}
+                  disabled={!autoExtract}
                 >
-                  <RotateCcw size={12} />
-                  <span>Voltar ao padrão</span>
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
-              )}
+              </div>
             </div>
-            <div className="confirm-control-box">
-              <FolderOpen className="field-icon" size={16} />
-              <input
-                className="confirm-input-text"
-                value={destination || ""}
-                placeholder="Selecione uma pasta"
-                readOnly
-              />
-              <button className="confirm-btn-alterar" onClick={chooseFolder}>
-                Alterar
+          </div>
+
+          {/* 3. Rodapé Fixo */}
+          <footer className="confirm-footer">
+            <button
+              className="confirm-details-toggle"
+              onClick={() => setDetailsOpen((v) => !v)}
+            >
+              <ChevronDown className={detailsOpen ? "is-open" : ""} size={16} />
+              <span>Mais detalhes</span>
+            </button>
+
+            <div className="confirm-footer-actions">
+              <button className="confirm-btn-cancel" onClick={close}>
+                Cancelar
+              </button>
+              <button
+                className="confirm-btn-start"
+                disabled={busy || loading || !preview}
+                onClick={() => void finish()}
+              >
+                <Download size={18} />
+                <span>{busy ? "Iniciando..." : "Iniciar download"}</span>
               </button>
             </div>
-          </div>
-
-          <div className={`confirm-field-col${isCustomFolder ? " confirm-field-disabled" : ""}`}>
-            <span className="confirm-label">Categoria</span>
-            <div className="confirm-control-box box-custom-select">
-              <CustomSelect
-                value={isCustomFolder ? "" : selectedCategory}
-                options={
-                  isCustomFolder
-                    ? [{ value: "", label: "Pasta personalizada" }]
-                    : categories.map((cat) => ({ value: cat, label: cat }))
-                }
-                onChange={(val) => setSelectedCategory(val)}
-                disabled={isCustomFolder}
-                icon={<Archive size={16} />}
-                direction="down"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Linha 2: Pílula Integrada de Metadados */}
-        <div className="confirm-meta-row">
-          <div className="confirm-meta-item item-origin" title={hostName || "Provedor desconhecido"}>
-            <Globe size={16} />
-            <span>{hostName || "origem desconhecida"}</span>
-          </div>
-          <div className="confirm-meta-item item-size">
-            <Package size={16} />
-            <span>{loading ? "Calculando..." : bytes(preview?.fileSize ?? null)}</span>
-          </div>
-          <div className="confirm-meta-item item-type">
-            <FileText size={16} />
-            <span>{(preview?.extension || "ARQUIVO").toUpperCase()}</span>
-          </div>
-        </div>
-
-        {/* Linha 3: Extrair e Senha em 2 Colunas */}
-        <div className="confirm-grid-row">
-          <div className="confirm-control-box box-toggle">
-            <Toggle
-              label="Extrair após concluir"
-              checked={isArchive && autoExtract}
-              onChange={setAutoExtract}
-              disabled={!isArchive}
-            />
-            <span className="toggle-label">Extrair após concluir</span>
-          </div>
-
-          <div className={`confirm-control-box box-password ${autoExtract ? "" : "is-disabled"}`}>
-            <LockKeyhole className="field-icon" size={16} />
-            <input
-              className="confirm-input-text"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              disabled={!autoExtract}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Digite a senha (opcional)"
-            />
-            <button
-              type="button"
-              className="confirm-btn-eye"
-              onClick={() => setShowPassword((value) => !value)}
-              disabled={!autoExtract}
-            >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Rodapé Fixo */}
-      {!error && (
-        <footer className="confirm-footer">
-          <button
-            className="confirm-details-toggle"
-            onClick={() => setDetailsOpen((v) => !v)}
-          >
-            <ChevronDown className={detailsOpen ? "is-open" : ""} size={16} />
-            <span>Mais detalhes</span>
-          </button>
-
-          <div className="confirm-footer-actions">
-            <button className="confirm-btn-cancel" onClick={close}>
-              Cancelar
-            </button>
-            <button
-              className="confirm-btn-start"
-              disabled={busy || loading || !preview}
-              onClick={() => void finish()}
-            >
-              <Download size={18} />
-              <span>{busy ? "Iniciando..." : "Iniciar download"}</span>
-            </button>
-          </div>
-        </footer>
+          </footer>
+        </>
       )}
 
       {/* Painel de Mais Detalhes (Compacto, sem scroll, 3 ações) */}

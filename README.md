@@ -6,7 +6,7 @@
 
 Construído com **Tauri 2 + React + Rust** — leve, nativo e sem Electron.
 
-[![Version](https://img.shields.io/badge/versão-0.3.3-blue?style=for-the-badge)](https://github.com/NskBR/SFDownloader-BETA/releases)
+[![Version](https://img.shields.io/badge/versão-0.3.4-blue?style=for-the-badge)](https://github.com/NskBR/SFDownloader-BETA/releases)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?style=for-the-badge&logo=tauri&logoColor=white)](https://tauri.app)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
 [![Rust](https://img.shields.io/badge/Rust-2021-CE422B?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
