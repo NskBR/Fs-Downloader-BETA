@@ -5183,5 +5183,82 @@ html, body, #root, .window-frame {
 .tl-btn-pause:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.25); }
 .tl-btn-cancel:hover { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #f87171; }
 
-
-
+/* ----- Update Banner -------------------------------------------------------- */
+.update-banner-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.12) 0%, rgba(59, 130, 246, 0.12) 100%);
+  border-bottom: 1px solid rgba(6, 182, 212, 0.25);
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text, #f3f4f6);
+  animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 100;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.update-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.update-banner-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(6, 182, 212, 0.2);
+  color: #22d3ee;
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.update-banner-text {
+  color: var(--text-2, #d1d5db);
+}
+.update-banner-text strong {
+  color: #ffffff;
+}
+.update-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.update-banner-btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+  border: none;
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, filter 0.15s ease;
+}
+.update-banner-btn-primary:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+.update-banner-btn-dismiss {
+  background: transparent;
+  border: none;
+  color: var(--muted, #9ca3af);
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.update-banner-btn-dismiss:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}

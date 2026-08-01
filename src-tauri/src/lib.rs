@@ -239,7 +239,8 @@ pub fn run() {
             commands::metrics::import_metrics,
             set_autostart,
             is_autostart_enabled,
-            download::extraction::extraction_status
+            download::extraction::extraction_status,
+            commands::updater::check_for_updates
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o SF Downloader");

@@ -191,3 +191,16 @@ export const cancelTorrent = (infoHash: string, deleteFiles: boolean = false) =>
 
 export const openTorrentProgressWindow = (infoHash: string, taskId: string) =>
   invoke<void>("open_torrent_progress_window", { infoHash, taskId });
+
+export interface UpdateCheckResult {
+  available: boolean;
+  current_version: string;
+  latest_version: string;
+  release_url: string;
+  release_name?: string | null;
+  release_notes?: string | null;
+}
+
+export const checkForUpdates = (repoOverride?: string) =>
+  invoke<UpdateCheckResult>("check_for_updates", { repoOverride });
+

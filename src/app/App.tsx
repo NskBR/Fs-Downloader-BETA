@@ -12,6 +12,7 @@ import { isPageId, type PageId } from "./navigation";
 import * as downloadService from "../services/downloadService";
 import { applyThemeSettings } from "../services/theme";
 import { FloatingAiWidget } from "../components/ui/FloatingAiWidget";
+import { UpdateBanner } from "../components/UpdateBanner";
 interface BrowserDownloadRequest { requestId:string;url:string;fileName:string|null;fileSize:number|null;mimeType:string|null }
 const categoryPages:PageId[]=["downloads","active","completed","documents","music","videos","archives","applications","torrents","calculator"];
 const normalizePage=(page:PageId):PageId=>({home:"downloads",organization:"settings",active:"downloads",completed:"downloads"} as Partial<Record<PageId,PageId>>)[page]??page;
@@ -21,6 +22,19 @@ export function App() {
   const previousPage=useRef<PageId>("active");
   const { settings, persist, saved } = useSettings();
   const processedLinks=useRef(new Set<string>(JSON.parse(sessionStorage.getItem("sf-downloader.processed-links")||"[]")));
+  const [updateInfo, setUpdateInfo] = useState<downloadService.UpdateCheckResult | null>(null);
+
+  useEffect(() => {
+    void downloadService
+      .checkForUpdates()
+      .then((res) => {
+        if (res && res.available) {
+          setUpdateInfo(res);
+        }
+      })
+      .catch((err) => console.log("[UPDATER] Erro ao checar atualizações:", err));
+  }, []);
+
   useEffect(()=>{const media=matchMedia("(prefers-color-scheme: dark)");const apply=()=>{document.documentElement.dataset.theme=settings.theme==="system"?(media.matches?"midnight":"light"):settings.theme;document.documentElement.lang=settings.language};apply();media.addEventListener("change",apply);return()=>media.removeEventListener("change",apply)},[settings.theme,settings.language]);
   useEffect(()=>{
     applyThemeSettings(settings);
@@ -36,6 +50,9 @@ export function App() {
     : <DownloadsPage settings={settings} onSave={persist} filter={categoryPages.includes(activePage)?activePage:"active"} />;
    return (
      <>
+       {updateInfo && updateInfo.available && (
+         <UpdateBanner update={updateInfo} onDismiss={() => setUpdateInfo(null)} />
+       )}
        <AppShell activePage={activePage} onNavigate={navigate} sidebarAnimation={settings.sidebarAnimation}>{content}</AppShell>
        {!["settings", "metrics", "profile"].includes(activePage) && <FloatingAiWidget />}
      </>
