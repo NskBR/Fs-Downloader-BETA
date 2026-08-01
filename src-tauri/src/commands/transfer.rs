@@ -805,14 +805,17 @@ pub async fn pause_download(
                     }
                 }
 
+                let latest_task = downloads::find(&conn, &id).ok().flatten().unwrap_or(task.clone());
+                let paused_downloaded = latest_task.total_downloaded;
+
                 let _ = downloads::update_progress(
                     &conn,
                     &crate::database::models::UpdateDownloadInput {
                         id: id.clone(),
                         status: crate::database::models::DownloadStatus::Paused,
-                        total_downloaded: task.total_downloaded,
+                        total_downloaded: paused_downloaded,
                         speed_current: 0.0,
-                        speed_average: task.speed_average,
+                        speed_average: latest_task.speed_average,
                         seeds: None,
                         peers: None,
                         upload_speed: None,
@@ -823,9 +826,9 @@ pub async fn pause_download(
                 let _ = app.emit(
                     "download-progress",
                     serde_json::json!({
-                        "id": task.id,
-                        "downloaded": task.total_downloaded,
-                        "total": task.file_size,
+                        "id": latest_task.id,
+                        "downloaded": paused_downloaded,
+                        "total": latest_task.file_size,
                         "speed": 0.0,
                         "status": "paused",
                         "error": null

@@ -956,6 +956,7 @@ pub async fn run_torrent(
     let manager = get_torrent_manager();
     let info_hash = task.info_hash.clone().unwrap_or_default();
 
+    let mut current_downloaded = task.total_downloaded;
     let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(500));
     loop {
         interval.tick().await;
@@ -966,7 +967,7 @@ pub async fn run_torrent(
                 &UpdateDownloadInput {
                     id: task.id.clone(),
                     status: DownloadStatus::Paused,
-                    total_downloaded: task.total_downloaded,
+                    total_downloaded: current_downloaded,
                     speed_current: 0.0,
                     speed_average: 0.0,
                     seeds: None,
@@ -979,7 +980,7 @@ pub async fn run_torrent(
                 "download-progress",
                 serde_json::json!({
                     "id": task.id,
-                    "downloaded": task.total_downloaded,
+                    "downloaded": current_downloaded,
                     "total": task.file_size,
                     "speed": 0.0,
                     "status": "paused",
@@ -1014,6 +1015,8 @@ pub async fn run_torrent(
                 task.file_size.unwrap_or(entry.total_size as i64)
             };
 
+            let total_size = logical_total_size;
+
             let downloaded = if has_selected_subset {
                 entry
                     .selected_file_indexes
@@ -1021,13 +1024,20 @@ pub async fn run_torrent(
                     .map(|&idx| stats.file_progress.get(idx).copied().unwrap_or(0))
                     .sum::<u64>() as i64
             } else if stats.finished {
-                logical_total_size
+                total_size
             } else {
                 stats.progress_bytes as i64
             };
-            let total_size = logical_total_size;
-            let is_finished = if has_selected_subset && logical_total_size > 0 {
-                downloaded >= logical_total_size
+
+            // Garantir que baixado nunca ultrapasse o total_size da seleção ou do torrent
+            let downloaded = if total_size > 0 {
+                downloaded.min(total_size)
+            } else {
+                downloaded
+            };
+
+            let is_finished = if total_size > 0 {
+                downloaded >= total_size
             } else {
                 stats.finished
             };
@@ -1049,13 +1059,13 @@ pub async fn run_torrent(
                 .as_ref()
                 .map(|l| (l.snapshot.peer_stats.live + l.snapshot.peer_stats.connecting) as i64)
                 .unwrap_or(0);
-            // AggregatePeerStats não distingue seed de leecher. Não reportar
-            // conexões vivas como sementes.
             let seeds = 0;
 
             // Mapear estado real do librqbit para DownloadStatus
             use librqbit::TorrentStatsState;
             let is_initializing = matches!(stats.state, TorrentStatsState::Initializing);
+            let real_downloaded = if is_initializing { 0_i64 } else { downloaded };
+            current_downloaded = real_downloaded;
 
             let (db_status, ui_status) = if stats.error.is_some() {
                 (DownloadStatus::Failed, "failed")
@@ -1063,13 +1073,14 @@ pub async fn run_torrent(
                 (DownloadStatus::Completed, "completed")
             } else {
                 match stats.state {
-                    // Initializing = verificação de arquivo existente no disco
                     TorrentStatsState::Initializing => {
                         (DownloadStatus::Downloading, "checking_files")
                     }
                     TorrentStatsState::Live => {
-                        // Exibir "Baixando" apenas quando houver velocidade real de download (>= 1.0 KB/s)
-                        if speed_bytes >= 1024.0 {
+                        // Exibir "Baixando" APENAS quando já baixou algum byte real (> 0)
+                        // E a velocidade real de download for >= 1.0 KB/s.
+                        // Caso contrário, exibir "Conectando P2P" (Conectando-se aos pares).
+                        if real_downloaded > 0 && speed_bytes >= 1024.0 {
                             (DownloadStatus::Downloading, "downloading")
                         } else {
                             (DownloadStatus::Downloading, "connecting")
