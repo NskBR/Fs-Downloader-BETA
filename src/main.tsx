@@ -18,9 +18,10 @@ import "./styles/app.css";
 const label = getCurrentWindow().label;
 const torrentConfirmMatch = label.match(/^download-torrent-confirm-(.*)$/);
 const confirmationMatch = label.match(/^download-confirm-(.*)$/);
+const torrentProgressMatch = label.match(/^(?:torrent-progress-|download-torrent-live-)(.*)$/);
 const isTorrentConfirmation = Boolean(torrentConfirmMatch);
 const isConfirmationWindow = Boolean(confirmationMatch);
-const isTorrentLiveWindow = label.startsWith("download-torrent-live-");
+const isTorrentLiveWindow = Boolean(torrentProgressMatch);
 const isLiveWindow = label.startsWith("download-") && !isConfirmationWindow && !isTorrentConfirmation && !isTorrentLiveWindow;
 const isBrowserIntegrationWindow = label === "browser-integration";
 const isMainWindow = label === "main";
@@ -71,7 +72,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     ) : isConfirmationWindow ? (
       <ConfirmationPage token={confirmationMatch![1]} />
     ) : isTorrentLiveWindow ? (
-      <TorrentProgressWindow downloadId={label.substring("download-torrent-live-".length)} />
+      <TorrentProgressWindow downloadId={torrentProgressMatch![1]} />
     ) : isLiveWindow ? (
       <DownloadWindow downloadId={label.substring("download-".length)} />
     ) : isBrowserIntegrationWindow ? (

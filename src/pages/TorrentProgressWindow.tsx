@@ -168,7 +168,13 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
     const fetchTask = () => {
       void service.listDownloads().then((list) => {
         if (!active) return;
-        const found = list.find((item) => item.id === downloadId);
+        const found = list.find(
+          (item) =>
+            item.id === downloadId ||
+            item.infoHash === downloadId ||
+            item.id.includes(downloadId) ||
+            (item.infoHash && downloadId.includes(item.infoHash))
+        );
         if (found) {
           setTask(found);
           setDownloaded(found.totalDownloaded);
@@ -185,7 +191,14 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
     const interval = setInterval(fetchTask, task ? 2000 : 400);
 
     const listener = listen<TorrentProgressPayload>("download-progress", ({ payload }) => {
-      if (payload.id !== downloadId) return;
+      if (
+        task &&
+        payload.id !== task.id &&
+        payload.id !== downloadId &&
+        !payload.id.includes(downloadId)
+      ) {
+        return;
+      }
       setDownloaded(payload.downloaded);
       setSpeed(payload.speed);
       if (payload.uploadSpeed !== undefined) setUploadSpeed(payload.uploadSpeed);

@@ -197,8 +197,14 @@ pub async fn prepare_with_headers(
         });
     }
 
+    if url.starts_with("magnet:") {
+        println!("[MAGNET_ROUTED_TO_HTTP_ERROR] Tentativa de enviar magnet link para cliente HTTP! url='{}'", url);
+        return Err("Magnet links não utilizam cliente HTTP.".into());
+    }
+
     let parsed = Url::parse(url).map_err(|_| "A URL informada é inválida.".to_string())?;
     if !matches!(parsed.scheme(), "http" | "https") {
+        println!("[MAGNET_ROUTED_TO_HTTP_ERROR] URL não HTTP/HTTPS recebida no cliente HTTP: '{}'", url);
         return Err("Apenas URLs HTTP ou HTTPS são permitidas.".into());
     }
     let client = Client::builder()
@@ -343,6 +349,11 @@ pub async fn prepare_resume(
     offset: i64,
     request_headers: HeaderMap,
 ) -> Result<(Response, i64), String> {
+    if task.download_type == "torrent" || task.original_url.starts_with("magnet:") {
+        println!("[MAGNET_ROUTED_TO_HTTP_ERROR] Tentativa de enviar torrent para cliente HTTP em prepare_resume! url='{}'", task.original_url);
+        return Err("Torrents não utilizam cliente HTTP.".into());
+    }
+
     if offset < 0 || task.file_size.is_some_and(|size| offset > size) {
         return Err("O arquivo parcial possui um tamanho incompatível.".into());
     }

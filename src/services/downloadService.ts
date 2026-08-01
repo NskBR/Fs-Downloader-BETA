@@ -188,3 +188,6 @@ export const confirmTorrent = (input: {
 
 export const cancelTorrent = (infoHash: string, deleteFiles: boolean = false) =>
   invoke<void>("cancel_torrent", { infoHash, deleteFiles });
+
+export const openTorrentProgressWindow = (infoHash: string, taskId: string) =>
+  invoke<void>("open_torrent_progress_window", { infoHash, taskId });

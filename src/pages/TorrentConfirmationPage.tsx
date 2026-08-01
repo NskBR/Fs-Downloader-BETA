@@ -247,8 +247,9 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
         startImmediately: autoStart,
       });
       localStorage.removeItem(storageKey);
-      void appWindow.close();
       void emit("download-created", task).catch(() => {});
+      await service.openTorrentProgressWindow(infoHash, task.id);
+      void appWindow.close();
     } catch (cause) {
       console.error("[ADD_TORRENT_ALERT] Erro ao confirmar torrent:", cause);
       setError(String(cause));

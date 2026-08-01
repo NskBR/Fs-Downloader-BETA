@@ -232,6 +232,7 @@ pub fn run() {
             commands::transfer::parse_torrent_info,
             commands::transfer::confirm_torrent,
             commands::transfer::cancel_torrent,
+            commands::transfer::open_torrent_progress_window,
             commands::metrics::metrics_snapshot,
             commands::metrics::reset_metrics,
             commands::metrics::export_metrics,

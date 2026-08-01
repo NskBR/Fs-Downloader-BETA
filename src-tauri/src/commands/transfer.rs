@@ -265,6 +265,66 @@ pub async fn open_download_confirmation(
     Ok(())
 }
 
+  #[tauri::command]
+  pub async fn open_torrent_progress_window(
+      app: AppHandle,
+      info_hash: String,
+      task_id: String,
+  ) -> Result<(), String> {
+      let label = format!("torrent-progress-{}", info_hash);
+      println!(
+          "[PROGRESS_WINDOW_OPEN] label='{}', info_hash='{}', task_id='{}'",
+          label, info_hash, task_id
+      );
+
+      if let Some(window) = app.get_webview_window(&label) {
+          println!("[PROGRESS_WINDOW_OPEN] Janela existente encontrada, executando show() e set_focus()");
+          let _ = window.show();
+          let _ = window.set_focus();
+          return Ok(());
+      }
+
+      {
+          let mut creating = CREATING_WINDOWS.lock().map_err(|error| error.to_string())?;
+          if creating.contains(&label) {
+              return Ok(());
+          }
+          creating.insert(label.clone());
+      }
+
+      #[cfg(debug_assertions)]
+      let window_url = app
+          .config()
+          .build
+          .dev_url
+          .clone()
+          .map(WebviewUrl::External)
+          .unwrap_or_else(|| WebviewUrl::App("index.html".into()));
+      #[cfg(not(debug_assertions))]
+      let window_url = WebviewUrl::App("index.html".into());
+
+      let build_result = WebviewWindowBuilder::new(&app, &label, window_url)
+          .title("SF Downloader - Torrent")
+          .inner_size(540.0, 290.0)
+          .min_inner_size(460.0, 240.0)
+          .resizable(true)
+          .decorations(false)
+          .shadow(false)
+          .visible(true)
+          .transparent(true)
+          .center()
+          .build();
+
+      {
+          if let Ok(mut creating) = CREATING_WINDOWS.lock() {
+              creating.remove(&label);
+          }
+      }
+
+      build_result.map_err(|error| format!("Falha ao abrir janela de progresso torrent: {error}"))?;
+      Ok(())
+  }
+
 #[tauri::command]
 pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), String> {
     let label = format!("download-{}", id);
@@ -685,7 +745,46 @@ pub fn cancel_download(
 }
 
 #[tauri::command]
-pub fn pause_download(runtime: State<'_, DownloadRuntime>, id: String) -> Result<bool, String> {
+pub fn pause_download(
+    app: AppHandle,
+    database: State<'_, Database>,
+    runtime: State<'_, DownloadRuntime>,
+    id: String,
+) -> Result<bool, String> {
+    if let Ok(conn) = database.connect() {
+        if let Ok(Some(task)) = downloads::find(&conn, &id) {
+            if task.download_type == "torrent" || task.original_url.starts_with("magnet:") {
+                let info_hash = task.info_hash.clone().unwrap_or_default();
+                println!("[TORRENT_PAUSE] info_hash='{}', handle_valido=true, estado_antes='{:?}', estado_depois='paused'", info_hash, task.status);
+                let _ = downloads::update_progress(
+                    &conn,
+                    &crate::database::models::UpdateDownloadInput {
+                        id: id.clone(),
+                        status: crate::database::models::DownloadStatus::Paused,
+                        total_downloaded: task.total_downloaded,
+                        speed_current: 0.0,
+                        speed_average: task.speed_average,
+                        seeds: None,
+                        peers: None,
+                        upload_speed: None,
+                        total_uploaded: None,
+                    },
+                );
+                use tauri::Emitter;
+                let _ = app.emit(
+                    "download-progress",
+                    serde_json::json!({
+                        "id": task.id,
+                        "downloaded": task.total_downloaded,
+                        "total": task.file_size,
+                        "speed": 0.0,
+                        "status": "paused",
+                        "error": null
+                    }),
+                );
+            }
+        }
+    }
     runtime.pause(&id)
 }
 
@@ -713,6 +812,11 @@ pub async fn replace_download_url(
     id: String,
     new_url: String,
 ) -> Result<DownloadTask, String> {
+    if new_url.starts_with("magnet:") {
+        println!("[MAGNET_ROUTED_TO_HTTP_ERROR] Tentativa de enviar magnet link para replace_download_url! url='{}'", new_url);
+        return Err("Magnet links não podem ser utilizados como URL HTTP.".into());
+    }
+
     let task = downloads::find(&database.connect()?, &id)
         .map_err(|error| error.to_string())?
         .ok_or_else(|| "Download não encontrado.".to_string())?;
@@ -811,6 +915,48 @@ pub async fn resume_owned(
     };
     if task.status == crate::database::models::DownloadStatus::Completed {
         return Err("Este download já foi concluído.".into());
+    }
+
+    if task.download_type == "torrent" || task.original_url.starts_with("magnet:") {
+        let info_hash = task.info_hash.clone().unwrap_or_default();
+        println!(
+            "[TORRENT_RESUME] info_hash='{}', handle_valido=true, estado_antes='{:?}', estado_depois='downloading'",
+            info_hash, task.status
+        );
+
+        let control = TaskControl::new();
+        control.set_speed_limit(task.speed_limit_download).await;
+        runtime.register(task.id.clone(), control.clone())?;
+
+        let connection = database.connect()?;
+        let _ = downloads::update_progress(
+            &connection,
+            &crate::database::models::UpdateDownloadInput {
+                id: task.id.clone(),
+                status: crate::database::models::DownloadStatus::Downloading,
+                total_downloaded: task.total_downloaded,
+                speed_current: 0.0,
+                speed_average: task.speed_average,
+                seeds: None,
+                peers: None,
+                upload_speed: None,
+                total_uploaded: None,
+            },
+        );
+
+        let database_clone = database.clone();
+        let spawned_task = task.clone();
+        let app_handle = app.clone();
+        let runtime_clone = runtime.clone();
+        let task_id = task.id.clone();
+
+        tauri::async_runtime::spawn(async move {
+            crate::download::torrent::run_torrent(app_handle, database_clone, spawned_task, control).await;
+            runtime_clone.remove(&task_id);
+        });
+
+        let _ = open_torrent_progress_window(app.clone(), info_hash, task.id.clone()).await;
+        return Ok(task);
     }
     if runtime.has(&task.id) {
         for _ in 0..50 {
