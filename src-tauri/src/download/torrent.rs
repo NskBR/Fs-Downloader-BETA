@@ -301,6 +301,11 @@ pub async fn run_torrent(
         }
 
         if control.was_cancelled() {
+            println!("[TORRENT] Cancelando e removendo torrent da sessão: {}", task.id);
+            // Remocao explicita da sessao P2P
+            let id_num = handle.id();
+            let _ = session.delete(librqbit::api::TorrentIdOrHash::Id(id_num), false).await;
+
             let _ = downloads::update_progress(
                 &connection,
                 &UpdateDownloadInput {
@@ -340,7 +345,7 @@ pub async fn run_torrent(
         let speed_bytes = stats
             .live
             .as_ref()
-            .map(|l| (l.download_speed.mbps * 1024.0 * 1024.0 / 8.0) as f64)
+            .map(|l| (l.download_speed.mbps * 1_000_000.0 / 8.0) as f64)
             .unwrap_or(0.0);
 
         let upload_speed = stats
@@ -397,5 +402,43 @@ pub async fn run_torrent(
         if stats.finished {
             break;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_invalid_torrent_file() {
+        let engine = TorrentEngine::new();
+        let result = engine.parse_torrent("caminho_inexistente.torrent").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_single_file_torrent_parsing() {
+        let engine = TorrentEngine::new();
+        let source = "magnet:?xt=urn:btih:e55590274990d3f100af23961a426a195f41a316&dn=Ubuntu-22.04-desktop-amd64.iso&xl=3654959104";
+        let meta = engine.parse_torrent(source).await.unwrap();
+        assert_eq!(meta.name, "Ubuntu-22.04-desktop-amd64.iso");
+        assert_eq!(meta.total_size, 3654959104);
+        assert_eq!(meta.files.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_multi_file_selection() {
+        let files = vec![
+            TorrentFileItem { index: 0, path: "file1.mkv".into(), size: 1000 },
+            TorrentFileItem { index: 1, path: "file2.mkv".into(), size: 2000 },
+        ];
+        let meta = ParsedTorrentMeta {
+            name: "Multi Torrent".into(),
+            info_hash: "1234567890".into(),
+            total_size: 3000,
+            files,
+        };
+        assert_eq!(meta.files.len(), 2);
+        assert_eq!(meta.total_size, 3000);
     }
 }

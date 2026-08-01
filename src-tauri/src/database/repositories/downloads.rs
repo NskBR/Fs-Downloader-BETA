@@ -159,6 +159,8 @@ mod tests {
             etag: None,
             last_modified: None,
             delete_archive_after_extract: false,
+            download_type: "http".into(),
+            info_hash: None,
         }
     }
 
@@ -176,6 +178,10 @@ mod tests {
                 total_downloaded: 512,
                 speed_current: 0.0,
                 speed_average: 20.0,
+                seeds: None,
+                peers: None,
+                upload_speed: None,
+                total_uploaded: None,
             },
         )
         .unwrap();
@@ -202,6 +208,10 @@ mod tests {
                 total_downloaded: 2,
                 speed_current: 10.0,
                 speed_average: 10.0,
+                seeds: None,
+                peers: None,
+                upload_speed: None,
+                total_uploaded: None,
             },
         )
         .unwrap();
@@ -234,6 +244,10 @@ mod tests {
                 total_downloaded: 128,
                 speed_current: 10.0,
                 speed_average: 10.0,
+                seeds: None,
+                peers: None,
+                upload_speed: None,
+                total_uploaded: None,
             },
         )
         .unwrap();

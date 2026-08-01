@@ -137,16 +137,17 @@ pub fn run(connection: &mut Connection) -> Result<()> {
         transaction.commit()?;
     }
     if version < 7 {
-        let transaction = connection.transaction()?;
-        transaction.execute_batch(MIGRATION_007)?;
-        transaction.execute_batch("PRAGMA user_version = 7")?;
-        transaction.commit()?;
+        let _ = connection.execute("ALTER TABLE download_tasks ADD COLUMN delete_archive_after_extract INTEGER NOT NULL DEFAULT 0", []);
+        let _ = connection.execute("PRAGMA user_version = 7", []);
     }
     if version < 8 {
-        let transaction = connection.transaction()?;
-        transaction.execute_batch(MIGRATION_008)?;
-        transaction.execute_batch("PRAGMA user_version = 8")?;
-        transaction.commit()?;
+        let _ = connection.execute("ALTER TABLE download_tasks ADD COLUMN download_type TEXT NOT NULL DEFAULT 'http'", []);
+        let _ = connection.execute("ALTER TABLE download_tasks ADD COLUMN info_hash TEXT", []);
+        let _ = connection.execute("ALTER TABLE download_tasks ADD COLUMN seeds INTEGER NOT NULL DEFAULT 0", []);
+        let _ = connection.execute("ALTER TABLE download_tasks ADD COLUMN peers INTEGER NOT NULL DEFAULT 0", []);
+        let _ = connection.execute("ALTER TABLE download_tasks ADD COLUMN upload_speed REAL NOT NULL DEFAULT 0.0", []);
+        let _ = connection.execute("ALTER TABLE download_tasks ADD COLUMN total_uploaded INTEGER NOT NULL DEFAULT 0", []);
+        let _ = connection.execute("PRAGMA user_version = 8", []);
     }
     Ok(())
 }

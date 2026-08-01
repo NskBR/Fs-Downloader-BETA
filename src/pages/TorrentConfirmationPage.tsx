@@ -1,16 +1,11 @@
 import {
   Download,
-  Folder,
   FolderOpen,
-  Settings,
-  Check,
   X,
   Plus,
-  Info,
   Layers,
   FileText,
   FileVideo,
-  Signal,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -18,8 +13,6 @@ import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize } from "@tauri-apps/api/dpi";
 import { Toggle } from "../components/ui/Toggle";
-import { CustomSelect } from "../components/ui/CustomSelect";
-import { categoryForFile, downloadCategories } from "../domain/categories";
 import { loadSettings } from "../services/settingsStorage";
 import * as service from "../services/downloadService";
 
@@ -75,17 +68,10 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
     savedFolder || payload?.destination || settings.rootDownloadFolder || "",
   );
   const [torrentName, setTorrentName] = useState(
-    payload?.preview?.fileName || "Breaking Bad Season 1 Complete 720p BRRip",
+    payload?.preview?.fileName || "Torrent Download",
   );
   const [createSubfolder, setCreateSubfolder] = useState(true);
   const [autoStart, setAutoStart] = useState(true);
-  const [verifyFiles, setVerifyFiles] = useState(true);
-  const [sequentialDownload, setSequentialDownload] = useState(true);
-  const [limitSpeed, setLimitSpeed] = useState(false);
-  const [downloadLimit, setDownloadLimit] = useState("");
-  const [uploadLimit, setUploadLimit] = useState("");
-  const [priority, setPriority] = useState("Normal");
-  const [selectedCategory, setSelectedCategory] = useState("Séries");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,7 +88,6 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
           if (!active) return;
           const realName = meta.name && meta.name !== "Torrent Magnet" ? meta.name : (payload.preview?.fileName || "Torrent Download");
           setTorrentName(realName);
-          setSelectedCategory(categoryForFile(realName, settings.customCategories));
 
           if (meta.files && meta.files.length > 0) {
             setFileList(
@@ -124,27 +109,18 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             ]);
           }
         })
-        .catch(() => {
+        .catch((err) => {
           if (!active) return;
-          const fallbackName = payload.preview?.fileName || "Torrent Download";
-          setTorrentName(fallbackName);
-          setFileList([
-            {
-              id: 1,
-              name: fallbackName,
-              size: payload.preview?.fileSize || 0,
-              selected: true,
-            },
-          ]);
+          setError(String(err));
         });
     }
     return () => {
       active = false;
     };
-  }, [payload, settings.customCategories]);
+  }, [payload]);
 
   useEffect(() => {
-    void appWindow.setSize(new LogicalSize(760, 580)).catch(() => {});
+    void appWindow.setSize(new LogicalSize(740, 520)).catch(() => {});
   }, [appWindow]);
 
   const close = () => void appWindow.close();
@@ -180,11 +156,6 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   const totalSize = fileList.reduce((acc, f) => acc + f.size, 0);
   const selectedSize = selectedFiles.reduce((acc, f) => acc + f.size, 0);
 
-  const categories = [
-    ...downloadCategories.map((item) => item.name),
-    ...settings.customCategories.map((item) => item.name),
-  ];
-
   const finish = async () => {
     if (!payload?.url) return;
     setBusy(true);
@@ -198,8 +169,8 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
         true,
         false,
         undefined,
-        selectedCategory,
-        true,
+        undefined,
+        autoStart,
       );
       localStorage.removeItem(storageKey);
       close();
@@ -220,7 +191,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             <Download size={18} />
           </div>
           <div data-tauri-drag-region>
-            <h1 data-tauri-drag-region className="text-truncate" style={{ maxWidth: 520 }}>
+            <h1 data-tauri-drag-region className="text-truncate" style={{ maxWidth: 500 }}>
               {torrentName}
             </h1>
             <p data-tauri-drag-region>Adicionar Torrent • Configure seu download antes de iniciar.</p>
@@ -237,22 +208,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
       <main className="tc-body-grid">
         {/* Left Column: Settings */}
         <div className="tc-left-col">
-          {/* Card 1: Salvar em */}
-          <div className="tc-card">
-            <label className="tc-card-label">Salvar em</label>
-            <div className="tc-path-row">
-              <div className="tc-path-box">{destination}</div>
-              <button type="button" className="tc-btn-outline" onClick={chooseFolder}>
-                Alterar
-              </button>
-            </div>
-            <div className="tc-toggle-inline">
-              <Toggle checked={createSubfolder} onChange={setCreateSubfolder} />
-              <span>Criar subpasta</span>
-            </div>
-          </div>
-
-          {/* Nome do Torrent */}
+          {/* 1. Nome do Torrent */}
           <div className="tc-card">
             <label className="tc-card-label">Nome do torrent</label>
             <input
@@ -263,95 +219,31 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             />
           </div>
 
-          {/* Card 2: Opções do Torrent */}
-          <div className="tc-card tc-options-card">
-            <div className="tc-card-header">
-              <Settings size={16} className="tc-icon-cyan" />
-              <strong>Opções do torrent</strong>
+          {/* 2. Pasta de destino + Alterar */}
+          <div className="tc-card">
+            <label className="tc-card-label">Salvar em</label>
+            <div className="tc-path-row">
+              <div className="tc-path-box">{destination}</div>
+              <button type="button" className="tc-btn-outline" onClick={chooseFolder}>
+                Alterar
+              </button>
             </div>
+            {/* 3. Criar subpasta */}
+            <div className="tc-toggle-inline" style={{ marginTop: 6 }}>
+              <Toggle checked={createSubfolder} onChange={setCreateSubfolder} />
+              <span>Criar subpasta</span>
+            </div>
+          </div>
 
-            <div className="tc-option-row">
+          {/* 7. Iniciar download automaticamente */}
+          <div className="tc-card" style={{ marginTop: "auto" }}>
+            <div className="tc-toggle-inline">
               <Toggle checked={autoStart} onChange={setAutoStart} />
-              <div>
-                <strong>Iniciar download automaticamente</strong>
-                <span>Inicia o download assim que o torrent for adicionado.</span>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <strong style={{ color: "#ffffff", fontSize: 11.5 }}>Iniciar automaticamente</strong>
+                <span style={{ fontSize: 10, color: "var(--text-2)" }}>Inicia o download assim que for adicionado.</span>
               </div>
             </div>
-
-            <div className="tc-option-row">
-              <Toggle checked={verifyFiles} onChange={setVerifyFiles} />
-              <div>
-                <strong>Verificar arquivos ao adicionar</strong>
-                <span>Verifica os dados dos arquivos antes de iniciar o download.</span>
-              </div>
-            </div>
-
-            <div className="tc-select-row">
-              <label>Prioridade</label>
-              <div className="tc-select-box">
-                <Signal size={14} />
-                <CustomSelect
-                  value={priority}
-                  options={[
-                    { value: "Baixa", label: "Baixa" },
-                    { value: "Normal", label: "Normal" },
-                    { value: "Alta", label: "Alta" },
-                  ]}
-                  onChange={setPriority}
-                />
-              </div>
-            </div>
-
-            <div className="tc-select-row">
-              <label>Categoria</label>
-              <div className="tc-select-box">
-                <Folder size={14} />
-                <CustomSelect
-                  value={selectedCategory}
-                  options={categories.map((c) => ({ value: c, label: c }))}
-                  onChange={setSelectedCategory}
-                />
-              </div>
-            </div>
-
-            <div className="tc-option-row">
-              <Toggle checked={sequentialDownload} onChange={setSequentialDownload} />
-              <div>
-                <strong>Baixar em sequência <Info size={12} className="tc-info-icon" /></strong>
-                <span>Baixa os arquivos na ordem correta para reprodução.</span>
-              </div>
-            </div>
-
-            <div className="tc-option-row">
-              <Toggle checked={limitSpeed} onChange={setLimitSpeed} />
-              <div>
-                <strong>Limitar velocidade</strong>
-                <span>Define um limite de velocidade global para este torrent.</span>
-              </div>
-            </div>
-
-            {limitSpeed && (
-              <div className="tc-speed-inputs">
-                <div>
-                  <label>Download</label>
-                  <input
-                    type="text"
-                    placeholder="— KB/s"
-                    value={downloadLimit}
-                    onChange={(e) => setDownloadLimit(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label>Upload</label>
-                  <input
-                    type="text"
-                    placeholder="— KB/s"
-                    value={uploadLimit}
-                    onChange={(e) => setUploadLimit(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -363,17 +255,8 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
               <strong>Conteúdo do torrent</strong>
             </div>
 
+            {/* 4. Lista real de arquivos & 6. Tamanho selecionado */}
             <div className="tc-stats-header">
-              <div className="tc-stat-pair">
-                <div>
-                  <span className="tc-stat-label">Nome</span>
-                  <strong className="tc-stat-val text-truncate">{torrentName}</strong>
-                </div>
-                <div className="text-right">
-                  <span className="tc-stat-label">Espaço em disco</span>
-                  <strong className="tc-stat-val">95,7 GB livre</strong>
-                </div>
-              </div>
               <div className="tc-stat-pair">
                 <div>
                   <span className="tc-stat-label">Tamanho total</span>
@@ -388,6 +271,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
               </div>
             </div>
 
+            {/* 5. Seleção de arquivos */}
             <div className="tc-actions-bar">
               <button type="button" className="tc-btn-outline" onClick={selectAll}>
                 Selecionar tudo
@@ -397,14 +281,14 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
               </button>
             </div>
 
-            {/* Table / Tree view of files */}
+            {/* Tabela de Arquivos Reais */}
             <div className="tc-table-wrap">
               <div className="tc-table-header-row">
                 <span className="col-name">Nome ↓</span>
                 <span className="col-size">Tamanho</span>
               </div>
               <div className="tc-table-body">
-                {/* Folder Root */}
+                {/* Pasta Raiz */}
                 <div className="tc-file-row folder-root">
                   <input
                     type="checkbox"
@@ -416,7 +300,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                   <span className="tc-file-size">{bytes(totalSize)}</span>
                 </div>
 
-                {/* Child File Rows */}
+                {/* Linhas dos Arquivos */}
                 {fileList.map((f) => (
                   <div key={f.id} className="tc-file-row child">
                     <input
@@ -445,14 +329,15 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             <strong>
               {selectedCount} de {totalFilesCount} arquivos selecionados • {bytes(selectedSize)}
             </strong>
-            <span>Você pode alterar a seleção de arquivos antes de iniciar o download.</span>
           </div>
         </div>
 
         <div className="tc-footer-right">
+          {/* 8. Cancelar */}
           <button type="button" className="tc-btn-dark" onClick={close}>
             Cancelar
           </button>
+          {/* 9. Adicionar Torrent */}
           <button
             type="button"
             className="tc-btn-cyan-solid"
