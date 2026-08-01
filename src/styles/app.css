@@ -3747,10 +3747,8 @@ html, body, #root, .window-frame {
    CONFIGURAÇÕES — REDESIGN COMPLETO BASEADO NA FOTO DE REFERÊNCIA
    ========================================================================== */
 /* ==========================================================================
-   CONFIGURAÇÕES — REDESIGN COMPLETO BASEADO NA FOTO DE REFERÊNCIA
-   ========================================================================== */
-.cfg-container {
-  padding: 16px 24px;
+   CONFIGURAÇÕES — REDESIG.cfg-container {
+  padding: 10px 20px 6px;
   width: 100%;
   max-width: 1000px;
   margin: 0 auto;
@@ -3773,13 +3771,13 @@ html, body, #root, .window-frame {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   width: 100%;
   flex-shrink: 0;
 }
 
 .cfg-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   color: #ffffff;
   margin: 0 0 2px 0;
@@ -3787,7 +3785,7 @@ html, body, #root, .window-frame {
 }
 
 .cfg-subtitle {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-2, #8a92a3);
   margin: 0;
 }
@@ -3811,7 +3809,7 @@ html, body, #root, .window-frame {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 4px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
   box-sizing: border-box;
   flex-shrink: 0;
 }
@@ -3822,12 +3820,12 @@ html, body, #root, .window-frame {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 36px;
+  height: 34px;
   border-radius: 9px;
   border: 1.5px solid transparent;
   background: transparent;
   color: var(--text-2, #8a92a3);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -3862,7 +3860,7 @@ html, body, #root, .window-frame {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   box-sizing: border-box;
 }
 
@@ -3870,14 +3868,14 @@ html, body, #root, .window-frame {
   width: 100%;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
   box-sizing: border-box;
 }
 
 .cfg-col {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 /* Card de Configuração */
@@ -3886,7 +3884,13 @@ html, body, #root, .window-frame {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+  box-sizing: border-box;
+}12px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -4021,6 +4025,255 @@ html, body, #root, .window-frame {
 }
 
 .cfg-item-right {
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   ABA ARQUIVOS — CATEGORIAS & ORGANIZAÇÃO DE ARQUIVOS (FOTO DE REFERÊNCIA)
+   ========================================================================== */
+.cfg-cat-form-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.cfg-cat-input {
+  flex: 1;
+  height: 34px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: #ffffff;
+  font-size: 11.5px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.cfg-cat-input:focus {
+  border-color: var(--ember-solid, #06b6d4);
+}
+
+.cfg-btn-add-cat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--ember-solid, #06b6d4);
+  border: none;
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.cfg-btn-add-cat:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.cfg-btn-add-cat:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Tabela de Categorias */
+.cfg-cat-table-wrap {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.cfg-cat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+
+.cfg-cat-table th {
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-2, #8a92a3);
+  font-size: 11px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cfg-cat-table td {
+  padding: 8px 12px;
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.cfg-cat-table tr:last-child td {
+  border-bottom: none;
+}
+
+.cfg-cat-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.cfg-cat-folder-icon {
+  color: var(--ember-solid, #06b6d4);
+  flex-shrink: 0;
+}
+
+.cfg-cat-ext-cell {
+  color: var(--text-2, #9ca3af);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+}
+
+.cfg-cat-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.cfg-cat-action-btn {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.cfg-cat-action-btn.edit {
+  color: var(--ember-solid, #06b6d4);
+}
+
+.cfg-cat-action-btn.delete {
+  color: #ef4444;
+}
+
+.cfg-cat-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.text-right {
+  text-align: right;
+}
+
+/* Card Info "Sobre as categorias" */
+.cfg-info-card {
+  background: rgba(6, 182, 212, 0.04) !important;
+  border-color: rgba(6, 182, 212, 0.15) !important;
+}
+
+.cfg-info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.cfg-info-icon-box {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--ember-solid, #06b6d4);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.cfg-info-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cfg-info-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.cfg-info-desc {
+  font-size: 11px;
+  color: var(--text-2, #9ca3af);
+  margin: 0;
+  line-height: 1.35;
+}
+
+/* Sub-card Prévia da Estrutura */
+.cfg-preview-box {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cfg-preview-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.cfg-preview-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.cfg-preview-subtitle {
+  font-size: 10.5px;
+  color: var(--text-2, #8a92a3);
+}
+
+.cfg-tree-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 0 0 2px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--text, #f0f2f5);
+}
+
+.cfg-tree-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cfg-tree-node.child {
+  padding-left: 6px;
+}
+
+.cfg-tree-arrow {
+  color: var(--text-2, #8a92a3);
+  font-size: 10px;
+}
+
+.cfg-tree-indent {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.cfg-tree-folder-icon {
+  color: var(--ember-solid, #06b6d4);
   flex-shrink: 0;
 }
 

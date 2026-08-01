@@ -580,22 +580,138 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
         {activeTab === "arquivos" && (
           <div className="cfg-tab-view">
             <div className="cfg-grid-2col">
+              {/* Coluna Esquerda: Categorias Personalizadas & Sobre as categorias */}
+              <div className="cfg-col">
+                {/* Card 1: Categorias Personalizadas */}
+                <div className="cfg-card">
+                  <div className="cfg-card-header">
+                    <div className="cfg-card-icon-box">
+                      <Folder className="cfg-card-icon" size={18} />
+                    </div>
+                    <div>
+                      <h3 className="cfg-card-title">Categorias Personalizadas</h3>
+                      <p className="cfg-card-subtitle">Crie pastas para organizar automaticamente os arquivos baixados.</p>
+                    </div>
+                  </div>
+
+                  <div className="cfg-card-content">
+                    {/* Formulário de Criação de Categoria */}
+                    <div className="cfg-cat-form-row">
+                      <input
+                        type="text"
+                        className="cfg-cat-input"
+                        placeholder="Nome, por exemplo: Jogos"
+                        value={categoryName}
+                        onChange={(e) => setCategoryName(e.target.value)}
+                        maxLength={60}
+                      />
+                      <input
+                        type="text"
+                        className="cfg-cat-input"
+                        placeholder="Extensões: iso, rom, pkg"
+                        value={categoryExtensions}
+                        onChange={(e) => setCategoryExtensions(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="cfg-btn-add-cat"
+                        onClick={addCategory}
+                        disabled={!categoryName.trim()}
+                      >
+                        <Plus size={14} />
+                        <span>Adicionar categoria</span>
+                      </button>
+                    </div>
+
+                    {/* Tabela de Categorias */}
+                    <div className="cfg-cat-table-wrap">
+                      <table className="cfg-cat-table">
+                        <thead>
+                          <tr>
+                            <th>Categoria</th>
+                            <th>Extensões</th>
+                            <th className="text-right">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            { id: "def-jogos", name: "Jogos", extensions: ["iso", "rom", "pkg"], isDefault: true },
+                            { id: "def-series", name: "Séries", extensions: ["mkv", "mp4"], isDefault: true },
+                            { id: "def-docs", name: "Documentos", extensions: ["pdf", "docx"], isDefault: true },
+                            ...draft.customCategories.map(c => ({ ...c, isDefault: false }))
+                          ].map((cat) => (
+                            <tr key={cat.id}>
+                              <td>
+                                <div className="cfg-cat-name-cell">
+                                  <Folder size={15} className="cfg-cat-folder-icon" />
+                                  <span>{cat.name}</span>
+                                </div>
+                              </td>
+                              <td className="cfg-cat-ext-cell">
+                                {Array.isArray(cat.extensions) ? cat.extensions.join(", ") : ""}
+                              </td>
+                              <td className="text-right">
+                                <div className="cfg-cat-actions">
+                                  <button
+                                    type="button"
+                                    className="cfg-cat-action-btn edit"
+                                    title="Editar categoria"
+                                  >
+                                    <Pencil size={13} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="cfg-cat-action-btn delete"
+                                    onClick={() => {
+                                      if (!cat.isDefault) removeCategory(cat.id);
+                                    }}
+                                    title="Excluir categoria"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 2: Sobre as categorias */}
+                <div className="cfg-card cfg-info-card">
+                  <div className="cfg-info-row">
+                    <div className="cfg-info-icon-box">
+                      <Info size={16} />
+                    </div>
+                    <div className="cfg-info-text-group">
+                      <strong className="cfg-info-title">Sobre as categorias</strong>
+                      <p className="cfg-info-desc">
+                        Os arquivos serão movidos para a pasta correspondente com base nas extensões informadas.<br />
+                        Use vírgula para separar múltiplas extensões: ex: mp4, mkv, avi
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Coluna Direita: Organização de Arquivos */}
               <div className="cfg-col">
                 <div className="cfg-card">
                   <div className="cfg-card-header">
                     <div className="cfg-card-icon-box">
-                      <Folder className="cfg-card-icon" size={20} />
+                      <Folder className="cfg-card-icon" size={18} />
                     </div>
                     <div>
                       <h3 className="cfg-card-title">Organização de Arquivos</h3>
-                      <p className="cfg-card-subtitle">Mantenha seus downloads organizados automaticamente.</p>
+                      <p className="cfg-card-subtitle">Defina como seus arquivos baixados serão organizados.</p>
                     </div>
                   </div>
 
                   <div className="cfg-card-content cfg-list-items">
                     <div className="cfg-item-row">
                       <div className="cfg-item-left">
-                        <FileText size={18} className="cfg-item-icon" />
                         <div>
                           <strong className="cfg-item-label">Criar subpastas por categoria</strong>
                           <span className="cfg-item-desc">Organiza os downloads em pastas por tipo de arquivo.</span>
@@ -611,7 +727,6 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
 
                     <div className="cfg-item-row">
                       <div className="cfg-item-left">
-                        <FileText size={18} className="cfg-item-icon" />
                         <div>
                           <strong className="cfg-item-label">Renomear arquivos automaticamente</strong>
                           <span className="cfg-item-desc">Usa o nome original do conteúdo quando disponível.</span>
@@ -624,65 +739,50 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                         />
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
 
-              <div className="cfg-col">
-                <div className="cfg-card">
-                  <div className="cfg-card-header">
-                    <div className="cfg-card-icon-box">
-                      <Folder className="cfg-card-icon" size={20} />
-                    </div>
-                    <div>
-                      <h3 className="cfg-card-title">Categorias Personalizadas</h3>
-                      <p className="cfg-card-subtitle">Crie pastas para organizar automaticamente os arquivos baixados.</p>
-                    </div>
-                  </div>
-                  <div className="cfg-card-content">
-                    <div className="category-create-row">
-                      <input
-                        value={categoryName}
-                        onChange={(event) => setCategoryName(event.target.value)}
-                        placeholder="Nome, por exemplo: Jogos"
-                        maxLength={60}
-                      />
-                      <input
-                        value={categoryExtensions}
-                        onChange={(event) => setCategoryExtensions(event.target.value)}
-                        placeholder="Extensões: iso, rom, pkg"
-                      />
-                      <button type="button" onClick={addCategory} disabled={!categoryName.trim()}>
-                        <Plus size={16} />
-                        <span>Adicionar</span>
-                      </button>
+                    <div className="cfg-item-row">
+                      <div className="cfg-item-left">
+                        <div>
+                          <strong className="cfg-item-label">Evitar arquivos duplicados</strong>
+                          <span className="cfg-item-desc">Se um arquivo já existir, adiciona um sufixo (ex: nome (1), nome (2)).</span>
+                        </div>
+                      </div>
+                      <div className="cfg-item-right">
+                        <Toggle
+                          checked={draft.autoRenameDuplicates ?? true}
+                          onChange={(val) => update("autoRenameDuplicates", val)}
+                        />
+                      </div>
                     </div>
 
-                    <div className="custom-category-list">
-                      {draft.customCategories.length === 0 ? (
-                        <p>Nenhuma categoria personalizada.</p>
-                      ) : (
-                        draft.customCategories.map((category) => (
-                          <article key={category.id}>
-                            <Tags size={16} />
-                            <div>
-                              <strong>{category.name}</strong>
-                              <span>
-                                {category.extensions.length
-                                  ? category.extensions.map((ext) => `.${ext}`).join(", ")
-                                  : "Sem extensões automáticas"}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              title="Remover categoria"
-                              onClick={() => removeCategory(category.id)}
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </article>
-                        ))
-                      )}
+                    {/* Sub-card: Prévia da estrutura */}
+                    <div className="cfg-preview-box">
+                      <div className="cfg-preview-header">
+                        <strong className="cfg-preview-title">Prévia da estrutura</strong>
+                        <span className="cfg-preview-subtitle">Exemplo de organização:</span>
+                      </div>
+                      <div className="cfg-tree-preview">
+                        <div className="cfg-tree-node root">
+                          <span className="cfg-tree-arrow">˅</span>
+                          <Folder size={14} className="cfg-tree-folder-icon" />
+                          <span>Downloads</span>
+                        </div>
+                        <div className="cfg-tree-node child">
+                          <span className="cfg-tree-indent">┊   </span>
+                          <Folder size={14} className="cfg-tree-folder-icon" />
+                          <span>Jogos</span>
+                        </div>
+                        <div className="cfg-tree-node child">
+                          <span className="cfg-tree-indent">┊   </span>
+                          <Folder size={14} className="cfg-tree-folder-icon" />
+                          <span>Séries</span>
+                        </div>
+                        <div className="cfg-tree-node child">
+                          <span className="cfg-tree-indent">┊   </span>
+                          <Folder size={14} className="cfg-tree-folder-icon" />
+                          <span>Documentos</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
