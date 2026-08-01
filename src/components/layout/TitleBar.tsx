@@ -45,7 +45,7 @@ export function TitleBar({ updateInfo }: TitleBarProps) {
             title={`Nova versão v${updateInfo.latest_version} disponível! Clique para abrir no GitHub.`}
           >
             <Sparkles size={12} className="icon-pulse" />
-            <span>Nova versão disponível (Update)</span>
+            <span>Nova versão disponível</span>
             <ExternalLink size={11} />
           </button>
         )}
