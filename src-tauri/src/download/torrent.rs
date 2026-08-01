@@ -14,12 +14,50 @@ pub struct TorrentFileItem {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ParsedTorrentMeta {
-    pub name: String,
-    pub info_hash: String,
-    pub total_size: u64,
-    pub files: Vec<TorrentFileItem>,
+#[serde(tag = "status", rename_all = "camelCase")]
+pub enum TorrentMetadataResponse {
+    #[serde(rename = "ready")]
+    Ready {
+        info_hash: String,
+        name: String,
+        total_size: u64,
+        files: Vec<TorrentFileItem>,
+    },
+    #[serde(rename = "fetchingMetadata")]
+    FetchingMetadata {
+        info_hash: String,
+        name: Option<String>,
+    },
+}
+
+impl TorrentMetadataResponse {
+    pub fn name(&self) -> Option<&str> {
+        match self {
+            Self::Ready { name, .. } => Some(name),
+            Self::FetchingMetadata { name, .. } => name.as_deref(),
+        }
+    }
+
+    pub fn info_hash(&self) -> &str {
+        match self {
+            Self::Ready { info_hash, .. } => info_hash,
+            Self::FetchingMetadata { info_hash, .. } => info_hash,
+        }
+    }
+
+    pub fn total_size(&self) -> Option<u64> {
+        match self {
+            Self::Ready { total_size, .. } => Some(*total_size),
+            Self::FetchingMetadata { .. } => None,
+        }
+    }
+
+    pub fn files(&self) -> Option<&[TorrentFileItem]> {
+        match self {
+            Self::Ready { files, .. } => Some(files.as_slice()),
+            Self::FetchingMetadata { .. } => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -147,59 +185,92 @@ impl TorrentEngine {
         Ok(session)
     }
 
-    pub async fn parse_torrent(&self, source: &str) -> Result<ParsedTorrentMeta, String> {
+    pub async fn parse_torrent(&self, source: &str) -> Result<TorrentMetadataResponse, String> {
+        self.parse_torrent_with_app(None, None, source).await
+    }
+
+    pub async fn parse_torrent_with_app(
+        &self,
+        app: Option<tauri::AppHandle>,
+        token: Option<&str>,
+        source: &str,
+    ) -> Result<TorrentMetadataResponse, String> {
         println!("[TORRENT_LOG][BACKEND_RECEIVE] Argumento recebido: '{}'", source);
 
         if source.starts_with("magnet:") {
+            println!("[MAGNET_RECEIVED] Magnet link recebido: {}", source);
             let magnet = librqbit::Magnet::parse(source)
                 .map_err(|_| "Não foi possível ler os metadados deste torrent.".to_string())?;
-            let mut name = magnet.name.clone().unwrap_or_default();
-
-            let mut total_size: u64 = 0;
-            if let Ok(parsed) = reqwest::Url::parse(source) {
-                for (key, value) in parsed.query_pairs() {
-                    if key == "dn" && (name.is_empty() || name == "Torrent Magnet") {
-                        let decoded = value.trim().to_string();
-                        if !decoded.is_empty() {
-                            name = decoded;
-                        }
-                    }
-                    if key == "xl" {
-                        if let Ok(size) = value.trim().parse::<u64>() {
-                            total_size = size;
-                        }
-                    }
-                }
-            }
-
-            if name.is_empty() {
-                name = "Torrent Magnet".into();
-            }
-
             let info_hash = format!("{:?}", magnet.as_id20());
+            let name = magnet.name.clone();
 
-            let files = if total_size > 0 {
-                vec![TorrentFileItem {
-                    index: 0,
-                    path: name.clone(),
-                    size: total_size,
-                }]
-            } else {
-                vec![]
-            };
+            println!("[MAGNET_PARSED] Magnet parsed: info_hash={}, name={:?}", info_hash, name);
 
-            let meta = ParsedTorrentMeta {
-                name,
+            // Iniciar busca de metadados em background
+            if let Some(app_handle) = app {
+                let token_str = token.unwrap_or("").to_string();
+                let source_str = source.to_string();
+                let info_hash_str = info_hash.clone();
+                let name_str = name.clone();
+
+                tokio::spawn(async move {
+                    use tauri::Emitter;
+                    println!("[MAGNET_WAITING_METADATA] Aguardando metadados dos peers P2P para info_hash={}...", info_hash_str);
+                    let temp_dir = std::env::temp_dir();
+                    let engine = TorrentEngine::new();
+                    if let Ok(session) = engine.get_session(&temp_dir).await {
+                        println!("[MAGNET_ADDED_TO_SESSION] Adicionado à sessão P2P temporária para busca de metadados.");
+                        if let Ok(handle) = engine.start_torrent_handle(&session, &source_str, &temp_dir).await {
+                            // Tentar buscar metadados por até 25 segundos
+                            for _ in 0..50 {
+                                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                                let stats = handle.stats();
+                                if stats.total_bytes > 0 {
+                                    let meta_name = handle.name().unwrap_or_else(|| name_str.clone().unwrap_or_else(|| "Torrent".into()));
+                                    let total_size = stats.total_bytes as u64;
+                                    let files = vec![TorrentFileItem {
+                                        index: 0,
+                                        path: meta_name.clone(),
+                                        size: total_size,
+                                    }];
+
+                                    println!("[MAGNET_METADATA_RECEIVED] Metadados recebidos do swarm P2P!");
+                                    println!(
+                                        "[MAGNET_METADATA_RECEIVED] info_hash={}, nome='{}', total_size={} bytes, files.len()={}",
+                                        info_hash_str, meta_name, total_size, files.len()
+                                    );
+                                    for f in &files {
+                                        println!(
+                                            "[MAGNET_METADATA_RECEIVED] File: index={}, path='{}', size={} bytes",
+                                            f.index, f.path, f.size
+                                        );
+                                    }
+
+                                    let ready_response = TorrentMetadataResponse::Ready {
+                                        info_hash: info_hash_str.clone(),
+                                        name: meta_name,
+                                        total_size,
+                                        files,
+                                    };
+
+                                    let event_name = format!("torrent-metadata-ready-{}", token_str);
+                                    let _ = app_handle.emit(&event_name, ready_response);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            let response = TorrentMetadataResponse::FetchingMetadata {
                 info_hash,
-                total_size,
-                files,
+                name,
             };
-
-            println!(
-                "[TORRENT_LOG][BACKEND_PARSED] Magnet parsing concluído: name='{}', totalSize={} bytes, files.len()={}",
-                meta.name, meta.total_size, meta.files.len()
-            );
-            return Ok(meta);
+            let json_str = serde_json::to_string(&response)
+                .map_err(|_| "Não foi possível ler os metadados deste torrent.".to_string())?;
+            println!("[TORRENT_LOG][BACKEND_RETURN_JSON] JSON enviado ao frontend:\n{}", json_str);
+            return Ok(response);
         }
 
         let path = PathBuf::from(source);
@@ -316,21 +387,21 @@ impl TorrentEngine {
             return Err("Não foi possível ler os metadados deste torrent.".into());
         }
 
-        let meta = ParsedTorrentMeta {
-            name,
+        let meta = TorrentMetadataResponse::Ready {
+            name: name.clone(),
             info_hash: format!("{:?}", uuid::Uuid::new_v4()),
             total_size,
-            files,
+            files: files.clone(),
         };
 
         println!(
             "[TORRENT_LOG][BACKEND_PARSED] Nome interno: '{}', Tipo: '{}', Total de arquivos: {}, Total Size: {} bytes",
-            meta.name,
-            if meta.files.len() > 1 { "Múltiplos arquivos" } else { "Arquivo único" },
-            meta.files.len(),
-            meta.total_size
+            name,
+            if files.len() > 1 { "Múltiplos arquivos" } else { "Arquivo único" },
+            files.len(),
+            total_size
         );
-        for f in &meta.files {
+        for f in &files {
             println!(
                 "[TORRENT_LOG][BACKEND_FILE] index: {}, path: '{}', size: {} bytes",
                 f.index, f.path, f.size
@@ -663,14 +734,15 @@ mod tests {
         let engine = TorrentEngine::new();
         let meta = engine.parse_torrent(&file_path.to_string_lossy()).await.unwrap();
 
-        assert_eq!(meta.name, "example.iso");
-        assert_eq!(meta.total_size, 1048576);
-        assert_eq!(meta.files.len(), 1);
-        assert_eq!(meta.files[0].path, "example.iso");
-        assert_eq!(meta.files[0].size, 1048576);
-        assert!(meta.total_size > 0);
-        assert!(!meta.files.is_empty());
-        assert!(meta.files.iter().all(|file| file.size > 0));
+        assert_eq!(meta.name().unwrap(), "example.iso");
+        assert_eq!(meta.total_size().unwrap(), 1048576);
+        let files = meta.files().unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].path, "example.iso");
+        assert_eq!(files[0].size, 1048576);
+        assert!(meta.total_size().unwrap() > 0);
+        assert!(!files.is_empty());
+        assert!(files.iter().all(|file| file.size > 0));
 
         let json = serde_json::to_string(&meta).unwrap();
         assert!(json.contains("example.iso"));
@@ -678,7 +750,7 @@ mod tests {
         assert!(json.contains("totalSize"));
         assert!(json.contains("files"));
 
-        let deserialized: ParsedTorrentMeta = serde_json::from_str(&json).unwrap();
+        let deserialized: TorrentMetadataResponse = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized, meta);
 
         let _ = std::fs::remove_file(file_path);
@@ -729,20 +801,21 @@ mod tests {
         let engine = TorrentEngine::new();
         let meta = engine.parse_torrent(&file_path.to_string_lossy()).await.unwrap();
 
-        assert_eq!(meta.name, "Example Pack");
-        assert_eq!(meta.total_size, 6144);
-        assert_eq!(meta.files.len(), 2);
-        assert_eq!(meta.files[0].path, "Season 01/Episode 01.mkv");
-        assert_eq!(meta.files[0].size, 2048);
-        assert_eq!(meta.files[1].path, "Season 01/Episode 02.mkv");
-        assert_eq!(meta.files[1].size, 4096);
+        assert_eq!(meta.name().unwrap(), "Example Pack");
+        assert_eq!(meta.total_size().unwrap(), 6144);
+        let files = meta.files().unwrap();
+        assert_eq!(files.len(), 2);
+        assert_eq!(files[0].path, "Season 01/Episode 01.mkv");
+        assert_eq!(files[0].size, 2048);
+        assert_eq!(files[1].path, "Season 01/Episode 02.mkv");
+        assert_eq!(files[1].size, 4096);
 
-        assert!(meta.total_size > 0);
-        assert!(!meta.files.is_empty());
-        assert!(meta.files.iter().all(|file| file.size > 0));
+        assert!(meta.total_size().unwrap() > 0);
+        assert!(!files.is_empty());
+        assert!(files.iter().all(|file| file.size > 0));
 
         let json = serde_json::to_string(&meta).unwrap();
-        let deserialized: ParsedTorrentMeta = serde_json::from_str(&json).unwrap();
+        let deserialized: TorrentMetadataResponse = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized, meta);
 
         let _ = std::fs::remove_file(file_path);

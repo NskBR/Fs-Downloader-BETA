@@ -6,15 +6,19 @@ import {
   Layers,
   FileText,
   FileVideo,
+  Loader2,
+  Clock,
+  Key,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { emit } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize } from "@tauri-apps/api/dpi";
 import { Toggle } from "../components/ui/Toggle";
 import { loadSettings } from "../services/settingsStorage";
 import * as service from "../services/downloadService";
+import type { TorrentMetadataResponse } from "../services/downloadService";
 
 interface Payload {
   url: string;
@@ -75,52 +79,93 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [status, setStatus] = useState<"fetchingMetadata" | "ready">("fetchingMetadata");
+  const [infoHash, setInfoHash] = useState<string>("");
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [fileList, setFileList] = useState<TorrentFileNode[]>([]);
 
   const mainRef = useRef<HTMLDivElement>(null);
+
+  // Timer para tempo decorrido no fetchingMetadata
+  useEffect(() => {
+    if (status !== "fetchingMetadata") return;
+    const interval = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [status]);
+
+  const handleMetadataResponse = (res: TorrentMetadataResponse) => {
+    console.log("[TORRENT_LOG][FRONTEND_STATE] Recebida resposta de metadados:", res);
+    if (res.status === "fetchingMetadata") {
+      setStatus("fetchingMetadata");
+      setInfoHash(res.infoHash || "");
+      if (res.name) setTorrentName(res.name);
+      setFileList([]);
+    } else if (res.status === "ready") {
+      if (!res.files || res.files.length === 0 || !res.totalSize || res.totalSize === 0) {
+        setError("Não foi possível ler os metadados deste torrent.");
+        setFileList([]);
+        return;
+      }
+      setStatus("ready");
+      setTorrentName(res.name);
+      setInfoHash(res.infoHash || "");
+      const nodes: TorrentFileNode[] = res.files.map((f, idx) => ({
+        id: idx + 1,
+        name: f.path,
+        size: f.size,
+        selected: true,
+      }));
+      setFileList(nodes);
+      console.log("[TORRENT_LOG][FRONTEND_STATE] Lista real de arquivos armazenada no estado:", nodes);
+    }
+  };
 
   useEffect(() => {
     let active = true;
     if (payload?.url) {
       setError(null);
       void service
-        .parseTorrentInfo(payload.url)
-        .then((meta) => {
+        .parseTorrentInfo(payload.url, token)
+        .then((res) => {
           if (!active) return;
-          console.log("[TORRENT_LOG][FRONTEND_STATE] Recebido meta do torrent:", meta);
-          if (!meta || !meta.files || meta.files.length === 0 || !meta.totalSize || meta.totalSize === 0) {
-            setError("Não foi possível ler os metadados deste torrent.");
-            setFileList([]);
-            return;
-          }
-
-          setTorrentName(meta.name);
-          const nodes: TorrentFileNode[] = meta.files.map((f, idx) => ({
-            id: idx + 1,
-            name: f.path,
-            size: f.size,
-            selected: true,
-          }));
-          setFileList(nodes);
-          console.log("[TORRENT_LOG][FRONTEND_STATE] Lista armazenada no estado:", nodes);
+          handleMetadataResponse(res);
         })
         .catch((err) => {
           if (!active) return;
-          console.error("[TORRENT_LOG][FRONTEND_STATE] Falha no parsing:", err);
+          console.error("[TORRENT_LOG][FRONTEND_STATE] Falha ao obter metadados:", err);
           setError("Não foi possível ler os metadados deste torrent.");
           setFileList([]);
         });
+
+      // Escutar evento assíncrono para Magnet links que obtêm metadados via P2P
+      const unlistenPromise = listen<TorrentMetadataResponse>(
+        `torrent-metadata-ready-${token}`,
+        (event) => {
+          if (!active) return;
+          console.log("[MAGNET_METADATA_RECEIVED] Evento Tauri recebido com metadados do swarm P2P:", event.payload);
+          handleMetadataResponse(event.payload);
+        }
+      );
+
+      return () => {
+        active = false;
+        void unlistenPromise.then((unlisten) => unlisten());
+      };
     }
-    return () => {
-      active = false;
-    };
-  }, [payload]);
+  }, [payload, token]);
 
   useEffect(() => {
     void appWindow.setSize(new LogicalSize(740, 520)).catch(() => {});
   }, [appWindow]);
 
-  const close = () => void appWindow.close();
+  const close = () => {
+    if (status === "fetchingMetadata") {
+      console.log("[MAGNET_CANCELLED] Cancelando busca de metadados pelo usuário.");
+    }
+    void appWindow.close();
+  };
 
   const chooseFolder = async () => {
     const path = await open({ directory: true });
@@ -153,8 +198,14 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   const totalSize = fileList.reduce((acc, f) => acc + f.size, 0);
   const selectedSize = selectedFiles.reduce((acc, f) => acc + f.size, 0);
 
+  const formatTime = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
   const finish = async () => {
-    if (!payload?.url) return;
+    if (!payload?.url || status !== "ready") return;
     setBusy(true);
     setError(null);
     try {
@@ -252,66 +303,114 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
               <strong>Conteúdo do torrent</strong>
             </div>
 
-            {/* 4. Lista real de arquivos & 6. Tamanho selecionado */}
-            <div className="tc-stats-header">
-              <div className="tc-stat-pair">
+            {status === "fetchingMetadata" ? (
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 12,
+                  padding: 24,
+                  textAlign: "center",
+                  background: "rgba(0, 0, 0, 0.25)",
+                  borderRadius: 10,
+                  border: "1px solid var(--line, rgba(255, 255, 255, 0.08))",
+                }}
+              >
+                <Loader2 size={36} className="animate-spin" style={{ color: "var(--ember-solid)" }} />
                 <div>
-                  <span className="tc-stat-label">Tamanho total</span>
-                  <strong className="tc-stat-val">{bytes(totalSize)}</strong>
-                </div>
-                <div className="text-right">
-                  <span className="tc-stat-label">Arquivos selecionados</span>
-                  <strong className="tc-stat-val">
-                    {selectedCount} de {totalFilesCount} ({bytes(selectedSize)})
+                  <strong style={{ fontSize: 13, color: "#ffffff", display: "block" }}>
+                    Obtendo metadados do torrent…
                   </strong>
-                </div>
-              </div>
-            </div>
-
-            {/* 5. Seleção de arquivos */}
-            <div className="tc-actions-bar">
-              <button type="button" className="tc-btn-outline" onClick={selectAll}>
-                Selecionar tudo
-              </button>
-              <button type="button" className="tc-btn-dark" onClick={clearSelection}>
-                Limpar seleção
-              </button>
-            </div>
-
-            {/* Tabela de Arquivos Reais */}
-            <div className="tc-table-wrap">
-              <div className="tc-table-header-row">
-                <span className="col-name">Nome ↓</span>
-                <span className="col-size">Tamanho</span>
-              </div>
-              <div className="tc-table-body">
-                {/* Pasta Raiz */}
-                <div className="tc-file-row folder-root">
-                  <input
-                    type="checkbox"
-                    checked={selectedCount === totalFilesCount}
-                    onChange={(e) => (e.target.checked ? selectAll() : clearSelection())}
-                  />
-                  <FolderOpen size={14} className="tc-folder-icon" />
-                  <span className="tc-file-name">{torrentName}</span>
-                  <span className="tc-file-size">{bytes(totalSize)}</span>
+                  <span style={{ fontSize: 11, color: "var(--text-2)", marginTop: 4, display: "block" }}>
+                    Conectando aos pares da rede P2P BitTorrent para ler a estrutura de arquivos.
+                  </span>
                 </div>
 
-                {/* Linhas dos Arquivos */}
-                {fileList.map((f) => (
-                  <div key={f.id} className="tc-file-row child">
-                    <input
-                      type="checkbox"
-                      checked={f.selected}
-                      onChange={() => toggleFile(f.id)}
-                    />
-                    <FileVideo size={14} className="tc-file-icon" />
-                    <span className="tc-file-name">{f.name}</span>
-                    <span className="tc-file-size">{bytes(f.size)}</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%", marginTop: 8 }}>
+                  {infoHash && (
+                    <div className="tc-stat-pair" style={{ justifyContent: "center", gap: 6 }}>
+                      <Key size={12} style={{ color: "var(--text-2)" }} />
+                      <span className="tc-stat-label">Info Hash:</span>
+                      <strong className="tc-stat-val text-truncate" style={{ maxWidth: 220 }}>
+                        {infoHash}
+                      </strong>
+                    </div>
+                  )}
+
+                  <div className="tc-stat-pair" style={{ justifyContent: "center", gap: 6 }}>
+                    <Clock size={12} style={{ color: "var(--text-2)" }} />
+                    <span className="tc-stat-label">Tempo decorrido:</span>
+                    <strong className="tc-stat-val">{formatTime(elapsedSeconds)}</strong>
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* 4. Lista real de arquivos & 6. Tamanho selecionado */}
+                <div className="tc-stats-header">
+                  <div className="tc-stat-pair">
+                    <div>
+                      <span className="tc-stat-label">Tamanho total</span>
+                      <strong className="tc-stat-val">{bytes(totalSize)}</strong>
+                    </div>
+                    <div className="text-right">
+                      <span className="tc-stat-label">Arquivos selecionados</span>
+                      <strong className="tc-stat-val">
+                        {selectedCount} de {totalFilesCount} ({bytes(selectedSize)})
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Seleção de arquivos */}
+                <div className="tc-actions-bar">
+                  <button type="button" className="tc-btn-outline" onClick={selectAll}>
+                    Selecionar tudo
+                  </button>
+                  <button type="button" className="tc-btn-dark" onClick={clearSelection}>
+                    Limpar seleção
+                  </button>
+                </div>
+
+                {/* Tabela de Arquivos Reais */}
+                <div className="tc-table-wrap">
+                  <div className="tc-table-header-row">
+                    <span className="col-name">Nome ↓</span>
+                    <span className="col-size">Tamanho</span>
+                  </div>
+                  <div className="tc-table-body">
+                    {/* Pasta Raiz */}
+                    <div className="tc-file-row folder-root">
+                      <input
+                        type="checkbox"
+                        checked={selectedCount === totalFilesCount}
+                        onChange={(e) => (e.target.checked ? selectAll() : clearSelection())}
+                      />
+                      <FolderOpen size={14} className="tc-folder-icon" />
+                      <span className="tc-file-name">{torrentName}</span>
+                      <span className="tc-file-size">{bytes(totalSize)}</span>
+                    </div>
+
+                    {/* Linhas dos Arquivos */}
+                    {fileList.map((f) => (
+                      <div key={f.id} className="tc-file-row child">
+                        <input
+                          type="checkbox"
+                          checked={f.selected}
+                          onChange={() => toggleFile(f.id)}
+                        />
+                        <FileVideo size={14} className="tc-file-icon" />
+                        <span className="tc-file-name">{f.name}</span>
+                        <span className="tc-file-size">{bytes(f.size)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </main>
@@ -324,7 +423,9 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
           </div>
           <div>
             <strong>
-              {selectedCount} de {totalFilesCount} arquivos selecionados • {bytes(selectedSize)}
+              {status === "fetchingMetadata"
+                ? "Obtendo metadados P2P..."
+                : `${selectedCount} de ${totalFilesCount} arquivos selecionados • ${bytes(selectedSize)}`}
             </strong>
           </div>
         </div>
@@ -339,7 +440,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             type="button"
             className="tc-btn-cyan-solid"
             onClick={finish}
-            disabled={busy || !!error || fileList.length === 0 || selectedCount === 0}
+            disabled={busy || status !== "ready" || !!error || fileList.length === 0 || selectedCount === 0}
           >
             <Plus size={16} />
             <span>Adicionar torrent</span>

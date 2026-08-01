@@ -317,22 +317,22 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
 pub async fn inspect_download(url: String) -> Result<DownloadPreview, String> {
     if url.starts_with("magnet:") || url.to_lowercase().ends_with(".torrent") {
         let engine = crate::download::torrent::TorrentEngine::new();
-        let meta = engine.parse_torrent(&url).await.unwrap_or(crate::download::torrent::ParsedTorrentMeta {
-            name: "Torrent Magnet".into(),
-            info_hash: "".into(),
-            total_size: 0,
-            files: vec![],
-        });
-        let file_name = if meta.name.is_empty() { "Torrent Magnet".to_string() } else { meta.name };
+        let meta = engine.parse_torrent(&url).await.ok();
+        let file_name = meta
+            .as_ref()
+            .and_then(|m| m.name())
+            .unwrap_or("Torrent Download")
+            .to_string();
         let extension = Path::new(&file_name)
             .extension()
             .and_then(|v| v.to_str())
             .map(|v| v.to_lowercase())
             .or_else(|| Some("torrent".into()));
+        let total_size = meta.as_ref().and_then(|m| m.total_size());
         return Ok(DownloadPreview {
             url,
             file_name,
-            file_size: if meta.total_size > 0 { Some(meta.total_size as u64) } else { None },
+            file_size: total_size,
             mime_type: Some("application/x-bittorrent".into()),
             extension,
         });
@@ -1172,9 +1172,13 @@ pub fn start_drag_folder(window: tauri::WebviewWindow, path: String) -> Result<(
 }
 
 #[tauri::command]
-pub async fn parse_torrent_info(source: String) -> Result<crate::download::torrent::ParsedTorrentMeta, String> {
+pub async fn parse_torrent_info(
+    app: tauri::AppHandle,
+    token: Option<String>,
+    source: String,
+) -> Result<crate::download::torrent::TorrentMetadataResponse, String> {
     let engine = crate::download::torrent::TorrentEngine::new();
-    engine.parse_torrent(&source).await
+    engine.parse_torrent_with_app(Some(app), token.as_deref(), &source).await
 }
 
 #[cfg(test)]

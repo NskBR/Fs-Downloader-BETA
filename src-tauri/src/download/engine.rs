@@ -146,14 +146,10 @@ pub async fn prepare_with_headers(
 
     if url.starts_with("magnet:") || url.to_lowercase().ends_with(".torrent") {
         let engine = crate::download::torrent::TorrentEngine::new();
-        let meta = engine.parse_torrent(url).await.unwrap_or(crate::download::torrent::ParsedTorrentMeta {
-            name: "Torrent Magnet".into(),
-            info_hash: "".into(),
-            total_size: 0,
-            files: vec![],
-        });
+        let meta = engine.parse_torrent(url).await.ok();
 
-        let file_name = safe_file_name(if meta.name.is_empty() { "Torrent Magnet" } else { &meta.name });
+        let raw_name = meta.as_ref().and_then(|m| m.name()).unwrap_or("Torrent Download");
+        let file_name = safe_file_name(raw_name);
         let folder = if let Some(category) = selected_category.filter(|value| !value.trim().is_empty()) {
             let category = category.trim();
             if !valid_category_name(category) {
@@ -174,10 +170,13 @@ pub async fn prepare_with_headers(
         let temp_name = final_path.file_name().and_then(|v| v.to_str()).unwrap_or(&file_name);
         let temp_path = temp_folder.join(format!("{}.part", temp_name));
 
+        let total_size = meta.as_ref().and_then(|m| m.total_size()).map(|s| s as i64);
+        let info_hash = meta.as_ref().map(|m| m.info_hash().to_string());
+
         return Ok(PreparedDownload {
             input: CreateDownloadInput {
                 file_name,
-                file_size: if meta.total_size > 0 { Some(meta.total_size as i64) } else { None },
+                file_size: total_size,
                 original_url: url.to_owned(),
                 save_path: folder.to_string_lossy().into_owned(),
                 temp_path: temp_path.to_string_lossy().into_owned(),
@@ -192,7 +191,7 @@ pub async fn prepare_with_headers(
                 last_modified: None,
                 delete_archive_after_extract: false,
                 download_type: "torrent".into(),
-                info_hash: if meta.info_hash.is_empty() { None } else { Some(meta.info_hash) },
+                info_hash,
             },
             response: None,
         });

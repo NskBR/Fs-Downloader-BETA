@@ -129,13 +129,14 @@ export function ConfirmationPage({ token }: { token: string }) {
         .parseTorrentInfo(payload.url)
         .then((meta) => {
           if (!active) return;
-          const extMatch = meta.name.includes(".")
-            ? meta.name.split(".").pop()?.toLowerCase() || null
+          const metaName = meta.name || "Torrent Download";
+          const extMatch = metaName.includes(".")
+            ? metaName.split(".").pop()?.toLowerCase() || null
             : null;
           setPreview({
             url: payload.url,
-            fileName: meta.name,
-            fileSize: meta.totalSize || null,
+            fileName: metaName,
+            fileSize: meta.status === "ready" ? meta.totalSize : null,
             mimeType: "application/x-bittorrent",
             extension: extMatch || "torrent",
           });
