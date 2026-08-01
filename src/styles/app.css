@@ -2325,6 +2325,16 @@ input::-ms-clear {
   from { transform: translateX(-100%); }
   to { transform: translateX(100%); }
 }
+/* Verificação de arquivo: cor âmbar pulsante */
+.dw-bar--checking i {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+  animation: dw-bar-check-pulse 1.8s ease-in-out infinite;
+}
+@keyframes dw-bar-check-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
 .dw-size-row { display: flex; align-items: center; gap: 10px; }
 .dw-icon-btn {
   display: grid; place-items: center; width: 20px; height: 20px;

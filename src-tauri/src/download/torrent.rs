@@ -784,15 +784,18 @@ pub async fn run_torrent(
 
             // Mapear estado real do librqbit para DownloadStatus
             use librqbit::TorrentStatsState;
+            let is_initializing = matches!(stats.state, TorrentStatsState::Initializing);
+
             let (db_status, ui_status) = if stats.error.is_some() {
                 (DownloadStatus::Failed, "failed")
             } else if stats.finished {
                 (DownloadStatus::Completed, "completed")
             } else {
                 match stats.state {
-                    TorrentStatsState::Initializing => (DownloadStatus::Downloading, "connecting"),
+                    // Initializing = verificação de arquivo existente no disco
+                    TorrentStatsState::Initializing => (DownloadStatus::Downloading, "checking_files"),
                     TorrentStatsState::Live => {
-                        if peers > 0 || downloaded > 0 {
+                        if speed_bytes > 0.0 || peers > 0 {
                             (DownloadStatus::Downloading, "downloading")
                         } else {
                             (DownloadStatus::Downloading, "connecting")
@@ -803,9 +806,13 @@ pub async fn run_torrent(
                 }
             };
 
+            // Durante Initializing, progress_bytes = peças verificadas no disco (não bytes baixados)
+            // Só registrar progresso real quando estado for Live e houver velocidade
+            let real_downloaded = if is_initializing { 0_i64 } else { downloaded };
+
             println!(
-                "[TORRENT_LOG][BACKEND_STATUS] info_hash={} state={:?} progress={}/{} bytes, speed={:.0} B/s, peers={} seeds={}",
-                info_hash, stats.state, downloaded, total_size, speed_bytes, peers, seeds
+                "[TORRENT_LOG][BACKEND_STATUS] info_hash={} state={:?} verified={}/{} bytes, real_dl={} bytes, speed={:.0} B/s, peers={} seeds={}",
+                info_hash, stats.state, downloaded, total_size, real_downloaded, speed_bytes, peers, seeds
             );
 
             let _ = downloads::update_progress(
@@ -813,7 +820,7 @@ pub async fn run_torrent(
                 &UpdateDownloadInput {
                     id: task.id.clone(),
                     status: db_status,
-                    total_downloaded: downloaded,
+                    total_downloaded: real_downloaded,
                     speed_current: speed_bytes,
                     speed_average: speed_bytes,
                     seeds: Some(seeds),
@@ -827,7 +834,10 @@ pub async fn run_torrent(
                 "download-progress",
                 serde_json::json!({
                     "id": task.id,
-                    "downloaded": downloaded,
+                    // downloaded = bytes REALMENTE baixados (0 durante verificação)
+                    "downloaded": real_downloaded,
+                    // verifiedBytes = bytes verificados no disco (só durante checking_files)
+                    "verifiedBytes": if is_initializing { downloaded } else { 0_i64 },
                     "total": total_size,
                     "speed": speed_bytes,
                     "uploadSpeed": upload_speed,

@@ -118,6 +118,7 @@ function Donut({ value, status }: { value: number; status: DownloadStatus }) {
 interface TorrentProgressPayload {
   id: string;
   downloaded: number;
+  verifiedBytes?: number;
   total: number | null;
   speed: number;
   uploadSpeed?: number;
@@ -131,6 +132,7 @@ interface TorrentProgressPayload {
 export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
   const [task, setTask] = useState<DownloadTask | null>(null);
   const [downloaded, setDownloaded] = useState(0);
+  const [verifiedBytes, setVerifiedBytes] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [uploadSpeed, setUploadSpeed] = useState(0);
   const [seeds, setSeeds] = useState(0);
@@ -201,6 +203,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
         return;
       }
       setDownloaded(payload.downloaded);
+      if (payload.verifiedBytes !== undefined) setVerifiedBytes(payload.verifiedBytes);
       setSpeed(payload.speed);
       if (payload.uploadSpeed !== undefined) setUploadSpeed(payload.uploadSpeed);
       if (payload.seeds !== undefined) setSeeds(payload.seeds);
@@ -291,10 +294,14 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
     );
 
   const total = task.fileSize ?? 0,
-    progress = total ? Math.min(100, (downloaded / total) * 100) : 0,
+    isChecking = status === "checking_files",
     isCompleted = status === "completed",
     isActive = status === "downloading",
     isFailed = status === "failed" || status === "cancelled",
+    // Durante verificação, mostramos progresso de verificação no donut
+    verifyProgress = isChecking && total > 0 ? Math.min(100, (verifiedBytes / total) * 100) : 0,
+    downloadProgress = total > 0 ? Math.min(100, (downloaded / total) * 100) : 0,
+    progress = isChecking ? verifyProgress : (isCompleted ? 100 : downloadProgress),
     remaining = isActive && speed > 0 && total > downloaded ? (total - downloaded) / speed : -1,
     destination = task.finalPath.replace(/[\\/][^\\/]*$/, "");
 
@@ -328,7 +335,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
           </p>
 
           <div className="dw-size-row">
-            {!isCompleted && !isFailed && (
+            {!isCompleted && !isFailed && !isChecking && (
               <button className="dw-icon-btn" title="Pausar/Retomar" onClick={() => void pauseResume()}>
                 {isActive ? <Pause /> : <Play />}
               </button>
@@ -339,8 +346,12 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
               </button>
             )}
             <p className="dw-size">
-              {bytes(downloaded)}
-              {!isCompleted && total ? <em> / {bytes(total)}</em> : null}
+              {isChecking ? (
+                // Mostra progresso de verificação, não bytes baixados
+                <><span style={{ opacity: 0.7, fontSize: "0.85em" }}>Verificado: </span>{bytes(verifiedBytes)}<em> / {bytes(total)}</em></>
+              ) : (
+                <>{bytes(downloaded)}{!isCompleted && total ? <em> / {bytes(total)}</em> : null}</>
+              )}
             </p>
           </div>
 
@@ -351,6 +362,8 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
                   <AlertTriangle size={13} style={{ flexShrink: 0 }} />
                   <span>{error}</span>
                 </span>
+              ) : isChecking ? (
+                <span style={{ opacity: 0.75, fontSize: "0.85em" }}>Verificando integridade dos arquivos existentes...</span>
               ) : (
                 <>
                   ⬇️ {isActive ? `${bytes(speed)}/s` : "0 B/s"}
@@ -364,7 +377,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
           )}
 
           {!isCompleted && (
-            <div className={`dw-bar${isActive ? " dw-bar--active" : ""}`} role="progressbar" aria-valuenow={Math.round(progress)}>
+            <div className={`dw-bar${isActive ? " dw-bar--active" : ""}${isChecking ? " dw-bar--checking" : ""}`} role="progressbar" aria-valuenow={Math.round(progress)}>
               <i style={{ width: `${progress}%` }} />
             </div>
           )}
