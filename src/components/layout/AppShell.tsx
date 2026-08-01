@@ -30,6 +30,7 @@ interface Props extends PropsWithChildren {
   activePage: PageId;
   onNavigate: (page: PageId) => void;
   sidebarAnimation: boolean;
+  updateInfo?: downloadService.UpdateCheckResult | null;
 }
 
 const groups = {
@@ -44,6 +45,7 @@ export function AppShell({
   activePage,
   onNavigate,
   sidebarAnimation,
+  updateInfo,
   children,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -160,7 +162,7 @@ export function AppShell({
 
   return (
     <div className="window-frame">
-      <TitleBar />
+      <TitleBar updateInfo={updateInfo} />
       <div className="app-shell">
         <button
           className="mobile-menu"

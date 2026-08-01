@@ -5156,6 +5156,201 @@ html, body, #root, .window-frame {
   gap: 8px;
 }
 .tl-m-icon { color: var(--ember-solid, #06b6d4); flex-shrink: 0; }
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  font-size: 11px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.tc-file-row:hover { background: rgba(255, 255, 255, 0.04); }
+.tc-file-row.folder-root { font-weight: 700; color: #ffffff; }
+.tc-file-row.child { padding-left: 20px; color: var(--text, #f0f2f5); }
+.tc-file-row.single-file { color: var(--text, #f0f2f5); }
+.tc-folder-icon { color: #f59e0b; }
+.tc-file-icon { color: var(--text-2); }
+.tc-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tc-file-size { color: var(--text-2); font-size: 10.5px; white-space: nowrap; text-align: right; flex-shrink: 0; }
+
+.tc-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+.tc-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tc-layers-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--ember-soft, rgba(6, 182, 212, 0.15));
+  color: var(--ember-solid, #06b6d4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tc-footer-left div { display: flex; flex-direction: column; }
+.tc-footer-left strong { font-size: 11.5px; color: #ffffff; }
+.tc-footer-left span { font-size: 10.5px; color: var(--text-2); }
+
+.tc-footer-right { display: flex; gap: 8px; }
+.tc-btn-outline {
+  background: transparent;
+  border: 1px solid var(--ember-solid, #06b6d4);
+  color: var(--ember-solid, #06b6d4);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.tc-btn-outline:hover { background: var(--ember-soft, rgba(6, 182, 212, 0.15)); }
+
+.tc-btn-dark {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.tc-btn-dark:hover { background: rgba(255, 255, 255, 0.12); }
+
+.tc-btn-cyan-solid {
+  background: var(--ember-solid, #06b6d4);
+  border: none;
+  color: #000000;
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: 0.15s;
+}
+.tc-btn-cyan-solid:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* --- JANELA 2: DOWNLOAD EM PROGRESSO TORRENT --- */
+.tl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tl-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.tl-folder-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--ember-soft, rgba(6, 182, 212, 0.15));
+  border: 1px solid var(--ember-soft, rgba(6, 182, 212, 0.3));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.tl-folder-icon { color: var(--ember-solid, #06b6d4); }
+.tl-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.tl-donut-wrap {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+}
+.tl-donut-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.tl-donut-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+}
+.tl-donut-fg {
+  fill: none;
+  stroke: var(--ember-solid, #06b6d4);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.3s ease;
+}
+.tl-donut-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.tl-donut-text strong { font-size: 14px; font-weight: 800; color: #ffffff; line-height: 1; }
+.tl-donut-text span { font-size: 9.5px; color: var(--text-2, #8a92a3); margin-top: 1px; }
+
+.tl-progress-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0;
+}
+.tl-progress-bar-wrap {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.tl-progress-bar-fill {
+  height: 100%;
+  background: var(--ember-solid, #06b6d4);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.tl-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-2, #8a92a3);
+}
+.tl-percent-cyan { color: var(--ember-solid, #06b6d4); font-weight: 700; }
+
+.tl-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.tl-metric-card {
+  background: var(--surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tl-m-icon { color: var(--ember-solid, #06b6d4); flex-shrink: 0; }
 .tl-m-text { display: flex; flex-direction: column; }
 .tl-m-label { font-size: 9.5px; color: var(--text-2, #8a92a3); }
 .tl-m-val { font-size: 11.5px; font-weight: 700; color: #ffffff; }
@@ -5183,18 +5378,27 @@ html, body, #root, .window-frame {
 .tl-btn-pause:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.25); }
 .tl-btn-cancel:hover { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #f87171; }
 
-/* ----- Update Banner -------------------------------------------------------- */
-.update-banner-container {
-  display: flex;
+/* ----- TitleBar Update Badge ----------------------------------------------- */
+.titlebar-update-badge {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  background: linear-gradient(90deg, rgba(6, 182, 212, 0.12) 0%, rgba(59, 130, 246, 0.12) 100%);
-  border-bottom: 1px solid rgba(6, 182, 212, 0.25);
-  padding: 8px 16px;
-  font-size: 12px;
-  color: var(--text, #f3f4f6);
-  animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 100;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.16) 0%, rgba(59, 130, 246, 0.16) 100%);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  color: #22d3ee;
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 12px;
+  transition: all 0.15s ease;
+}
+.titlebar-update-badge:hover {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.35) 0%, rgba(59, 130, 246, 0.35) 100%);
+  border-color: rgba(6, 182, 212, 0.6);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-100%); }

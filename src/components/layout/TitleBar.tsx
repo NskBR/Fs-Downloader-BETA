@@ -1,12 +1,18 @@
-import { Minus, Square, X, Puzzle } from "lucide-react";
+import { Minus, Square, X, Puzzle, Sparkles, ExternalLink } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { version } from "../../../package.json";
+import type { UpdateCheckResult } from "../../services/downloadService";
+import { openUrl } from "../../services/downloadService";
 
 const appWindow = getCurrentWindow();
 
-export function TitleBar() {
+interface TitleBarProps {
+  updateInfo?: UpdateCheckResult | null;
+}
+
+export function TitleBar({ updateInfo }: TitleBarProps) {
   const [extensionConnected, setExtensionConnected] = useState<boolean | null>(null);
   useEffect(() => {
     const updateStatus = () => {
@@ -18,13 +24,32 @@ export function TitleBar() {
     const timer = setInterval(updateStatus, 3000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleOpenRelease = () => {
+    if (updateInfo?.release_url) {
+      void openUrl(updateInfo.release_url);
+    }
+  };
+
   return (
     <header
       className="titlebar"
       data-tauri-drag-region
       onDoubleClick={() => void appWindow.toggleMaximize()}
     >
-      <div className="titlebar-side" data-tauri-drag-region></div>
+      <div className="titlebar-side" data-tauri-drag-region>
+        {updateInfo?.available && (
+          <button
+            className="nodrag titlebar-update-badge"
+            onClick={handleOpenRelease}
+            title={`Nova versão v${updateInfo.latest_version} disponível! Clique para abrir no GitHub.`}
+          >
+            <Sparkles size={12} className="icon-pulse" />
+            <span>Nova versão disponível (Update)</span>
+            <ExternalLink size={11} />
+          </button>
+        )}
+      </div>
       <div className="titlebar-center" data-tauri-drag-region>
         <strong>SF Downloader</strong>
         <span className="titlebar-version">v{version}</span>

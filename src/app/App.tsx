@@ -70,10 +70,7 @@ export function App() {
     : <DownloadsPage settings={settings} onSave={persist} filter={categoryPages.includes(activePage)?activePage:"active"} />;
    return (
      <>
-       {updateInfo && updateInfo.available && (
-         <UpdateBanner update={updateInfo} onDismiss={() => setUpdateInfo(null)} />
-       )}
-       <AppShell activePage={activePage} onNavigate={navigate} sidebarAnimation={settings.sidebarAnimation}>{content}</AppShell>
+       <AppShell activePage={activePage} onNavigate={navigate} sidebarAnimation={settings.sidebarAnimation} updateInfo={updateInfo}>{content}</AppShell>
        {!["settings", "metrics", "profile"].includes(activePage) && <FloatingAiWidget />}
      </>
    );
