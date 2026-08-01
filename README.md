@@ -40,20 +40,10 @@ Construído com **Tauri 2 + React + Rust** — leve, nativo e sem Electron.
 
 ![Lista de Downloads](screenshots/downloads-list.png)
 
-### 🪟 Janelas Secundárias & Diálogos Nativos
+### 🪟 Visão Geral de Janelas Secundárias & Diálogos Nativos
+> Suporte nativo a múltiplas janelas independentes (Confirmação de Download, Detalhes Técnicos, Adicionar Torrent, Progresso P2P e Estado de Conclusão).
 
-| Janela de Confirmação | Progresso de Download (HTTP) |
-|---|---|
-| ![Confirmação](screenshots/window-confirmation.png) | ![Progresso HTTP](screenshots/window-download-progress.png) |
-
-| Progresso BitTorrent (P2P) | Download Concluído |
-|---|---|
-| ![Progresso Torrent](screenshots/window-torrent-progress.png) | ![Concluído](screenshots/window-completed.png) |
-
-#### 🛡️ Tratamento Intuitivo de Erros (HTTP 403 / Conectividade)
-> Tela nativa de erro com sugestões práticas e resolução com um clique, sem sobreposição de interface.
-
-![Tratamento de Erros](screenshots/window-error.png)
+![Visão Geral de Janelas Simultâneas](screenshots/window-all-open.png)
 
 ---
 
