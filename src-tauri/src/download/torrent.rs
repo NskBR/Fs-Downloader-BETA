@@ -884,8 +884,22 @@ impl TorrentManager {
                     actual_info_hash = h;
                 }
 
-                // A remoção dos arquivos pertence ao librqbit, que conhece exatamente
-                // o conteúdo do torrent. Nunca apagar recursivamente a pasta de destino.
+                if delete_files {
+                    let final_path = std::path::PathBuf::from(&task.final_path);
+                    let save_path = std::path::PathBuf::from(&task.save_path);
+
+                    if final_path.exists() {
+                        if final_path.is_file() {
+                            let _ = std::fs::remove_file(&final_path);
+                        } else if final_path.is_dir() {
+                            let _ = std::fs::remove_dir_all(&final_path);
+                        }
+                    }
+
+                    if save_path.exists() && save_path != final_path && save_path.is_dir() {
+                        let _ = std::fs::remove_dir_all(&save_path);
+                    }
+                }
             }
         }
 
@@ -899,6 +913,27 @@ impl TorrentManager {
                 let _ = session
                     .delete(librqbit::api::TorrentIdOrHash::Id(id_num), delete_files)
                     .await;
+            }
+        }
+
+        // Apagar os arquivos de cache/persistência (.bitv e .torrent) da pasta torrent-session
+        use tauri::Manager;
+        let app_dir = app.path().app_data_dir().ok();
+        let persistence_root = app_dir
+            .unwrap_or_else(std::env::temp_dir)
+            .join("SF Downloader")
+            .join("torrent-session");
+
+        for h in [&actual_info_hash, info_hash] {
+            let bitv = persistence_root.join(format!("{}.bitv", h));
+            let torrent_file = persistence_root.join(format!("{}.torrent", h));
+            if bitv.exists() {
+                let _ = std::fs::remove_file(&bitv);
+                println!("[TORRENT_CLEANUP] Removido cache bitv de persistencia: {:?}", bitv);
+            }
+            if torrent_file.exists() {
+                let _ = std::fs::remove_file(&torrent_file);
+                println!("[TORRENT_CLEANUP] Removido cache torrent de persistencia: {:?}", torrent_file);
             }
         }
 
