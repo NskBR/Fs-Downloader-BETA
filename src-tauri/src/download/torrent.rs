@@ -609,6 +609,24 @@ impl TorrentManager {
 
         println!("[TORRENT_PRIORITIES] Prioridades de arquivos aplicadas para índices: {:?}", selected_file_indexes);
 
+        // Aplicar seleção de arquivos (update_only_files) na sessão do librqbit
+        if !selected_file_indexes.is_empty() && selected_file_indexes.len() < entry.files.len() {
+            let selected_set: std::collections::HashSet<usize> = selected_file_indexes.iter().copied().collect();
+            if let Some(ref session) = *self.session.read().await {
+                if let Err(e) = session.update_only_files(&entry.handle, &selected_set).await {
+                    println!("[TORRENT_ERROR] Falha ao aplicar update_only_files na sessão: {:?}", e);
+                } else {
+                    println!("[TORRENT_PRIORITIES] update_only_files aplicado com sucesso via sessão: {:?}", selected_set);
+                }
+            }
+        }
+
+        let selected_total_size: u64 = if !selected_file_indexes.is_empty() && selected_file_indexes.len() < entry.files.len() {
+            selected_file_indexes.iter().map(|&idx| entry.files.get(idx).map(|f| f.size).unwrap_or(0)).sum()
+        } else {
+            entry.total_size
+        };
+
         entry.confirmed = true;
         entry.save_path = save_path.to_string();
 
@@ -622,7 +640,7 @@ impl TorrentManager {
 
         let input = crate::database::models::CreateDownloadInput {
             file_name: entry.name.clone(),
-            file_size: if entry.total_size > 0 { Some(entry.total_size as i64) } else { None },
+            file_size: if selected_total_size > 0 { Some(selected_total_size as i64) } else { None },
             original_url: entry.source.clone(),
             save_path: save_path.to_string(),
             temp_path: save_path.to_string(),
@@ -666,7 +684,7 @@ impl TorrentManager {
         info_hash: &str,
         delete_files: bool,
     ) -> Result<(), String> {
-        println!("[MAGNET_CANCELLED] Cancelando torrent com info_hash={}", info_hash);
+        println!("[MAGNET_CANCELLED] Cancelando torrent com info_hash={}, delete_files={}", info_hash, delete_files);
 
         let mut actual_info_hash = info_hash.to_string();
         let mut db_task_id = info_hash.to_string();
@@ -676,6 +694,23 @@ impl TorrentManager {
                 db_task_id = task.id.clone();
                 if let Some(h) = task.info_hash {
                     actual_info_hash = h;
+                }
+
+                if delete_files {
+                    let final_path = std::path::PathBuf::from(&task.final_path);
+                    let save_path = std::path::PathBuf::from(&task.save_path);
+
+                    if final_path.exists() {
+                        if final_path.is_file() {
+                            let _ = std::fs::remove_file(&final_path);
+                        } else if final_path.is_dir() {
+                            let _ = std::fs::remove_dir_all(&final_path);
+                        }
+                    }
+
+                    if save_path.exists() && save_path != final_path && save_path.is_dir() {
+                        let _ = std::fs::remove_dir_all(&save_path);
+                    }
                 }
             }
         }
