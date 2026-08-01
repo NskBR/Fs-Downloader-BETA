@@ -182,6 +182,7 @@ pub struct TorrentEntry {
     pub name: String,
     pub total_size: u64,
     pub files: Vec<TorrentFileItem>,
+    pub selected_file_indexes: Vec<usize>,
     pub save_path: String,
 }
 
@@ -323,6 +324,7 @@ impl TorrentManager {
                         name: name.clone().unwrap_or_else(|| "Torrent Magnet".into()),
                         total_size: 0,
                         files: vec![],
+                        selected_file_indexes: vec![],
                         save_path: temp_dir.to_string_lossy().to_string(),
                     },
                 );
@@ -629,6 +631,7 @@ impl TorrentManager {
 
         entry.confirmed = true;
         entry.save_path = save_path.to_string();
+        entry.selected_file_indexes = selected_file_indexes.to_vec();
 
         let conn = database.connect().map_err(|e| e.to_string())?;
 
@@ -819,11 +822,36 @@ pub async fn run_torrent(
         let guard = manager.entries.read().await;
         if let Some(entry) = guard.get(&info_hash) {
             let stats = entry.handle.stats();
-            let downloaded = stats.progress_bytes as i64;
-            let total_size = if stats.total_bytes > 0 {
+
+            let has_selected_subset = !entry.selected_file_indexes.is_empty()
+                && entry.selected_file_indexes.len() < entry.files.len();
+
+            let downloaded = if has_selected_subset {
+                entry
+                    .selected_file_indexes
+                    .iter()
+                    .map(|&idx| stats.file_progress.get(idx).copied().unwrap_or(0))
+                    .sum::<u64>() as i64
+            } else {
+                stats.progress_bytes as i64
+            };
+
+            let total_size = if has_selected_subset {
+                entry
+                    .selected_file_indexes
+                    .iter()
+                    .map(|&idx| entry.files.get(idx).map(|f| f.size).unwrap_or(0))
+                    .sum::<u64>() as i64
+            } else if stats.total_bytes > 0 {
                 stats.total_bytes as i64
             } else {
                 task.file_size.unwrap_or(entry.total_size as i64)
+            };
+
+            let is_finished = if has_selected_subset && total_size > 0 {
+                downloaded >= total_size
+            } else {
+                stats.finished
             };
 
             let speed_bytes = stats
@@ -856,7 +884,7 @@ pub async fn run_torrent(
 
             let (db_status, ui_status) = if stats.error.is_some() {
                 (DownloadStatus::Failed, "failed")
-            } else if stats.finished {
+            } else if is_finished {
                 (DownloadStatus::Completed, "completed")
             } else {
                 match stats.state {
@@ -916,7 +944,7 @@ pub async fn run_torrent(
                 }),
             );
 
-            if stats.finished || stats.error.is_some() {
+            if is_finished || stats.error.is_some() {
                 break;
             }
         } else {
@@ -1106,6 +1134,7 @@ mod tests {
                         path: "test_game.iso".into(),
                         size: 1048576,
                     }],
+                    selected_file_indexes: vec![0],
                     save_path: dir.to_string_lossy().to_string(),
                 },
             );
