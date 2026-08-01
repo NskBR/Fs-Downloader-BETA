@@ -101,6 +101,7 @@ impl TorrentEngine {
     ) -> Result<Arc<ManagedTorrent>, String> {
         let opts = AddTorrentOptions {
             output_folder: Some(output_dir.to_string_lossy().to_string()),
+            overwrite: true,
             ..Default::default()
         };
 

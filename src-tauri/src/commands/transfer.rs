@@ -294,12 +294,17 @@ pub async fn inspect_download(url: String) -> Result<DownloadPreview, String> {
             files: vec![],
         });
         let file_name = if meta.name.is_empty() { "Torrent Magnet".to_string() } else { meta.name };
+        let extension = Path::new(&file_name)
+            .extension()
+            .and_then(|v| v.to_str())
+            .map(|v| v.to_lowercase())
+            .or_else(|| Some("torrent".into()));
         return Ok(DownloadPreview {
             url,
             file_name,
             file_size: if meta.total_size > 0 { Some(meta.total_size as u64) } else { None },
             mime_type: Some("application/x-bittorrent".into()),
-            extension: Some("torrent".into()),
+            extension,
         });
     }
 
