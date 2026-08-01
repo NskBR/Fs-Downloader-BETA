@@ -66,13 +66,38 @@ impl TorrentEngine {
 
     pub async fn parse_torrent(&self, source: &str) -> Result<ParsedTorrentMeta, String> {
         if source.starts_with("magnet:") {
-            let magnet = librqbit::Magnet::parse(source).map_err(|e| format!("Magnet Link inválido: {e}"))?;
-            let name = magnet.name.clone().unwrap_or_else(|| "Torrent Magnet".into());
-            let info_hash = format!("{:?}", magnet.as_id20());
+            let magnet = librqbit::Magnet::parse(source).ok();
+            let mut name = magnet.as_ref().and_then(|m| m.name.clone()).unwrap_or_default();
+            let mut total_size: u64 = 0;
+
+            if let Ok(parsed) = reqwest::Url::parse(source) {
+                for (key, value) in parsed.query_pairs() {
+                    if key == "dn" && (name.is_empty() || name == "Torrent Magnet") {
+                        let decoded = value.trim().to_string();
+                        if !decoded.is_empty() {
+                            name = decoded;
+                        }
+                    }
+                    if key == "xl" {
+                        if let Ok(size) = value.trim().parse::<u64>() {
+                            total_size = size;
+                        }
+                    }
+                }
+            }
+
+            if name.is_empty() {
+                name = "Torrent Magnet".into();
+            }
+
+            let info_hash = magnet
+                .map(|m| format!("{:?}", m.as_id20()))
+                .unwrap_or_default();
+
             Ok(ParsedTorrentMeta {
                 name,
                 info_hash,
-                total_size: 0,
+                total_size,
                 files: vec![],
             })
         } else {

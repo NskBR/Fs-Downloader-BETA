@@ -129,12 +129,15 @@ export function ConfirmationPage({ token }: { token: string }) {
         .parseTorrentInfo(payload.url)
         .then((meta) => {
           if (!active) return;
+          const extMatch = meta.name.includes(".")
+            ? meta.name.split(".").pop()?.toLowerCase() || null
+            : null;
           setPreview({
             url: payload.url,
             fileName: meta.name,
             fileSize: meta.totalSize || null,
             mimeType: "application/x-bittorrent",
-            extension: "torrent",
+            extension: extMatch || "torrent",
           });
         })
         .catch((cause) => active && setError(String(cause)))

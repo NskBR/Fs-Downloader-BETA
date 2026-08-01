@@ -11,6 +11,12 @@ import type { CustomCategory } from "./settings";
 
 export const downloadCategories = [
   {
+    name: "Jogos",
+    extensions: ["iso", "rom", "pkg"],
+    icon: FileCode2,
+    color: "#a855f7",
+  },
+  {
     name: "Imagens",
     extensions: ["jpg", "jpeg", "png", "webp", "gif"],
     icon: FileImage,
