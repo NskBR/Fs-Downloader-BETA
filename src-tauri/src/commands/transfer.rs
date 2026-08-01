@@ -134,7 +134,12 @@ pub async fn open_download_confirmation(
     token: String,
     url: String,
 ) -> Result<(), String> {
-    let label = format!("download-confirm-{}", token);
+    let is_torrent = url.starts_with("magnet:") || url.to_lowercase().ends_with(".torrent");
+    let label = if is_torrent {
+        format!("download-torrent-confirm-{}", token)
+    } else {
+        format!("download-confirm-{}", token)
+    };
     if let Some(window) = app.get_webview_window(&label) {
         window.set_focus().map_err(|error| error.to_string())?;
         return Ok(());
@@ -165,10 +170,15 @@ pub async fn open_download_confirmation(
     #[cfg(not(debug_assertions))]
     let confirmation_url = WebviewUrl::App("index.html".into());
 
+    let (width, height) = if is_torrent {
+        (740.0, 570.0)
+    } else {
+        (600.0, 295.0)
+    };
+
     let build_result = WebviewWindowBuilder::new(&app, &label, confirmation_url)
-        .title("Confirmar download")
-        .inner_size(600.0, 295.0)
-        .min_inner_size(560.0, 280.0)
+        .title(if is_torrent { "Adicionar Torrent" } else { "Confirmar download" })
+        .inner_size(width, height)
         .resizable(false)
         .decorations(false)
         .shadow(false)
@@ -189,7 +199,19 @@ pub async fn open_download_confirmation(
 
   #[tauri::command]
   pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), String> {
-    let label = format!("download-{}", id);
+    let is_torrent = app
+        .state::<Database>()
+        .connect()
+        .ok()
+        .and_then(|c| downloads::find(&c, &id).ok().flatten())
+        .map(|t| t.download_type == "torrent" || t.original_url.starts_with("magnet:") || t.file_name.to_lowercase().ends_with(".torrent"))
+        .unwrap_or(false);
+
+    let label = if is_torrent {
+        format!("download-torrent-live-{}", id)
+    } else {
+        format!("download-{}", id)
+    };
     if let Some(window) = app.get_webview_window(&label) {
         window.set_focus().map_err(|error| error.to_string())?;
         return Ok(());
@@ -214,9 +236,15 @@ pub async fn open_download_confirmation(
     #[cfg(not(debug_assertions))]
     let url = WebviewUrl::App("index.html".into());
 
+    let (width, height) = if is_torrent {
+        (520.0, 275.0)
+    } else {
+        (450.0, 205.0)
+    };
+
     let build_result = WebviewWindowBuilder::new(&app, &label, url)
-      .title("SF Downloader - Download")
-      .inner_size(450.0, 205.0)
+      .title(if is_torrent { "SF Downloader - Torrent" } else { "SF Downloader - Download" })
+      .inner_size(width, height)
         .resizable(false)
         .decorations(false)
         .shadow(false)
