@@ -680,43 +680,53 @@ pub async fn start_download(
 }
 
 #[tauri::command]
-pub fn cancel_download(
+pub async fn cancel_download(
+    app: AppHandle,
     runtime: State<'_, DownloadRuntime>,
     database: State<'_, Database>,
     id: String,
     delete_files: bool,
 ) -> Result<bool, String> {
-    if runtime.cancel(&id, delete_files)? {
-        return Ok(true);
-    }
     let connection = database.connect()?;
-    let Some(task) = downloads::find(&connection, &id)
-        .map_err(|error| format!("Falha ao localizar o download: {error}"))?
-    else {
+    let task_opt = downloads::find(&connection, &id).map_err(|e| e.to_string())?;
+
+    if let Some(ref task) = task_opt {
+        if task.download_type == "torrent" || task.original_url.starts_with("magnet:") {
+            let info_hash = task.info_hash.clone().unwrap_or_else(|| id.clone());
+            let manager = crate::download::torrent::get_torrent_manager();
+            let _ = manager.cancel_torrent(&app, database.inner(), &info_hash, delete_files).await;
+        }
+    }
+
+    if runtime.has(&id) {
+        let _ = runtime.cancel(&id, delete_files);
+    }
+
+    let Some(task) = task_opt else {
         return Ok(false);
     };
+
     if task.status == crate::database::models::DownloadStatus::Completed {
         return Ok(false);
     }
+
     let observed_downloaded = task.total_downloaded.max(0);
     if delete_files {
         let _ = std::fs::remove_file(&task.temp_path);
+        let _ = std::fs::remove_file(&task.final_path);
         if let Ok(plan) = crate::database::repositories::chunks::list(&connection, &task.id) {
             for chunk in plan {
                 let _ = std::fs::remove_file(format!("{}.chunk-{}", task.temp_path, chunk.index));
             }
         }
     }
+
     downloads::update(
         &connection,
         crate::database::models::UpdateDownloadInput {
-            id,
+            id: id.clone(),
             status: crate::database::models::DownloadStatus::Cancelled,
-            total_downloaded: if delete_files {
-                0
-            } else {
-                task.total_downloaded
-            },
+            total_downloaded: if delete_files { 0 } else { task.total_downloaded },
             speed_current: 0.0,
             speed_average: task.speed_average,
             seeds: None,
@@ -726,9 +736,10 @@ pub fn cancel_download(
         },
     )
     .map_err(|error| format!("Falha ao cancelar o download: {error}"))?;
+
     if observed_downloaded > 0 {
         let mut connection = database.connect()?;
-        statistics::record_snapshot(
+        let _ = statistics::record_snapshot(
             &mut connection,
             &task.id,
             &task.file_name,
@@ -737,17 +748,23 @@ pub fn cancel_download(
             observed_downloaded,
             task.speed_average,
             "cancelled",
-        )
-        .map_err(|error| format!("Falha ao registrar uso do download: {error}"))?;
-        let _ = crate::database::repositories::metrics::record(
-            &connection,
-            observed_downloaded,
-            observed_downloaded,
-            0,
-            "cancelled",
-            0,
         );
     }
+
+    use tauri::Emitter;
+    let _ = app.emit(
+        "download-progress",
+        serde_json::json!({
+            "id": id,
+            "downloaded": 0,
+            "total": null,
+            "speed": 0.0,
+            "status": "cancelled",
+            "error": null
+        }),
+    );
+    let _ = app.emit("download-updated", id);
+
     Ok(true)
 }
 

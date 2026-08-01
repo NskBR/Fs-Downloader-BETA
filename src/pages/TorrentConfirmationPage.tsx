@@ -260,9 +260,14 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
     setBusy(true);
     setError(null);
     try {
+      const sanitizedName = torrentName.replace(/[/\\?%*:|"<>]/g, "_").trim() || "Torrent";
+      const finalSavePath = createSubfolder
+        ? `${destination.replace(/[/\\]+$/, "")}/${sanitizedName}`
+        : destination;
+
       const task = await service.confirmTorrent({
         infoHash,
-        savePath: destination,
+        savePath: finalSavePath,
         selectedFileIndexes: selectedFiles.map((f) => f.id - 1),
         startImmediately: autoStart,
       });

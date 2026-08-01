@@ -613,7 +613,12 @@ impl TorrentManager {
         entry.save_path = save_path.to_string();
 
         let conn = database.connect().map_err(|e| e.to_string())?;
-        let _task_id = format!("torrent_{}", info_hash);
+
+        let final_path = if entry.files.len() == 1 {
+            save_dir.join(&entry.files[0].path).to_string_lossy().into_owned()
+        } else {
+            save_dir.to_string_lossy().into_owned()
+        };
 
         let input = crate::database::models::CreateDownloadInput {
             file_name: entry.name.clone(),
@@ -621,7 +626,7 @@ impl TorrentManager {
             original_url: entry.source.clone(),
             save_path: save_path.to_string(),
             temp_path: save_path.to_string(),
-            final_path: save_dir.join(&entry.name).to_string_lossy().into_owned(),
+            final_path,
             mime_type: Some("application/x-bittorrent".into()),
             extension: Some("torrent".into()),
             supports_range: false,
@@ -663,44 +668,57 @@ impl TorrentManager {
     ) -> Result<(), String> {
         println!("[MAGNET_CANCELLED] Cancelando torrent com info_hash={}", info_hash);
 
+        let mut actual_info_hash = info_hash.to_string();
+        let mut db_task_id = info_hash.to_string();
+
+        if let Ok(conn) = database.connect() {
+            if let Ok(Some(task)) = crate::database::repositories::downloads::find_by_info_hash(&conn, info_hash) {
+                db_task_id = task.id.clone();
+                if let Some(h) = task.info_hash {
+                    actual_info_hash = h;
+                }
+            }
+        }
+
         let mut guard = self.entries.write().await;
-        if let Some(entry) = guard.remove(info_hash) {
+        if let Some(entry) = guard.remove(&actual_info_hash).or_else(|| guard.remove(info_hash)) {
             let id_num = entry.handle.id();
             if let Some(ref session) = *self.session.read().await {
                 let _ = session.delete(librqbit::api::TorrentIdOrHash::Id(id_num), delete_files).await;
             }
         }
 
-        let task_id = format!("torrent_{}", info_hash);
         if let Ok(conn) = database.connect() {
-            let _ = crate::database::repositories::downloads::update_progress(
-                &conn,
-                &crate::database::models::UpdateDownloadInput {
-                    id: task_id.clone(),
-                    status: crate::database::models::DownloadStatus::Cancelled,
-                    total_downloaded: 0,
-                    speed_current: 0.0,
-                    speed_average: 0.0,
-                    seeds: None,
-                    peers: None,
-                    upload_speed: None,
-                    total_uploaded: None,
-                },
+            let _ = conn.execute(
+                "UPDATE download_tasks SET status='cancelled', speed_current=0.0, updated_at=CURRENT_TIMESTAMP WHERE id=?1 OR info_hash=?2",
+                rusqlite::params![db_task_id, actual_info_hash],
             );
         }
 
         use tauri::Emitter;
-        let _ = app.emit(
-            "download-progress",
-            serde_json::json!({
-                "id": task_id,
+        let payload = serde_json::json!({
+            "id": db_task_id,
+            "downloaded": 0,
+            "total": null,
+            "speed": 0.0,
+            "status": "cancelled",
+            "error": null
+        });
+        let _ = app.emit("download-progress", payload.clone());
+        let _ = app.emit("download-updated", db_task_id);
+
+        if actual_info_hash != info_hash {
+            let payload_hash = serde_json::json!({
+                "id": info_hash,
                 "downloaded": 0,
-                "total": 0,
+                "total": null,
                 "speed": 0.0,
                 "status": "cancelled",
                 "error": null
-            }),
-        );
+            });
+            let _ = app.emit("download-progress", payload_hash);
+            let _ = app.emit("download-updated", info_hash);
+        }
 
         Ok(())
     }

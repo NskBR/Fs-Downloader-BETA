@@ -60,6 +60,16 @@ pub fn find(connection: &Connection, id: &str) -> Result<Option<DownloadTask>> {
         .optional()
 }
 
+pub fn find_by_info_hash(connection: &Connection, info_hash: &str) -> Result<Option<DownloadTask>> {
+    connection
+        .query_row(
+            &format!("SELECT {COLUMNS} FROM download_tasks WHERE info_hash=?1 OR id=?1"),
+            [info_hash],
+            map_task,
+        )
+        .optional()
+}
+
 pub fn list(connection: &Connection) -> Result<Vec<DownloadTask>> {
     let mut statement = connection.prepare(&format!(
         "SELECT {COLUMNS} FROM download_tasks ORDER BY created_at DESC"
