@@ -3,12 +3,14 @@ import ReactDOM from "react-dom/client";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { App } from "./app/App";
 import { ConfirmationPage } from "./pages/ConfirmationPage";
 import { DownloadWindow } from "./pages/DownloadWindow";
 import { BrowserIntegrationPage } from "./pages/BrowserIntegrationPage";
 import { loadSettings } from "./services/settingsStorage";
 import { applyThemeSettings } from "./services/theme";
+import type { AppSettings } from "./domain/settings";
 import "./styles/app.css";
 
 const label = getCurrentWindow().label;
@@ -35,6 +37,13 @@ if (isMainWindow) {
 const initialSettings = loadSettings();
 applyThemeSettings(initialSettings);
 void getCurrentWebview().setZoom(initialSettings.uiScale).catch(console.error);
+
+void listen<AppSettings>("settings-changed", (event) => {
+  if (event.payload) {
+    applyThemeSettings(event.payload);
+    void getCurrentWebview().setZoom(event.payload.uiScale).catch(console.error);
+  }
+});
 
 window.addEventListener("storage", (event) => {
   if (event.key === "sf-downloader.settings.v1" && event.newValue) {

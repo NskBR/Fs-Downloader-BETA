@@ -2373,7 +2373,7 @@ input::-ms-clear {
 .dw-details.dw-details-full {
   position: absolute !important;
   inset: 0 !important;
-  background: #0f1117 !important;
+  background: var(--bg-fill, var(--panel, #12151b)) !important;
   padding: 8px 12px !important;
   display: flex !important;
   flex-direction: column !important;
@@ -2506,6 +2506,8 @@ input::-ms-clear {
 .icon-amber { color: #f59e0b; }
 .icon-blue { color: #3b82f6; }
 .icon-purple { color: #8b5cf6; }
+
+.dw-details-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
